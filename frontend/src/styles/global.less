@@ -1,0 +1,185 @@
+// 全局样式变量
+@import 'ant-design-vue/dist/reset.css';
+
+// 自定义CSS变量
+:root {
+  --header-height: 64px;
+  --header-height-mobile: 56px;
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 80px;
+  --border-radius-base: 8px;
+  --box-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+// 自定义全局样式
+html, body, #app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+// 优化滚动条样式
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  
+  @media (max-width: 768px) {
+    width: 4px;
+    height: 4px;
+  }
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 3px;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.25);
+  }
+}
+
+// 移动端滚动优化mixin
+.mobile-scroll-mixin() {
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+// 移动端隐藏滚动条但保持滚动功能
+.mobile-scroll {
+  .mobile-scroll-mixin();
+}
+
+// 响应式工具类
+.mobile-only {
+  @media (min-width: 768px) {
+    display: none !important;
+  }
+}
+
+.tablet-only {
+  @media (max-width: 767px), (min-width: 1024px) {
+    display: none !important;
+  }
+}
+
+.desktop-only {
+  @media (max-width: 767px) {
+    display: none !important;
+  }
+}
+
+// 通用动画优化
+.fade-enter-active,
+.fade-leave-active {
+  transition: var(--transition-base);
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+// 滑动动画
+.slide-enter-active,
+.slide-leave-active {
+  transition: var(--transition-base);
+}
+
+.slide-enter-from {
+  transform: translateX(-100%);
+}
+
+.slide-leave-to {
+  transform: translateX(100%);
+}
+
+// 页面容器优化
+.page-container {
+  padding: 12px;
+  height: calc(100vh - var(--header-height-mobile));
+  overflow-y: auto;
+  overflow-x: hidden;
+  
+  @media (min-width: 768px) {
+    padding: 24px;
+    height: calc(100vh - var(--header-height));
+  }
+  
+  // 移动端优化
+  @media (max-width: 768px) {
+    .mobile-scroll-mixin();
+  }
+}
+
+// 卡片优化
+.ant-card {
+  border-radius: var(--border-radius-base) !important;
+  box-shadow: var(--box-shadow-base) !important;
+  border: none !important;
+  
+  @media (max-width: 768px) {
+    margin-bottom: 12px !important;
+  }
+}
+
+// 按钮优化
+.ant-btn {
+  border-radius: var(--border-radius-base) !important;
+  transition: var(--transition-base) !important;
+  
+  @media (max-width: 768px) {
+    min-height: 44px !important; // 移动端触摸友好
+  }
+}
+
+// 表格移动端优化
+@media (max-width: 768px) {
+  .ant-table-wrapper {
+    .ant-table {
+      font-size: 12px;
+    }
+    
+    .ant-table-thead > tr > th {
+      padding: 8px 4px !important;
+    }
+    
+    .ant-table-tbody > tr > td {
+      padding: 8px 4px !important;
+    }
+  }
+}
+
+// 表单移动端优化
+@media (max-width: 768px) {
+  .ant-form-item {
+    margin-bottom: 16px !important;
+  }
+  
+  .ant-input,
+  .ant-select-selector {
+    min-height: 44px !important;
+  }
+}
+
+// 安全区域适配（刘海屏等）
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API测试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin: 20px 0; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; background: #f8f9fa; border-radius: 4px; white-space: pre-wrap; }
+        .error { background: #f8d7da; color: #721c24; }
+        .success { background: #d1edff; color: #0c5460; }
+        input { padding: 8px; margin: 5px; width: 200px; border: 1px solid #ddd; border-radius: 4px; }
+        .token-display { word-break: break-all; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>后端API测试页面</h1>
+        
+        <!-- 配置部分 -->
+        <div class="test-section">
+            <h3>🔧 配置</h3>
+            <label>后端地址: 
+                <input type="text" id="baseUrl" value="http://dev_backend:5000" placeholder="http://dev_backend:5000">
+            </label>
+            <button onclick="testConnection()">测试连接</button>
+            <div id="connectionResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- 健康检查 -->
+        <div class="test-section">
+            <h3>💚 健康检查 (无需认证)</h3>
+            <button onclick="testHealth()">测试 /api/health</button>
+            <button onclick="testCustomerHealth()">测试 /api/v1/customers/health</button>
+            <div id="healthResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- 登录测试 -->
+        <div class="test-section">
+            <h3>🔐 登录测试</h3>
+            <div>
+                <label>用户名: <input type="text" id="username" value="admin" placeholder="用户名"></label>
+                <label>密码: <input type="password" id="password" value="password" placeholder="密码"></label>
+            </div>
+            <button onclick="testLogin()">登录</button>
+            <button onclick="clearToken()">清除Token</button>
+            <div id="loginResult" class="result" style="display:none;"></div>
+            <div id="tokenDisplay" class="result token-display" style="display:none;"></div>
+        </div>
+
+        <!-- 认证API测试 -->
+        <div class="test-section">
+            <h3>🛡️ 认证API测试 (需要JWT)</h3>
+            <button onclick="testCustomerList()">测试客户列表 GET /api/v1/customers</button>
+            <button onclick="testUserInfo()">测试用户信息 GET /auth/me</button>
+            <div id="authResult" class="result" style="display:none;"></div>
+        </div>
+
+        <!-- JWT信息显示 -->
+        <div class="test-section">
+            <h3>🔍 JWT信息</h3>
+            <button onclick="decodeJWT()">解析当前JWT</button>
+            <div id="jwtInfo" class="result" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentToken = localStorage.getItem('token') || '';
+
+        // 获取基础URL
+        function getBaseUrl() {
+            return document.getElementById('baseUrl').value.replace(/\/$/, '');
+        }
+
+        // 显示结果
+        function showResult(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = 'result ' + (isError ? 'error' : 'success');
+            element.textContent = JSON.stringify(content, null, 2);
+        }
+
+        // 测试连接
+        async function testConnection() {
+            try {
+                const response = await fetch(getBaseUrl() + '/');
+                const result = await response.text();
+                showResult('connectionResult', { 
+                    status: response.status, 
+                    statusText: response.statusText,
+                    body: result 
+                }, !response.ok);
+            } catch (error) {
+                showResult('connectionResult', { error: error.message }, true);
+            }
+        }
+
+        // 测试健康检查
+        async function testHealth() {
+            try {
+                const response = await fetch(getBaseUrl() + '/api/health');
+                const result = await response.json();
+                showResult('healthResult', { 
+                    endpoint: '/api/health',
+                    status: response.status,
+                    data: result 
+                }, !response.ok);
+            } catch (error) {
+                showResult('healthResult', { 
+                    endpoint: '/api/health',
+                    error: error.message 
+                }, true);
+            }
+        }
+
+        // 测试客户模块健康检查
+        async function testCustomerHealth() {
+            try {
+                const response = await fetch(getBaseUrl() + '/api/v1/customers/health');
+                const result = await response.json();
+                showResult('healthResult', { 
+                    endpoint: '/api/v1/customers/health',
+                    status: response.status,
+                    data: result 
+                }, !response.ok);
+            } catch (error) {
+                showResult('healthResult', { 
+                    endpoint: '/api/v1/customers/health',
+                    error: error.message 
+                }, true);
+            }
+        }
+
+        // 测试登录
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch(getBaseUrl() + '/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.access_token) {
+                    currentToken = result.access_token;
+                    localStorage.setItem('token', currentToken);
+                    
+                    // 显示token信息
+                    document.getElementById('tokenDisplay').style.display = 'block';
+                    document.getElementById('tokenDisplay').textContent = 'Token已保存: ' + currentToken;
+                    
+                    showResult('loginResult', result, false);
+                } else {
+                    showResult('loginResult', result, true);
+                }
+            } catch (error) {
+                showResult('loginResult', { error: error.message }, true);
+            }
+        }
+
+        // 清除Token
+        function clearToken() {
+            currentToken = '';
+            localStorage.removeItem('token');
+            document.getElementById('tokenDisplay').style.display = 'none';
+            showResult('loginResult', { message: 'Token已清除' }, false);
+        }
+
+        // 测试客户列表
+        async function testCustomerList() {
+            if (!currentToken) {
+                showResult('authResult', { error: '请先登录获取Token' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(getBaseUrl() + '/api/v1/customers?page=1&per_page=20', {
+                    headers: {
+                        'Authorization': 'Bearer ' + currentToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                showResult('authResult', {
+                    endpoint: '/api/v1/customers',
+                    status: response.status,
+                    data: result
+                }, !response.ok);
+            } catch (error) {
+                showResult('authResult', { 
+                    endpoint: '/api/v1/customers',
+                    error: error.message 
+                }, true);
+            }
+        }
+
+        // 测试用户信息
+        async function testUserInfo() {
+            if (!currentToken) {
+                showResult('authResult', { error: '请先登录获取Token' }, true);
+                return;
+            }
+
+            try {
+                const response = await fetch(getBaseUrl() + '/api/v1/auth/me', {
+                    headers: {
+                        'Authorization': 'Bearer ' + currentToken,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                showResult('authResult', {
+                    endpoint: '/api/v1/auth/me',
+                    status: response.status,
+                    data: result
+                }, !response.ok);
+            } catch (error) {
+                showResult('authResult', { 
+                    endpoint: '/api/v1/auth/me',
+                    error: error.message 
+                }, true);
+            }
+        }
+
+        // 解析JWT
+        function decodeJWT() {
+            if (!currentToken) {
+                showResult('jwtInfo', { error: '没有找到JWT Token' }, true);
+                return;
+            }
+
+            try {
+                const parts = currentToken.split('.');
+                if (parts.length !== 3) {
+                    throw new Error('Invalid JWT format');
+                }
+
+                const header = JSON.parse(atob(parts[0]));
+                const payload = JSON.parse(atob(parts[1]));
+                
+                // 转换时间戳为可读格式
+                if (payload.exp) payload.exp_readable = new Date(payload.exp * 1000).toLocaleString();
+                if (payload.iat) payload.iat_readable = new Date(payload.iat * 1000).toLocaleString();
+
+                showResult('jwtInfo', {
+                    header,
+                    payload,
+                    signature: parts[2]
+                }, false);
+            } catch (error) {
+                showResult('jwtInfo', { error: 'JWT解析失败: ' + error.message }, true);
+            }
+        }
+
+        // 页面加载时检查是否有保存的token
+        window.onload = function() {
+            if (currentToken) {
+                document.getElementById('tokenDisplay').style.display = 'block';
+                document.getElementById('tokenDisplay').textContent = 'Token已保存: ' + currentToken;
+            }
+        };
+    </script>
+</body>
+</html>

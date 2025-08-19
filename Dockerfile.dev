@@ -1,0 +1,31 @@
+FROM node:20-alpine
+
+# 安装常用开发工具
+RUN apk add --no-cache \
+    git \
+    bash \
+    curl \
+    vim \
+    nano
+
+# 设置工作目录
+WORKDIR /workspace
+
+# 安装全局依赖
+RUN npm install -g @vue/cli@latest \
+    vite@latest \
+    pnpm@latest
+
+# 创建非 root 用户（可选，提高安全性）
+RUN addgroup -g 1001 developer && \
+    adduser -D -u 1001 -G developer developer && \
+    chown -R developer:developer /workspace
+
+# 配置 npm 镜像（中国地区加速）
+RUN npm config set registry https://registry.npmmirror.com
+
+# 暴露常用端口
+EXPOSE 8088 5173 8080
+
+# 保持容器运行
+CMD ["tail", "-f", "/dev/null"]
