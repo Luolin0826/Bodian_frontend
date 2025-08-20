@@ -866,7 +866,7 @@ const rules = {
   answer: [
     { required: true, message: '请输入答案内容', trigger: 'blur', type: 'string' }
   ]
-}
+} as any
 
 // 获取类型颜色
 const getTypeColor = (type: string) => {

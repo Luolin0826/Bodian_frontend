@@ -324,7 +324,7 @@ import {
   UserOutlined
 } from '@ant-design/icons-vue'
 import dayjs, { Dayjs } from 'dayjs'
-import { useResponsive } from '@/composables/useResponsive'
+// import { useResponsive } from '@/composables/useResponsive'
 import {
   getFollowUpReminders,
   createFollowUpReminder,
@@ -332,7 +332,6 @@ import {
   completeFollowUpReminder,
   reopenFollowUpReminder,
   deleteFollowUpReminder,
-  getTodayReminders,
   getReminderStatistics,
   type FollowUpReminder,
   getPriorityText,
@@ -341,13 +340,19 @@ import {
 import { getCustomers, type Customer } from '@/api/customer'
 
 // 响应式工具
-const { isMobile } = useResponsive()
+// const { isMobile } = useResponsive()
+
+// 扩展的提醒类型（包含加载状态）
+interface ExtendedFollowUpReminder extends FollowUpReminder {
+  completing?: boolean
+  reopening?: boolean
+}
 
 // 响应式数据
 const loading = ref(false)
 const submitLoading = ref(false)
 const reminderModalVisible = ref(false)
-const reminderList = ref<FollowUpReminder[]>([])
+const reminderList = ref<ExtendedFollowUpReminder[]>([])
 const editingReminder = ref<FollowUpReminder | null>(null)
 const reminderFormRef = ref()
 const filterStatus = ref<string>('pending')
@@ -401,7 +406,7 @@ const reminderRules = {
   priority: [
     { required: true, message: '请选择优先级', trigger: 'change' }
   ]
-}
+} as any
 
 // 统计数据计算
 const pendingCount = computed(() => statsData.value?.total_pending || 0)
@@ -506,12 +511,12 @@ const loadReminders = async () => {
     }
     
     const response = await getFollowUpReminders(params)
-    reminderList.value = (response.data.reminders || []).map(item => ({
+    reminderList.value = ((response.data as any).reminders || []).map((item: any) => ({
       ...item,
       completing: false,
       reopening: false
     }))
-    pagination.total = response.data.total
+    pagination.total = (response.data as any).total
   } catch (error) {
     message.error('加载提醒列表失败')
   } finally {
@@ -568,7 +573,7 @@ const handleEditReminder = (reminder: FollowUpReminder) => {
 }
 
 // 完成提醒
-const handleCompleteReminder = async (reminder: FollowUpReminder) => {
+const handleCompleteReminder = async (reminder: ExtendedFollowUpReminder) => {
   reminder.completing = true
   try {
     await completeFollowUpReminder(reminder.id!)
@@ -583,7 +588,7 @@ const handleCompleteReminder = async (reminder: FollowUpReminder) => {
 }
 
 // 重新打开提醒
-const handleReopenReminder = async (reminder: FollowUpReminder) => {
+const handleReopenReminder = async (reminder: ExtendedFollowUpReminder) => {
   reminder.reopening = true
   try {
     await reopenFollowUpReminder(reminder.id!)
@@ -621,7 +626,8 @@ const handleReminderSubmit = async () => {
       customer_id: reminderFormData.customer_id!,
       remind_date: reminderFormData.remind_date!.format('YYYY-MM-DD'),
       remind_content: reminderFormData.remind_content,
-      priority: reminderFormData.priority as any
+      priority: reminderFormData.priority as any,
+      is_completed: false
     }
     
     if (editingReminder.value) {

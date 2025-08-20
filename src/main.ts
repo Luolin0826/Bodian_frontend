@@ -17,7 +17,7 @@ app.use(router)
 app.use(Antd)
 
 // 全局错误处理
-app.config.errorHandler = (err, vm, info) => {
+app.config.errorHandler = (err, _vm, info) => {
   console.error('Global Error:', err, info)
 }
 

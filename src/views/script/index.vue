@@ -978,12 +978,12 @@ const rules = {
   category: [
     { required: true, message: '请选择话术分类', trigger: 'change' }
   ]
-}
+} as any
 
 // 分类选项
-const categoryOptions = computed(() => {
-  return categories.value.map(cat => ({ label: cat, value: cat }))
-})
+// const categoryOptions = computed(() => {
+//   return categories.value.map(cat => ({ label: cat, value: cat }))
+// })
 
 // 获取分类颜色
 const getCategoryColor = (category: string) => {

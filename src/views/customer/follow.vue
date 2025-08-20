@@ -427,7 +427,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import { 
   ReloadOutlined, 
@@ -463,9 +463,6 @@ import {
   getFollowUpStatistics,
   getNeedFollowUpCustomers,
   type FollowUpRecord,
-  getFollowUpTypeText,
-  getFollowUpResultText,
-  getFollowUpResultColor
 } from '@/api/follow-up'
 
 // 响应式工具
@@ -540,7 +537,7 @@ const followColumns = [
     title: '客户信息',
     key: 'customer',
     width: 250,
-    fixed: 'left'
+    fixed: 'left' as const
   },
   {
     title: '状态',
@@ -557,7 +554,7 @@ const followColumns = [
     title: '操作',
     key: 'action',
     width: 180,
-    fixed: 'right'
+    fixed: 'right' as const
   }
 ]
 
@@ -657,7 +654,7 @@ const loadFollowCustomers = async () => {
         urgency_level: urgencyLevel,
         status: searchKeyword.value.trim() ? undefined : '跟进中'
       })
-      followList.value = response.data.customers || []
+      followList.value = (response.data as any).customers || []
     } else {
       // 使用原有的客户API
       const params: CustomerQuery = {
@@ -671,9 +668,9 @@ const loadFollowCustomers = async () => {
       // 转换数据格式以适配新的界面
       followList.value = response.data.map((customer: Customer) => ({
         ...customer,
-        days_since_last_follow_up: getDaysSinceContact(customer.updated_at),
-        urgency: getDaysSinceContact(customer.updated_at) > 3 ? 'urgent' : 
-                getDaysSinceContact(customer.updated_at) > 1 ? 'normal' : 'recent'
+        days_since_last_follow_up: getDaysSinceContact((customer as any).updated_at || (customer as any).last_follow_up_date),
+        urgency: getDaysSinceContact((customer as any).updated_at || (customer as any).last_follow_up_date) > 3 ? 'urgent' : 
+                getDaysSinceContact((customer as any).updated_at || (customer as any).last_follow_up_date) > 1 ? 'normal' : 'recent'
       }))
       
       // 根据排序方式处理数据
@@ -742,7 +739,7 @@ const handleQuickFollowSubmit = async () => {
     // 如果状态有变化，同时更新客户状态
     if (quickFollowFormData.value.status_after && quickFollowFormData.value.status_after !== currentCustomer.value.status) {
       await updateCustomer(currentCustomer.value.id, {
-        status: quickFollowFormData.value.status_after
+        status: quickFollowFormData.value.status_after as "潜在" | "跟进中" | "已成交" | "已流失"
       })
     }
     

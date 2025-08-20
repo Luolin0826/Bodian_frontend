@@ -1,31 +1,63 @@
-FROM node:20-alpine
-
-# 安装常用开发工具
-RUN apk add --no-cache \
-    git \
-    bash \
-    curl \
-    vim \
-    nano
+# --- STAGE 1: Base ---
+# 定义所有阶段共享的基础环境，主要是 Node.js 版本和国内镜像源配置
+FROM node:20-alpine AS base
 
 # 设置工作目录
-WORKDIR /workspace
+WORKDIR /app
 
-# 安装全局依赖
-RUN npm install -g @vue/cli@latest \
-    vite@latest \
-    pnpm@latest
-
-# 创建非 root 用户（可选，提高安全性）
-RUN addgroup -g 1001 developer && \
-    adduser -D -u 1001 -G developer developer && \
-    chown -R developer:developer /workspace
-
-# 配置 npm 镜像（中国地区加速）
+# 关键：先设置镜像源，后续所有 npm/pnpm 操作都会加速
 RUN npm config set registry https://registry.npmmirror.com
 
-# 暴露常用端口
-EXPOSE 8088 5173 8080
 
-# 保持容器运行
+# --- STAGE 2: Builder ---
+# 这是一个功能强大的构建阶段，开发和生产环境都将基于它
+FROM base AS builder
+
+# 1. 拷贝依赖清单
+COPY package.json package-lock.json ./
+
+# 2. 安装 pnpm 并安装所有依赖 (包括 devDependencies，因为构建时可能需要)
+RUN npm install
+
+# 3. 拷贝所有源代码
+# 开发环境虽然会用 volume 覆盖，但构建时需要它来预热缓存
+COPY . .
+
+
+# --- STAGE 3: Development Target ---
+# 用于生成开发镜像，目标是“大而全”，方便调试
+FROM builder AS development
+
+# 安装额外的开发调试工具
+RUN apk add --no-cache git bash vim nano
+
+# 设置默认的启动命令，保持容器运行，等待我们 exec 进入
 CMD ["tail", "-f", "/dev/null"]
+
+
+# --- STAGE 4: Production Target ---
+# 用于生成最终的生产镜像，目标是“小而精”
+FROM builder AS production-builder
+
+# 在这个阶段执行生产编译
+RUN npm run build
+
+# ---
+# 最终的生产运行环境，使用轻量的 Nginx
+FROM nginx:stable-alpine AS production
+
+# 从 production-builder 阶段拷贝编译好的静态文件到 Nginx 的网站根目录
+COPY --from=production-builder /app/dist /usr/share/nginx/html
+
+# 拷贝 Nginx 配置模板和启动脚本
+COPY nginx-template.conf /etc/nginx/conf.d/nginx-template.conf
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+
+# 设置执行权限
+RUN chmod +x /docker-entrypoint.sh
+
+# 暴露 Nginx 的默认端口
+EXPOSE 80
+
+# 使用自定义启动脚本
+ENTRYPOINT ["/docker-entrypoint.sh"]

@@ -86,7 +86,6 @@
       FileSearchOutlined,
       FileAddOutlined,
       BarChartOutlined,
-      PieChartOutlined,
       ReloadOutlined
     } from '@ant-design/icons-vue'
     

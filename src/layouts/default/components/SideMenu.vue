@@ -33,7 +33,7 @@
     </template>
     
     <script setup lang="ts">
-    import { ref, computed, watch } from 'vue'
+    import { ref, watch } from 'vue'
     import { useRoute, useRouter } from 'vue-router'
     import {
       DashboardOutlined,
@@ -124,8 +124,8 @@
       }
     }, { immediate: true })
     
-    const handleSelect = ({ key }: { key: string }) => {
-      router.push(key)
+    const handleSelect = (info: { key: string | number }) => {
+      router.push(String(info.key))
       emit('select')
     }
     </script>

@@ -220,7 +220,6 @@ import dayjs, { Dayjs } from 'dayjs'
 import * as echarts from 'echarts'
 import {
   getFollowUpStatistics,
-  getFollowUps,
   type FollowUpStatistics
 } from '@/api/follow-up'
 
@@ -265,8 +264,27 @@ const pagination = reactive({
 })
 
 // 数据表格
-const summaryData = ref([])
-const detailData = ref([])
+interface SummaryData {
+  key: string
+  metric: string
+  thisWeek: string
+  lastWeek: string
+  growth: string
+  ratio: string
+}
+
+interface DetailData {
+  key: string
+  date: string
+  count: number
+  customers: number
+  deals: number
+  rate: string
+  responseTime: string
+}
+
+const summaryData = ref<SummaryData[]>([])
+const detailData = ref<DetailData[]>([])
 
 // 计算属性
 const weekGrowth = computed(() => {
@@ -299,9 +317,9 @@ const detailColumns = [
 ]
 
 // 日期范围变化
-const onDateRangeChange = (dates: [Dayjs, Dayjs] | null) => {
+const onDateRangeChange = (dates: [string, string] | [Dayjs, Dayjs] | null) => {
   if (dates) {
-    dateRange.value = dates
+    dateRange.value = dates as [Dayjs, Dayjs]
     loadAllData()
   }
 }
@@ -328,7 +346,7 @@ const loadAllData = async () => {
 const loadStatistics = async () => {
   try {
     const response = await getFollowUpStatistics()
-    statisticsData.value = response.data
+    statisticsData.value = response.data as unknown as FollowUpStatistics
   } catch (error) {
     console.error('加载统计数据失败:', error)
   }

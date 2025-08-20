@@ -119,7 +119,7 @@ interface Props {
   estimatedDate?: string
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   subtitle: '功能开发中',
   progress: 25,
   features: () => []

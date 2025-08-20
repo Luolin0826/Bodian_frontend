@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: prod_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - prod_network
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  backend-prod:
+    image: crpi-2l13lq8qqggkzp5n.cn-shanghai.personal.cr.aliyuncs.com/develop_daily/bodian_backend:0.2
+    container_name: backend
+    ports:
+      - "5000:5000"  # 保留外部访问端口，便于调试
+    env_file:
+      - ./.env.prod
+    networks:
+      - prod_network
+    depends_on:
+      - redis
+    restart: always
+    healthcheck:
+      # 使用更通用的健康检查方式
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  frontend-prod:
+    # 使用新构建的镜像（包含正确的 nginx 配置）
+    image: crpi-2l13lq8qqggkzp5n.cn-shanghai.personal.cr.aliyuncs.com/develop_daily/bodian_frontend:0.3
+    container_name: frontend
+    ports:
+      - "80:80"
+      - "443:443"  # 为 HTTPS 预留
+    environment:
+      # 可选：如果使用环境变量模板
+      - BACKEND_HOST=backend:5000
+    networks:
+      - prod_network
+    depends_on:
+      backend-prod:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  prod_network:
+    driver: bridge
+    # 可选：指定网段
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  redis_prod_data:
+    driver: local

@@ -633,14 +633,7 @@ import {
   type CustomerQuery 
 } from '@/api/customer'
 import {
-  createFollowUpRecord,
-  getCustomerDetail,
-  type FollowUpRecord,
-  getFollowUpTypeText,
-  getFollowUpResultText,
-  getFollowUpResultColor,
-  getPriorityText,
-  getPriorityColor
+  createFollowUpRecord
 } from '@/api/follow-up'
 
 // 响应式工具
@@ -763,7 +756,7 @@ const quickFollowRules = {
   content: [
     { required: true, message: '请输入跟进内容', trigger: 'blur' }
   ]
-}
+} as any
 
 // 表格列配置
 const columns = computed(() => [
@@ -906,7 +899,7 @@ const handleSearch = () => {
 }
 
 // 表格变化处理
-const handleTableChange = (pag: any, filters: any, sorter: any) => {
+const handleTableChange = (pag: any, _filters: any, sorter: any) => {
   searchParams.page = pag.current
   searchParams.per_page = pag.pageSize
   pagination.current = pag.current
@@ -1052,7 +1045,7 @@ const handleQuickFollowSubmit = async () => {
     if (quickFollowFormData.customer_status && 
         quickFollowFormData.customer_status !== quickFollowCustomer.value?.status) {
       await updateCustomer(quickFollowCustomer.value!.id!, {
-        status: quickFollowFormData.customer_status
+        status: quickFollowFormData.customer_status as "潜在" | "跟进中" | "已成交" | "已流失"
       })
     }
     

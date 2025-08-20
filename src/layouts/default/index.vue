@@ -116,14 +116,12 @@
       MenuOutlined,
       CloseOutlined
     } from '@ant-design/icons-vue'
-    import { useUserStore } from '@/stores/user'
     import { useResponsive } from '@/composables/useResponsive'
     import SideMenu from './components/SideMenu.vue'
     import Breadcrumb from './components/Breadcrumb.vue'
     import UserMenu from '@/components/common/UserMenu.vue'
     
     const route = useRoute()
-    const userStore = useUserStore()
     const { isMobile } = useResponsive()
     
     const collapsed = ref(false)
