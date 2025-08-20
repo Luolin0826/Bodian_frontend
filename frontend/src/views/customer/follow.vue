@@ -171,14 +171,14 @@
             </template>
             <template v-else-if="column.key === 'last_contact'">
               <div class="contact-info">
-                <div class="contact-time" :class="getContactTimeClass(record.updated_at)">
-                  {{ getLastContactText(record.updated_at) }}
+                <div class="contact-time" :class="getContactTimeClass(record)">
+                  {{ getLastContactText(record.last_follow_up_date || record.updated_at) }}
                 </div>
                 <div class="contact-urgency">
-                  <a-tag v-if="getDaysSinceContact(record.updated_at) > 3" color="red" size="small">
+                  <a-tag v-if="getCustomerDaysSinceContact(record) > 3" color="red" size="small">
                     紧急
                   </a-tag>
-                  <a-tag v-else-if="getDaysSinceContact(record.updated_at) > 1" color="orange" size="small">
+                  <a-tag v-else-if="getCustomerDaysSinceContact(record) > 1" color="orange" size="small">
                     正常
                   </a-tag>
                   <a-tag v-else color="green" size="small">
@@ -239,7 +239,7 @@
                   <a-tag :color="getStatusColor(customer.status)" class="status-tag">
                     {{ customer.status }}
                   </a-tag>
-                  <a-tag v-if="getDaysSinceContact(customer.updated_at) > 3" color="red" size="small">
+                  <a-tag v-if="getCustomerDaysSinceContact(customer) > 3" color="red" size="small">
                     紧急
                   </a-tag>
                 </div>
@@ -255,8 +255,8 @@
                 </div>
                 <div class="info-row">
                   <span class="label">最后联系：</span>
-                  <span class="value" :class="getContactTimeClass(customer.updated_at)">
-                    {{ getLastContactText(customer.updated_at) }}
+                  <span class="value" :class="getContactTimeClass(customer)">
+                    {{ getLastContactText(customer.last_follow_up_date || customer.updated_at) }}
                   </span>
                 </div>
                 <div v-if="customer.remark" class="info-row remark-row">
@@ -364,18 +364,60 @@
         </p>
         
         <a-form layout="vertical" class="mt-4">
-          <a-form-item label="更新状态">
-            <a-select v-model:value="quickFollowStatus" placeholder="选择新状态">
-              <a-select-option value="跟进中">跟进中</a-select-option>
-              <a-select-option value="已成交">已成交</a-select-option>
-              <a-select-option value="已流失">已流失</a-select-option>
-            </a-select>
-          </a-form-item>
-          <a-form-item label="跟进备注">
+          <a-row :gutter="16">
+            <a-col :span="12">
+              <a-form-item label="跟进方式">
+                <a-select v-model:value="quickFollowFormData.follow_up_type" placeholder="选择跟进方式">
+                  <a-select-option value="phone">电话</a-select-option>
+                  <a-select-option value="wechat">微信</a-select-option>
+                  <a-select-option value="meeting">面谈</a-select-option>
+                  <a-select-option value="email">邮件</a-select-option>
+                  <a-select-option value="other">其他</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="跟进结果">
+                <a-select v-model:value="quickFollowFormData.result" placeholder="选择跟进结果" allow-clear>
+                  <a-select-option value="interested">有意向</a-select-option>
+                  <a-select-option value="not_interested">无意向</a-select-option>
+                  <a-select-option value="no_answer">未接听</a-select-option>
+                  <a-select-option value="deal">成交</a-select-option>
+                  <a-select-option value="reschedule">改期</a-select-option>
+                  <a-select-option value="other">其他</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+          </a-row>
+          
+          <a-row :gutter="16">
+            <a-col :span="12">
+              <a-form-item label="更新状态">
+                <a-select v-model:value="quickFollowFormData.status_after" placeholder="选择新状态" allow-clear>
+                  <a-select-option value="潜在">潜在</a-select-option>
+                  <a-select-option value="跟进中">跟进中</a-select-option>
+                  <a-select-option value="已成交">已成交</a-select-option>
+                  <a-select-option value="已流失">已流失</a-select-option>
+                </a-select>
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="下次跟进日期">
+                <a-input 
+                  v-model:value="quickFollowFormData.next_follow_date" 
+                  type="date" 
+                  style="width: 100%" 
+                  placeholder="选择下次跟进日期"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+          
+          <a-form-item label="跟进内容">
             <a-textarea 
-              v-model:value="quickFollowRemark" 
-              placeholder="请输入跟进情况..."
-              :rows="3"
+              v-model:value="quickFollowFormData.follow_up_content" 
+              placeholder="请输入跟进内容..."
+              :rows="4"
             />
           </a-form-item>
         </a-form>
@@ -416,6 +458,15 @@ import {
   type Customer,
   type CustomerQuery 
 } from '@/api/customer'
+import {
+  createFollowUpRecord,
+  getFollowUpStatistics,
+  getNeedFollowUpCustomers,
+  type FollowUpRecord,
+  getFollowUpTypeText,
+  getFollowUpResultText,
+  getFollowUpResultColor
+} from '@/api/follow-up'
 
 // 响应式工具
 const { isMobile } = useResponsive()
@@ -424,17 +475,25 @@ const { isMobile } = useResponsive()
 const loading = ref(false)
 const submitLoading = ref(false)
 const quickFollowVisible = ref(false)
-const followList = ref<Customer[]>([])
-const currentCustomer = ref<Customer | null>(null)
+const followList = ref<any[]>([])
+const currentCustomer = ref<any | null>(null)
 const filterStatus = ref<string>('跟进中')
 const searchKeyword = ref('')
-const quickFollowStatus = ref('')
-const quickFollowRemark = ref('')
+// 快速跟进表单数据
+const quickFollowFormData = ref({
+  follow_up_type: 'phone',
+  follow_up_content: '',
+  result: '',
+  status_after: '',
+  next_follow_date: ''
+})
 const viewType = ref<'list' | 'cards'>('list')
 const sortBy = ref<string>('urgency')
+const statisticsData = ref<any>(null)
 
 // 状态选项
 const statusOptions = [
+  { label: '需要跟进', value: 'need_follow_up' },
   { label: '跟进中', value: '跟进中' },
   { label: '潜在客户', value: '潜在' },
   { label: '全部', value: '' }
@@ -443,13 +502,13 @@ const statusOptions = [
 // 统计数据计算
 const urgentCount = computed(() => {
   return followList.value.filter(customer => 
-    getDaysSinceContact(customer.updated_at) > 3
+    customer.urgency === 'urgent' || getCustomerDaysSinceContact(customer) > 3
   ).length
 })
 
 const normalCount = computed(() => {
   return followList.value.filter(customer => {
-    const days = getDaysSinceContact(customer.updated_at)
+    const days = getCustomerDaysSinceContact(customer)
     return days >= 1 && days <= 3
   }).length
 })
@@ -462,25 +521,17 @@ const potentialCount = computed(() => {
 
 // 今日跟进数量计算
 const todayFollowCount = computed(() => {
-  const today = dayjs().format('YYYY-MM-DD')
-  return followList.value.filter(customer => 
-    dayjs(customer.updated_at).format('YYYY-MM-DD') === today
-  ).length
+  return statisticsData.value?.today_count || 0
 })
 
 // 今日成交数量
 const todayDealCount = computed(() => {
-  const today = dayjs().format('YYYY-MM-DD')
-  return followList.value.filter(customer => 
-    customer.status === '已成交' && 
-    dayjs(customer.updated_at).format('YYYY-MM-DD') === today
-  ).length
+  return statisticsData.value?.deal_customers || 0
 })
 
 // 跟进率计算
 const followRate = computed(() => {
-  if (followList.value.length === 0) return 0
-  return (todayFollowCount.value / followList.value.length) * 100
+  return statisticsData.value?.conversion_rate || 0
 })
 
 // 表格列配置
@@ -558,25 +609,35 @@ const getLastContactText = (lastContactDate?: string) => {
   return `${days}天前`
 }
 
+// 处理客户数据的联系时间
+const getCustomerLastContactDate = (customer: any) => {
+  return customer.last_follow_up_date || customer.updated_at
+}
+
+// 处理客户数据的天数
+const getCustomerDaysSinceContact = (customer: any) => {
+  return customer.days_since_last_follow_up || getDaysSinceContact(getCustomerLastContactDate(customer))
+}
+
 // 获取联系时间样式类
-const getContactTimeClass = (lastContactDate?: string) => {
-  const days = getDaysSinceContact(lastContactDate)
+const getContactTimeClass = (customer: any) => {
+  const days = getCustomerDaysSinceContact(customer)
   if (days > 3) return 'contact-urgent'
   if (days > 1) return 'contact-normal'
   return 'contact-recent'
 }
 
 // 获取表格行样式类
-const getRowClassName = (record: Customer) => {
-  const days = getDaysSinceContact(record.updated_at)
+const getRowClassName = (record: any) => {
+  const days = getCustomerDaysSinceContact(record)
   if (days > 3) return 'row-urgent'
   if (days > 1) return 'row-normal'
   return 'row-recent'
 }
 
 // 获取卡片样式类
-const getCardClass = (customer: Customer) => {
-  const days = getDaysSinceContact(customer.updated_at)
+const getCardClass = (customer: any) => {
+  const days = getCustomerDaysSinceContact(customer)
   if (days > 3) return 'card-urgent'
   if (days > 1) return 'card-normal'
   return 'card-recent'
@@ -586,38 +647,52 @@ const getCardClass = (customer: Customer) => {
 const loadFollowCustomers = async () => {
   loading.value = true
   try {
-    const params: CustomerQuery = {
-      status: filterStatus.value || '跟进中',
-      per_page: 100,
-      subject: searchKeyword.value.trim()
+    let response
+    
+    if (filterStatus.value === 'need_follow_up') {
+      // 使用新的需要跟进的客户API
+      const urgencyLevel = sortBy.value === 'urgency' ? 'urgent' : undefined
+      response = await getNeedFollowUpCustomers({
+        per_page: 100,
+        urgency_level: urgencyLevel,
+        status: searchKeyword.value.trim() ? undefined : '跟进中'
+      })
+      followList.value = response.data.customers || []
+    } else {
+      // 使用原有的客户API
+      const params: CustomerQuery = {
+        status: filterStatus.value || '跟进中',
+        per_page: 100,
+        subject: searchKeyword.value.trim()
+      }
+      
+      response = await getCustomers(params)
+      
+      // 转换数据格式以适配新的界面
+      followList.value = response.data.map((customer: Customer) => ({
+        ...customer,
+        days_since_last_follow_up: getDaysSinceContact(customer.updated_at),
+        urgency: getDaysSinceContact(customer.updated_at) > 3 ? 'urgent' : 
+                getDaysSinceContact(customer.updated_at) > 1 ? 'normal' : 'recent'
+      }))
+      
+      // 根据排序方式处理数据
+      switch (sortBy.value) {
+        case 'urgency':
+          followList.value.sort((a, b) => b.days_since_last_follow_up - a.days_since_last_follow_up)
+          break
+        case 'date':
+          followList.value.sort((a, b) => {
+            return dayjs(b.updated_at || '').diff(dayjs(a.updated_at || ''))
+          })
+          break
+        case 'name':
+          followList.value.sort((a, b) => {
+            return (a.wechat_name || '').localeCompare(b.wechat_name || '')
+          })
+          break
+      }
     }
-    
-    const response = await getCustomers(params)
-    
-    // 根据排序方式处理数据
-    let sortedData = [...response.data]
-    
-    switch (sortBy.value) {
-      case 'urgency':
-        sortedData.sort((a, b) => {
-          const daysA = getDaysSinceContact(a.updated_at)
-          const daysB = getDaysSinceContact(b.updated_at)
-          return daysB - daysA
-        })
-        break
-      case 'date':
-        sortedData.sort((a, b) => {
-          return dayjs(b.updated_at || '').diff(dayjs(a.updated_at || ''))
-        })
-        break
-      case 'name':
-        sortedData.sort((a, b) => {
-          return (a.wechat_name || '').localeCompare(b.wechat_name || '')
-        })
-        break
-    }
-    
-    followList.value = sortedData
   } catch (error) {
     message.error('加载跟进列表失败')
   } finally {
@@ -626,37 +701,57 @@ const loadFollowCustomers = async () => {
 }
 
 // 快速跟进
-const handleQuickFollow = (customer: Customer) => {
+const handleQuickFollow = (customer: any) => {
   currentCustomer.value = customer
-  quickFollowStatus.value = customer.status || ''
-  quickFollowRemark.value = ''
+  quickFollowFormData.value = {
+    follow_up_type: 'phone',
+    follow_up_content: '',
+    result: '',
+    status_after: customer.status || '',
+    next_follow_date: ''
+  }
   quickFollowVisible.value = true
 }
 
-// 详细跟进
-const handleDetailFollow = (customer: Customer) => {
-  // 这里可以跳转到客户详情页面或打开详细编辑弹窗
-  message.info('详细跟进功能待实现')
+// 详细跟进 - 跳转到客户详情页面
+const handleDetailFollow = (customer: any) => {
+  // 可以跳转到客户管理页面并打开详情
+  window.open(`/customer/list?detail=${customer.id}`, '_blank')
 }
 
 // 提交快速跟进
 const handleQuickFollowSubmit = async () => {
-  if (!currentCustomer.value) return
+  if (!currentCustomer.value?.id || !quickFollowFormData.value.follow_up_content) {
+    message.error('请填写跟进内容')
+    return
+  }
   
   submitLoading.value = true
   try {
-    const updateData = {
-      status: quickFollowStatus.value,
-      remark: `${currentCustomer.value.remark || ''}\n\n[${dayjs().format('YYYY-MM-DD HH:mm')}] ${quickFollowRemark.value}`.trim()
+    // 创建跟进记录
+    const followUpData: Omit<FollowUpRecord, 'id' | 'customer_id'> = {
+      follow_up_type: quickFollowFormData.value.follow_up_type as any,
+      follow_up_content: quickFollowFormData.value.follow_up_content,
+      result: quickFollowFormData.value.result as any || undefined,
+      status_after: quickFollowFormData.value.status_after as any || undefined,
+      next_follow_date: quickFollowFormData.value.next_follow_date || undefined
     }
     
-    await updateCustomer(currentCustomer.value.id!, updateData)
-    message.success('跟进记录更新成功')
+    await createFollowUpRecord(currentCustomer.value.id, followUpData)
     
+    // 如果状态有变化，同时更新客户状态
+    if (quickFollowFormData.value.status_after && quickFollowFormData.value.status_after !== currentCustomer.value.status) {
+      await updateCustomer(currentCustomer.value.id, {
+        status: quickFollowFormData.value.status_after
+      })
+    }
+    
+    message.success('跟进记录创建成功')
     quickFollowVisible.value = false
     loadFollowCustomers()
+    loadStatistics() // 刷新统计数据
   } catch (error) {
-    message.error('更新跟进记录失败')
+    message.error('创建跟进记录失败')
   } finally {
     submitLoading.value = false
   }
@@ -671,9 +766,20 @@ const handleQuickFollowFromEmpty = () => {
   }
 }
 
+// 加载统计数据
+const loadStatistics = async () => {
+  try {
+    const response = await getFollowUpStatistics()
+    statisticsData.value = response.data
+  } catch (error) {
+    console.error('加载统计数据失败:', error)
+  }
+}
+
 // 初始化
 onMounted(() => {
   loadFollowCustomers()
+  loadStatistics()
   // 移动端默认使用卡片视图
   if (isMobile.value) {
     viewType.value = 'cards'

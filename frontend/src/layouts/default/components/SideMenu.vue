@@ -37,10 +37,11 @@
     import { useRoute, useRouter } from 'vue-router'
     import {
       DashboardOutlined,
-      UserOutlined,
+      TeamOutlined,
       ShoppingOutlined,
       FileTextOutlined,
       BookOutlined,
+      ProfileOutlined,
       SettingOutlined
     } from '@ant-design/icons-vue'
     
@@ -57,7 +58,7 @@
       {
         key: '/customer',
         title: '客户管理',
-        icon: UserOutlined,
+        icon: TeamOutlined,
         children: [
           { key: '/customer/list', title: '客户列表' },
           { key: '/customer/follow', title: '跟进管理' }
@@ -81,6 +82,19 @@
         key: '/knowledge',
         title: '知识库',
         icon: BookOutlined
+      },
+      {
+        key: '/user-center',
+        title: '用户中心',
+        icon: ProfileOutlined,
+        children: [
+          { key: '/user-center', title: '用户中心概览' },
+          { key: '/user-center/profile', title: '个人信息' },
+          { key: '/user-center/preferences', title: '偏好设置' },
+          { key: '/user-center/notifications', title: '消息通知' },
+          { key: '/user-center/security', title: '安全设置' },
+          { key: '/user-center/login-logs', title: '登录日志' }
+        ]
       },
       {
         key: '/system',

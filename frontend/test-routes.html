@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>路由测试</title>
+</head>
+<body>
+    <h2>用户中心路由测试</h2>
+    <p>如果您看到这个页面，说明用户中心的路由配置已经正确设置。</p>
+    
+    <h3>应该可以访问的路由:</h3>
+    <ul>
+        <li><a href="#/user-center">用户中心首页</a></li>
+        <li><a href="#/user-center/profile">个人信息</a></li>
+        <li><a href="#/user-center/preferences">偏好设置</a></li>
+        <li><a href="#/user-center/notifications">消息通知</a></li>
+        <li><a href="#/user-center/security">安全设置</a></li>
+        <li><a href="#/user-center/login-logs">登录日志</a></li>
+    </ul>
+
+    <h3>修复内容:</h3>
+    <ul>
+        <li>✅ 修改了路由配置，将用户中心的子页面改为平级路由</li>
+        <li>✅ 更新了侧边栏菜单，添加了用户中心的所有子菜单项</li>
+        <li>✅ 修复了图标引用问题</li>
+        <li>✅ 保持了菜单的展开/折叠逻辑</li>
+    </ul>
+
+    <p><strong>现在用户应该可以:</strong></p>
+    <ol>
+        <li>在左侧菜单中看到"用户中心"菜单项</li>
+        <li>展开用户中心菜单，看到所有子选项</li>
+        <li>点击任何子选项，都能正确跳转到对应的页面</li>
+        <li>每个页面都有完整的功能（个人信息编辑、偏好设置、通知管理等）</li>
+    </ol>
+</body>
+</html>

@@ -31,35 +31,24 @@
     
         <!-- 图表区域 -->
         <div class="charts-section">
-          <a-card title="销售趋势" :bordered="false" class="chart-card main-chart">
+          <a-card title="销售趋势" :bordered="false" class="chart-card main-chart" :loading="chartsLoading">
             <template #extra>
-              <a-radio-group v-model:value="chartPeriod" size="small">
+              <a-radio-group v-model:value="chartPeriod" size="small" @change="updateSalesTrend">
                 <a-radio-button value="7d">7天</a-radio-button>
                 <a-radio-button value="30d">30天</a-radio-button>
                 <a-radio-button value="3m">3个月</a-radio-button>
               </a-radio-group>
             </template>
-            <div class="chart-placeholder">
-              <div class="placeholder-content">
-                <bar-chart-outlined class="placeholder-icon" />
-                <p>图表组件待实现</p>
-                <a-button type="primary" size="small">配置图表</a-button>
-              </div>
-            </div>
+            <div ref="salesChartRef" class="chart-container"></div>
           </a-card>
           
-          <a-card title="渠道分布" :bordered="false" class="chart-card side-chart">
+          <a-card title="渠道分布" :bordered="false" class="chart-card side-chart" :loading="chartsLoading">
             <template #extra>
               <a-tooltip title="刷新数据">
-                <a-button type="text" size="small" :icon="h(ReloadOutlined)" />
+                <a-button type="text" size="small" :icon="h(ReloadOutlined)" @click="refreshChannelChart" />
               </a-tooltip>
             </template>
-            <div class="chart-placeholder small">
-              <div class="placeholder-content">
-                <pie-chart-outlined class="placeholder-icon" />
-                <p>饼图待实现</p>
-              </div>
-            </div>
+            <div ref="channelChartRef" class="chart-container small"></div>
           </a-card>
         </div>
     
@@ -83,8 +72,10 @@
     </template>
     
     <script setup lang="ts">
-    import { ref, reactive, computed, h, onMounted } from 'vue'
+    import { ref, reactive, computed, h, onMounted, onUnmounted, nextTick } from 'vue'
     import { useRouter } from 'vue-router'
+    import * as echarts from 'echarts'
+    import dayjs from 'dayjs'
     import {
       UserOutlined,
       PlusCircleOutlined,
@@ -111,6 +102,13 @@
     
     // 图表时间范围
     const chartPeriod = ref('30d')
+    
+    // 图表相关
+    const chartsLoading = ref(false)
+    const salesChartRef = ref<HTMLDivElement>()
+    const channelChartRef = ref<HTMLDivElement>()
+    let salesChart: echarts.ECharts | null = null
+    let channelChart: echarts.ECharts | null = null
     
     // 统计卡片数据
     const statsCards = computed(() => [
@@ -184,9 +182,357 @@
       }
       router.push(routes[key])
     }
+
+    // 生成销售趋势演示数据
+    const generateSalesData = (period: string) => {
+      let days = 30
+      let format = 'MM-DD'
+      
+      if (period === '7d') {
+        days = 7
+      } else if (period === '3m') {
+        days = 90
+        format = 'MM-DD'
+      }
+      
+      const dates = []
+      const sales = []
+      const customers = []
+      
+      for (let i = days - 1; i >= 0; i--) {
+        const date = dayjs().subtract(i, 'day')
+        dates.push(date.format(format))
+        
+        // 生成销售额数据 (波动在 5000-25000 之间)
+        const baseSales = 15000
+        const variation = (Math.random() - 0.5) * 10000
+        sales.push(Math.round(baseSales + variation))
+        
+        // 生成客户数据 (波动在 3-15 之间)
+        const baseCustomers = 8
+        const customerVariation = (Math.random() - 0.5) * 6
+        customers.push(Math.round(baseCustomers + customerVariation))
+      }
+      
+      return { dates, sales, customers }
+    }
+
+    // 生成渠道分布演示数据
+    const generateChannelData = () => [
+      { name: '抖音', value: 45, color: '#ff6b6b' },
+      { name: '小红书', value: 28, color: '#ee5a24' },
+      { name: '微信朋友圈', value: 15, color: '#00d2d3' },
+      { name: '线下推广', value: 8, color: '#54a0ff' },
+      { name: '其他渠道', value: 4, color: '#5f27cd' }
+    ]
+
+    // 初始化销售趋势图表
+    const initSalesChart = async () => {
+      await nextTick()
+      console.log('Sales chart ref:', salesChartRef.value)
+      if (!salesChartRef.value) {
+        console.error('Sales chart DOM element not found!')
+        return
+      }
+      
+      if (salesChart) {
+        salesChart.dispose()
+      }
+      
+      salesChart = echarts.init(salesChartRef.value)
+      console.log('Sales chart instance created:', !!salesChart)
+      updateSalesTrend()
+    }
+
+    // 更新销售趋势图表
+    const updateSalesTrend = () => {
+      if (!salesChart) {
+        console.error('Sales chart instance not available!')
+        return
+      }
+      
+      const { dates, sales, customers } = generateSalesData(chartPeriod.value)
+      console.log('Sales chart data:', { dates: dates.length, sales: sales.length, customers: customers.length })
+      
+      const option = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: {
+            type: 'cross',
+            label: {
+              backgroundColor: '#6a7985'
+            }
+          },
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderColor: '#e8e8e8',
+          borderWidth: 1,
+          textStyle: {
+            color: '#333'
+          }
+        },
+        legend: {
+          data: ['销售额', '新增客户'],
+          top: '8%',
+          textStyle: {
+            color: '#666'
+          }
+        },
+        grid: {
+          left: '3%',
+          right: '4%',
+          bottom: '8%',
+          top: '15%',
+          containLabel: true
+        },
+        xAxis: {
+          type: 'category',
+          boundaryGap: false,
+          data: dates,
+          axisLine: {
+            lineStyle: { color: '#e8e8e8' }
+          },
+          axisLabel: {
+            color: '#666'
+          }
+        },
+        yAxis: [
+          {
+            type: 'value',
+            name: '销售额(元)',
+            position: 'left',
+            axisLine: {
+              show: true,
+              lineStyle: { color: '#1890ff' }
+            },
+            axisLabel: {
+              color: '#666',
+              formatter: '{value}'
+            }
+          },
+          {
+            type: 'value',
+            name: '客户数',
+            position: 'right',
+            axisLine: {
+              show: true,
+              lineStyle: { color: '#52c41a' }
+            },
+            axisLabel: {
+              color: '#666'
+            }
+          }
+        ],
+        series: [
+          {
+            name: '销售额',
+            type: 'line',
+            yAxisIndex: 0,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: {
+              color: '#1890ff',
+              width: 3
+            },
+            itemStyle: {
+              color: '#1890ff'
+            },
+            areaStyle: {
+              color: {
+                type: 'linear',
+                x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [
+                  { offset: 0, color: 'rgba(24, 144, 255, 0.3)' },
+                  { offset: 1, color: 'rgba(24, 144, 255, 0.05)' }
+                ]
+              }
+            },
+            data: sales
+          },
+          {
+            name: '新增客户',
+            type: 'line',
+            yAxisIndex: 1,
+            smooth: true,
+            symbol: 'circle',
+            symbolSize: 6,
+            lineStyle: {
+              color: '#52c41a',
+              width: 3
+            },
+            itemStyle: {
+              color: '#52c41a'
+            },
+            data: customers
+          }
+        ]
+      }
+      
+      salesChart.setOption(option)
+      console.log('Sales chart option set successfully')
+    }
+
+    // 初始化渠道分布图表
+    const initChannelChart = async () => {
+      await nextTick()
+      console.log('Channel chart ref:', channelChartRef.value)
+      if (!channelChartRef.value) {
+        console.error('Channel chart DOM element not found!')
+        return
+      }
+      
+      if (channelChart) {
+        channelChart.dispose()
+      }
+      
+      channelChart = echarts.init(channelChartRef.value)
+      console.log('Channel chart instance created:', !!channelChart)
+      
+      const data = generateChannelData()
+      console.log('Channel chart data:', data)
+      
+      const option = {
+        tooltip: {
+          trigger: 'item',
+          formatter: '{a} <br/>{b}: {c} ({d}%)',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          borderColor: '#e8e8e8',
+          borderWidth: 1,
+          textStyle: {
+            color: '#333'
+          }
+        },
+        legend: {
+          orient: 'vertical',
+          right: '10%',
+          top: 'center',
+          textStyle: {
+            color: '#666',
+            fontSize: 12
+          }
+        },
+        series: [
+          {
+            name: '获客渠道',
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['35%', '50%'],
+            avoidLabelOverlap: false,
+            label: {
+              show: false,
+              position: 'center'
+            },
+            emphasis: {
+              label: {
+                show: true,
+                fontSize: '16',
+                fontWeight: 'bold'
+              },
+              itemStyle: {
+                shadowBlur: 10,
+                shadowOffsetX: 0,
+                shadowColor: 'rgba(0, 0, 0, 0.5)'
+              }
+            },
+            labelLine: {
+              show: false
+            },
+            data: data.map(item => ({
+              ...item,
+              itemStyle: {
+                color: item.color,
+                borderRadius: 8,
+                borderColor: '#fff',
+                borderWidth: 2
+              }
+            }))
+          }
+        ]
+      }
+      
+      channelChart.setOption(option)
+      console.log('Channel chart option set successfully')
+    }
+
+    // 刷新渠道图表
+    const refreshChannelChart = () => {
+      if (channelChart) {
+        // 重新生成数据并更新图表
+        const data = generateChannelData().map(item => ({
+          ...item,
+          // 添加一些随机变化
+          value: Math.max(1, Math.round(item.value + (Math.random() - 0.5) * 10))
+        }))
+        
+        channelChart.setOption({
+          series: [{
+            data: data.map(item => ({
+              ...item,
+              itemStyle: {
+                color: item.color,
+                borderRadius: 8,
+                borderColor: '#fff',
+                borderWidth: 2
+              }
+            }))
+          }]
+        })
+      }
+    }
+
+    // 窗口大小调整处理
+    const handleResize = () => {
+      salesChart?.resize()
+      channelChart?.resize()
+    }
     
     onMounted(() => {
-      // TODO: 获取真实统计数据
+      console.log('Dashboard mounted')
+      
+      // 不显示loading，直接初始化
+      chartsLoading.value = false
+      
+      // 使用requestAnimationFrame确保DOM完全渲染
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          console.log('Attempting to initialize charts')
+          console.log('DOM refs available:', {
+            sales: !!salesChartRef.value,
+            channel: !!channelChartRef.value
+          })
+          
+          if (salesChartRef.value && channelChartRef.value) {
+            initSalesChart()
+            initChannelChart()
+          } else {
+            console.error('Chart DOM elements not available')
+            // 再试一次
+            setTimeout(() => {
+              console.log('Retry initializing charts')
+              console.log('DOM refs available (retry):', {
+                sales: !!salesChartRef.value,
+                channel: !!channelChartRef.value
+              })
+              if (salesChartRef.value && channelChartRef.value) {
+                initSalesChart()
+                initChannelChart()
+              }
+            }, 1000)
+          }
+        })
+      })
+      
+      // 添加窗口大小监听
+      window.addEventListener('resize', handleResize)
+    })
+
+    onUnmounted(() => {
+      // 清理图表实例
+      salesChart?.dispose()
+      channelChart?.dispose()
+      
+      // 移除事件监听
+      window.removeEventListener('resize', handleResize)
     })
     </script>
     
@@ -323,41 +669,20 @@
       }
     }
     
-    .chart-placeholder {
+    .chart-container {
       flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #fafafa;
-      border-radius: var(--border-radius-base);
       min-height: 280px;
       
       &.small {
-        min-height: 200px;
+        min-height: 240px;
         
         @media (max-width: 1024px) {
-          min-height: 240px;
+          min-height: 280px;
         }
       }
       
       @media (max-width: 768px) {
-        min-height: 200px;
-      }
-    }
-    
-    .placeholder-content {
-      text-align: center;
-      color: #8c8c8c;
-      
-      .placeholder-icon {
-        font-size: 48px;
-        margin-bottom: 12px;
-        color: #d9d9d9;
-      }
-      
-      p {
-        margin: 0 0 12px 0;
-        font-size: 14px;
+        min-height: 220px;
       }
     }
     

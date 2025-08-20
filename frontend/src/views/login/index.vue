@@ -89,7 +89,7 @@
     
             <!-- 底部信息 -->
             <div class="login-footer">
-              © 2024 博电教育招生管理系统
+              © 2025 博电教育招生管理系统
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@
     </template>
     
     <script setup lang="ts">
-    import { ref, reactive, h } from 'vue'
+    import { ref, reactive, h, onMounted } from 'vue'
     import { useRouter } from 'vue-router'
     import { message } from 'ant-design-vue'
     import { UserOutlined, LockOutlined, QuestionCircleOutlined } from '@ant-design/icons-vue'
@@ -145,6 +145,31 @@
       password: 'admin123'
     })
     
+    // 从localStorage恢复记住的账号信息
+    const loadRememberedCredentials = () => {
+      const remembered = localStorage.getItem('rememberMe')
+      if (remembered === 'true') {
+        rememberMe.value = true
+        const savedUsername = localStorage.getItem('savedUsername')
+        const savedPassword = localStorage.getItem('savedPassword')
+        if (savedUsername) formState.username = savedUsername
+        if (savedPassword) formState.password = savedPassword
+      }
+    }
+    
+    // 保存或清除记住的账号信息
+    const saveRememberedCredentials = () => {
+      if (rememberMe.value) {
+        localStorage.setItem('rememberMe', 'true')
+        localStorage.setItem('savedUsername', formState.username)
+        localStorage.setItem('savedPassword', formState.password)
+      } else {
+        localStorage.removeItem('rememberMe')
+        localStorage.removeItem('savedUsername')
+        localStorage.removeItem('savedPassword')
+      }
+    }
+    
     const rules: Record<string, Rule[]> = {
       username: [
         { required: true, message: '请输入用户名', trigger: 'blur' }
@@ -159,6 +184,10 @@
       try {
         loading.value = true
         await userStore.login(formState)
+        
+        // 保存或清除记住的账号信息
+        saveRememberedCredentials()
+        
         message.success('登录成功')
         router.push('/')
       } catch (error: any) {
@@ -173,6 +202,11 @@
     const showForgotPassword = () => {
       forgotPasswordVisible.value = true
     }
+    
+    // 组件挂载时恢复记住的账号信息
+    onMounted(() => {
+      loadRememberedCredentials()
+    })
     </script>
     
     <style scoped lang="less">

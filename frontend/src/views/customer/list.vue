@@ -490,6 +490,102 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <!-- 快速跟进弹窗 -->
+    <a-modal
+      v-model:open="quickFollowVisible"
+      title="快速跟进"
+      @ok="handleQuickFollowSubmit"
+      @cancel="handleQuickFollowCancel"
+      :confirm-loading="quickFollowLoading"
+      width="600px"
+      class="follow-up-modal"
+    >
+      <div class="customer-info-header">
+        <a-avatar :size="40" class="customer-avatar">
+          <template #icon><user-outlined /></template>
+        </a-avatar>
+        <div class="customer-details">
+          <div class="customer-name">{{ quickFollowCustomer?.wechat_name }}</div>
+          <div class="customer-phone">{{ quickFollowCustomer?.phone }}</div>
+          <a-tag :color="getStatusColor(quickFollowCustomer?.status)">
+            {{ quickFollowCustomer?.status }}
+          </a-tag>
+        </div>
+      </div>
+
+      <a-form
+        ref="quickFollowFormRef"
+        :model="quickFollowFormData"
+        :rules="quickFollowRules"
+        layout="vertical"
+        class="follow-up-form-content"
+      >
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="跟进方式" name="follow_type">
+              <a-select v-model:value="quickFollowFormData.follow_type" placeholder="选择跟进方式">
+                <a-select-option value="phone">电话</a-select-option>
+                <a-select-option value="wechat">微信</a-select-option>
+                <a-select-option value="meeting">面谈</a-select-option>
+                <a-select-option value="email">邮件</a-select-option>
+                <a-select-option value="other">其他</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="跟进结果" name="follow_result">
+              <a-select v-model:value="quickFollowFormData.follow_result" placeholder="选择跟进结果">
+                <a-select-option value="interested">有意向</a-select-option>
+                <a-select-option value="not_interested">无意向</a-select-option>
+                <a-select-option value="deal">成交</a-select-option>
+                <a-select-option value="no_answer">未接听</a-select-option>
+                <a-select-option value="reschedule">改期</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+        </a-row>
+        
+        <a-form-item label="跟进内容" name="content">
+          <a-textarea 
+            v-model:value="quickFollowFormData.content" 
+            placeholder="请详细描述跟进情况..."
+            :rows="4"
+          />
+        </a-form-item>
+        
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="客户状态" name="customer_status">
+              <a-select v-model:value="quickFollowFormData.customer_status" placeholder="更新客户状态">
+                <a-select-option value="潜在">潜在</a-select-option>
+                <a-select-option value="跟进中">跟进中</a-select-option>
+                <a-select-option value="已成交">已成交</a-select-option>
+                <a-select-option value="已流失">已流失</a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="下次跟进时间" name="next_follow_date">
+              <a-date-picker 
+                v-model:value="quickFollowFormData.next_follow_date" 
+                style="width: 100%" 
+                placeholder="选择下次跟进时间"
+                :disabled-date="(current) => current && current < dayjs().startOf('day')"
+              />
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="备注" name="remark">
+          <a-textarea 
+            v-model:value="quickFollowFormData.remark" 
+            placeholder="其他备注信息..."
+            :rows="2"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
   </div>
 </template>
 
@@ -536,6 +632,16 @@ import {
   type CustomerFormData,
   type CustomerQuery 
 } from '@/api/customer'
+import {
+  createFollowUpRecord,
+  getCustomerDetail,
+  type FollowUpRecord,
+  getFollowUpTypeText,
+  getFollowUpResultText,
+  getFollowUpResultColor,
+  getPriorityText,
+  getPriorityColor
+} from '@/api/follow-up'
 
 // 响应式工具
 const { isMobile } = useResponsive()
@@ -549,6 +655,12 @@ const customerList = ref<Customer[]>([])
 const editingCustomer = ref<Customer | null>(null)
 const formRef = ref()
 const viewMode = ref<'table' | 'card'>('table')
+
+// 快速跟进相关
+const quickFollowVisible = ref(false)
+const quickFollowLoading = ref(false)
+const quickFollowCustomer = ref<Customer | null>(null)
+const quickFollowFormRef = ref()
 
 // 搜索关键词
 const searchKeyword = ref('')
@@ -623,6 +735,36 @@ const rules = {
   ]
 }
 
+// 快速跟进表单数据
+const quickFollowFormData = reactive<{
+  follow_type: string
+  follow_result: string
+  content: string
+  customer_status?: string
+  next_follow_date?: Dayjs
+  remark: string
+}>({
+  follow_type: '',
+  follow_result: '',
+  content: '',
+  customer_status: undefined,
+  next_follow_date: undefined,
+  remark: ''
+})
+
+// 快速跟进表单验证规则
+const quickFollowRules = {
+  follow_type: [
+    { required: true, message: '请选择跟进方式', trigger: 'change' }
+  ],
+  follow_result: [
+    { required: true, message: '请选择跟进结果', trigger: 'change' }
+  ],
+  content: [
+    { required: true, message: '请输入跟进内容', trigger: 'blur' }
+  ]
+}
+
 // 表格列配置
 const columns = computed(() => [
   {
@@ -669,7 +811,7 @@ const columns = computed(() => [
   {
     title: '操作',
     key: 'action',
-    width: 120,
+    width: 150,
     fixed: 'right' as const
   }
 ])
@@ -880,9 +1022,68 @@ const handleDelete = async (id?: number) => {
 }
 
 // 快速跟进
-const handleQuickFollow = (_customer: Customer) => {
-  message.info('快速跟进功能正在开发中')
-  // TODO: 实现快速跟进功能
+const handleQuickFollow = (customer: Customer) => {
+  quickFollowCustomer.value = customer
+  resetQuickFollowForm()
+  // 默认设置客户状态为当前状态
+  quickFollowFormData.customer_status = customer.status
+  quickFollowVisible.value = true
+}
+
+// 快速跟进提交
+const handleQuickFollowSubmit = async () => {
+  try {
+    await quickFollowFormRef.value.validate()
+    quickFollowLoading.value = true
+    
+    const followUpData = {
+      follow_up_type: quickFollowFormData.follow_type as any,
+      follow_up_content: quickFollowFormData.content,
+      result: quickFollowFormData.follow_result as any,
+      next_follow_date: quickFollowFormData.next_follow_date?.format('YYYY-MM-DD'),
+      status_before: quickFollowCustomer.value?.status as any,
+      status_after: quickFollowFormData.customer_status as any
+    }
+    
+    // 创建跟进记录
+    await createFollowUpRecord(quickFollowCustomer.value!.id!, followUpData)
+    
+    // 如果状态有变化，更新客户状态
+    if (quickFollowFormData.customer_status && 
+        quickFollowFormData.customer_status !== quickFollowCustomer.value?.status) {
+      await updateCustomer(quickFollowCustomer.value!.id!, {
+        status: quickFollowFormData.customer_status
+      })
+    }
+    
+    message.success('跟进记录创建成功')
+    quickFollowVisible.value = false
+    loadCustomers() // 刷新客户列表
+  } catch (error: any) {
+    if (error?.errorFields) return // 表单验证错误
+    message.error('创建跟进记录失败')
+  } finally {
+    quickFollowLoading.value = false
+  }
+}
+
+// 快速跟进取消
+const handleQuickFollowCancel = () => {
+  quickFollowVisible.value = false
+  resetQuickFollowForm()
+}
+
+// 重置快速跟进表单
+const resetQuickFollowForm = () => {
+  Object.assign(quickFollowFormData, {
+    follow_type: '',
+    follow_result: '',
+    content: '',
+    customer_status: undefined,
+    next_follow_date: undefined,
+    remark: ''
+  })
+  quickFollowFormRef.value?.resetFields()
 }
 
 // 重置筛选
@@ -1382,6 +1583,175 @@ onMounted(() => {
 .customer-modal {
   :deep(.ant-modal-body) {
     padding: 24px;
+  }
+}
+
+// 跟进模态框
+.follow-up-modal {
+  :deep(.ant-modal-body) {
+    padding: 24px;
+  }
+  
+  .customer-info-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 24px;
+    
+    .customer-details {
+      .customer-name {
+        font-weight: 500;
+        font-size: 16px;
+        margin-bottom: 4px;
+      }
+      
+      .customer-phone {
+        font-size: 14px;
+        color: #8c8c8c;
+        margin-bottom: 4px;
+      }
+    }
+  }
+  
+  .follow-up-form-content {
+    .ant-form-item {
+      margin-bottom: 20px;
+    }
+  }
+}
+
+// 客户详情模态框
+.customer-detail-modal {
+  :deep(.ant-modal-body) {
+    padding: 24px;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+  
+  .detail-section {
+    margin-bottom: 32px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid #f0f0f0;
+      color: #1890ff;
+    }
+  }
+  
+  .customer-basic-info {
+    .info-item {
+      margin-bottom: 12px;
+      
+      .label {
+        font-weight: 500;
+        color: #666;
+        margin-right: 8px;
+      }
+      
+      .value {
+        color: #2c3e50;
+      }
+    }
+  }
+  
+  .follow-up-stats {
+    :deep(.ant-statistic) {
+      text-align: center;
+      
+      .ant-statistic-title {
+        font-size: 13px;
+        margin-bottom: 4px;
+      }
+      
+      .ant-statistic-content-value {
+        font-size: 18px;
+        font-weight: 600;
+      }
+    }
+  }
+  
+  .recent-follow-ups {
+    .timeline-content {
+      .timeline-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        
+        .follow-up-type {
+          font-weight: 500;
+          color: #1890ff;
+        }
+        
+        .follow-up-time {
+          font-size: 12px;
+          color: #8c8c8c;
+          margin-left: auto;
+        }
+      }
+      
+      .follow-up-content {
+        margin-bottom: 4px;
+        line-height: 1.4;
+        color: #333;
+      }
+      
+      .follow-up-creator {
+        font-size: 12px;
+        color: #8c8c8c;
+      }
+    }
+  }
+  
+  .pending-reminders {
+    .reminder-content {
+      .reminder-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        
+        .remind-date {
+          font-size: 12px;
+          color: #666;
+          margin-left: auto;
+        }
+      }
+      
+      .reminder-text {
+        margin-bottom: 4px;
+        color: #333;
+      }
+      
+      .reminder-creator {
+        font-size: 12px;
+        color: #8c8c8c;
+      }
+    }
+  }
+}
+
+// 操作按钮增强
+.action-buttons {
+  .detail-btn {
+    color: #722ed1;
+    
+    &:hover {
+      background: #f9f0ff;
+    }
   }
 }
 </style>

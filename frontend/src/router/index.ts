@@ -44,7 +44,7 @@ const authRoutes: RouteRecordRaw[] = [
       {
         path: 'customer',
         name: 'Customer',
-        meta: { title: '客户管理', icon: 'UserOutlined' },
+        meta: { title: '客户管理', icon: 'TeamOutlined' },
         children: [
           {
             path: 'list',
@@ -57,6 +57,18 @@ const authRoutes: RouteRecordRaw[] = [
             name: 'CustomerFollow',
             component: () => import('@/views/customer/follow.vue'),
             meta: { title: '跟进管理' }
+          },
+          {
+            path: 'reminders',
+            name: 'CustomerReminders',
+            component: () => import('@/views/customer/reminders.vue'),
+            meta: { title: '跟进提醒' }
+          },
+          {
+            path: 'analytics',
+            name: 'CustomerAnalytics',
+            component: () => import('@/views/customer/analytics.vue'),
+            meta: { title: '跟进分析' }
           }
         ]
       },
@@ -90,6 +102,42 @@ const authRoutes: RouteRecordRaw[] = [
         name: 'Knowledge',
         component: () => import('@/views/knowledge/index.vue'),
         meta: { title: '知识库', icon: 'BookOutlined' }
+      },
+      {
+        path: 'user-center',
+        name: 'UserCenter',
+        component: () => import('@/views/user-center/index.vue'),
+        meta: { title: '用户中心', icon: 'ProfileOutlined' }
+      },
+      {
+        path: 'user-center/profile',
+        name: 'UserProfile',
+        component: () => import('@/views/user-center/profile.vue'),
+        meta: { title: '个人信息', parent: 'UserCenter' }
+      },
+      {
+        path: 'user-center/preferences',
+        name: 'UserPreferences',
+        component: () => import('@/views/user-center/preferences.vue'),
+        meta: { title: '偏好设置', parent: 'UserCenter' }
+      },
+      {
+        path: 'user-center/notifications',
+        name: 'UserNotifications',
+        component: () => import('@/views/user-center/notifications.vue'),
+        meta: { title: '消息通知', parent: 'UserCenter' }
+      },
+      {
+        path: 'user-center/security',
+        name: 'UserSecurity',
+        component: () => import('@/views/user-center/security.vue'),
+        meta: { title: '安全设置', parent: 'UserCenter' }
+      },
+      {
+        path: 'user-center/login-logs',
+        name: 'UserLoginLogs',
+        component: () => import('@/views/user-center/login-logs.vue'),
+        meta: { title: '登录日志', parent: 'UserCenter' }
       },
       {
         path: 'system',

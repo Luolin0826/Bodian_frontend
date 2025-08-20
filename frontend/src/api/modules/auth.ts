@@ -14,6 +14,10 @@ export interface LoginResponse {
     username: string
     real_name: string
     role: 'admin' | 'sales' | 'teacher' | 'viewer'
+    avatar?: string
+    role_display_name?: string
+    department_name?: string
+    last_login?: string
   }
 }
 
