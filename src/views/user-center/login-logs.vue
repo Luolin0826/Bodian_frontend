@@ -14,6 +14,50 @@
         </a-space>
       </template>
 
+      <!-- 登录统计卡片 -->
+      <div class="stats-section" style="margin-bottom: 24px;">
+        <a-row :gutter="16">
+          <a-col :span="6">
+            <a-card size="small">
+              <a-statistic
+                title="总登录次数"
+                :value="loginStats?.stats?.total_logins || 0"
+                :value-style="{ color: '#1890ff' }"
+              />
+            </a-card>
+          </a-col>
+          <a-col :span="6">
+            <a-card size="small">
+              <a-statistic
+                title="失败次数"
+                :value="loginStats?.stats?.failed_logins || 0"
+                :value-style="{ color: '#ff4d4f' }"
+              />
+            </a-card>
+          </a-col>
+          <a-col :span="6">
+            <a-card size="small">
+              <a-statistic
+                title="成功率"
+                :value="loginStats?.stats?.success_rate || 0"
+                suffix="%"
+                :precision="1"
+                :value-style="{ color: '#52c41a' }"
+              />
+            </a-card>
+          </a-col>
+          <a-col :span="6">
+            <a-card size="small">
+              <a-statistic
+                title="不同IP地址"
+                :value="loginStats?.stats?.unique_ips || 0"
+                :value-style="{ color: '#722ed1' }"
+              />
+            </a-card>
+          </a-col>
+        </a-row>
+      </div>
+
       <!-- 筛选条件 -->
       <div class="filters-section">
         <a-row :gutter="16" align="middle">
@@ -30,39 +74,34 @@
             </a-select>
           </a-col>
           
-          <a-col :span="12">
-            <a-range-picker 
-              v-model:value="dateRange" 
+          <a-col :span="6">
+            <a-select 
+              v-model:value="filters.days" 
+              placeholder="时间范围"
               style="width: 100%"
-              @change="handleDateChange"
-              :presets="datePresets"
-            />
+              @change="handleFilterChange"
+            >
+              <a-select-option :value="7">最近7天</a-select-option>
+              <a-select-option :value="30">最近30天</a-select-option>
+              <a-select-option :value="90">最近90天</a-select-option>
+              <a-select-option :value="0">全部</a-select-option>
+            </a-select>
           </a-col>
           
-          <a-col :span="6">
-            <a-input
-              v-model:value="filters.ip_address"
-              placeholder="IP地址"
-              @pressEnter="handleFilterChange"
-              @blur="handleFilterChange"
-            >
-              <template #prefix>
-                <GlobalOutlined />
-              </template>
-            </a-input>
+          <a-col :span="12">
+            <a-space>
+              <a-tag v-if="loginStats?.stats?.last_login_time" color="blue">
+                最近登录：{{ formatDateTime(loginStats.stats.last_login_time) }}
+              </a-tag>
+              <a-tag v-if="loginStats?.stats?.last_login_location" color="green">
+                <EnvironmentOutlined />
+                {{ loginStats.stats.last_login_location }}
+              </a-tag>
+            </a-space>
           </a-col>
         </a-row>
       </div>
 
-      <!-- 当前会话信息 -->
-      <a-alert 
-        v-if="currentSession"
-        type="info" 
-        :message="`当前会话：${currentSession.ip_address}`"
-        :description="`登录时间：${formatDateTime(currentSession.login_time)} | 过期时间：${formatDateTime(currentSession.expires_at)}`"
-        show-icon
-        style="margin-bottom: 16px;"
-      />
 
       <!-- 登录日志表格 -->
       <a-table
@@ -117,12 +156,20 @@
             </div>
           </template>
 
-          <!-- 会话时长列 -->
+          <!-- 失败原因/会话时长列 -->
           <template v-else-if="column.key === 'session_duration'">
-            <span v-if="record.logout_time">
-              {{ calculateDuration(record.login_time, record.logout_time) }}
-            </span>
-            <a-tag v-else color="processing">进行中</a-tag>
+            <div v-if="record.status === 'failed'" class="failure-reason">
+              <a-tag color="red">
+                <ExclamationCircleOutlined />
+                {{ record.failure_reason || '登录失败' }}
+              </a-tag>
+            </div>
+            <div v-else>
+              <span v-if="record.logout_time">
+                {{ calculateDuration(record.login_time, record.logout_time) }}
+              </span>
+              <a-tag v-else color="processing">进行中</a-tag>
+            </div>
           </template>
 
           <!-- 操作列 -->
@@ -237,6 +284,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
+import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
   DownloadOutlined, 
   ReloadOutlined, 
@@ -244,10 +292,12 @@ import {
   EnvironmentOutlined,
   DesktopOutlined,
   MobileOutlined,
-  TabletOutlined
+  TabletOutlined,
+  ExclamationCircleOutlined
 } from '@ant-design/icons-vue'
 import {
   getLoginLogs,
+  getLoginStats,
   type LoginLog,
   type LoginLogQueryParams
 } from '@/api/user-center'
@@ -266,30 +316,26 @@ const reporting = ref(false)
 const detailModal = ref(false)
 const reportModal = ref(false)
 
+// 用户偏好设置
+const { itemsPerPage, loadPreferencesOnce } = useUserPreferences()
+
 const loginLogs = ref<LoginLog[]>([])
 const total = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(20)
-const currentSession = ref()
+const loginStats = ref()
+const statsLoading = ref(false)
 const selectedLog = ref<LoginLog>()
-const dateRange = ref()
 
 const filters = reactive({
-  ip_address: ''
+  status: '' as '' | 'success' | 'failed',
+  days: 30
 })
 
 const reportForm = reactive({
   reason: '',
   description: ''
 })
-
-const datePresets = [
-  { label: '今天', value: [dayjs().startOf('day'), dayjs().endOf('day')] },
-  { label: '昨天', value: [dayjs().subtract(1, 'day').startOf('day'), dayjs().subtract(1, 'day').endOf('day')] },
-  { label: '最近7天', value: [dayjs().subtract(7, 'day'), dayjs()] },
-  { label: '最近30天', value: [dayjs().subtract(30, 'day'), dayjs()] },
-  { label: '本月', value: [dayjs().startOf('month'), dayjs().endOf('month')] }
-]
 
 const columns = [
   {
@@ -322,10 +368,10 @@ const columns = [
     sorter: true
   },
   {
-    title: '会话时长',
+    title: '会话时长/失败原因',
     dataIndex: 'session_duration',
     key: 'session_duration',
-    width: 120
+    width: 160
   },
   {
     title: '操作',
@@ -402,39 +448,38 @@ const fetchLoginLogs = async () => {
     
     const params: LoginLogQueryParams = {
       page: currentPage.value,
-      per_page: pageSize.value,
+      page_size: pageSize.value,
       ...filters
     }
 
-    // 处理日期范围
-    if (dateRange.value && dateRange.value.length === 2) {
-      params.start_date = dayjs(dateRange.value[0]).format('YYYY-MM-DD')
-      params.end_date = dayjs(dateRange.value[1]).format('YYYY-MM-DD')
-    }
-
     const response = await getLoginLogs(params)
-    if (response.code === 0) {
-      const data = response.data
-      loginLogs.value = data.logs
-      total.value = data.total
-      currentPage.value = data.page
-      currentSession.value = data.current_session
-    }
+    loginLogs.value = response.login_logs
+    total.value = response.pagination.total
+    currentPage.value = response.pagination.page
   } catch (error) {
     console.error('获取登录日志失败:', error)
+    message.error('获取登录日志失败')
   } finally {
     loading.value = false
+  }
+}
+
+const fetchLoginStats = async () => {
+  try {
+    statsLoading.value = true
+    const response = await getLoginStats({ days: filters.days })
+    loginStats.value = response
+  } catch (error) {
+    console.error('获取登录统计失败:', error)
+  } finally {
+    statsLoading.value = false
   }
 }
 
 const handleFilterChange = () => {
   currentPage.value = 1
   fetchLoginLogs()
-}
-
-const handleDateChange = () => {
-  currentPage.value = 1
-  fetchLoginLogs()
+  fetchLoginStats()
 }
 
 const showLogDetails = (log: LoginLog) => {
@@ -506,8 +551,16 @@ const exportLogs = async () => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // 首先加载用户偏好设置
+  await loadPreferencesOnce()
+  
+  // 设置默认分页大小为用户偏好
+  pageSize.value = itemsPerPage.value || 20
+  
+  // 然后加载数据
   fetchLoginLogs()
+  fetchLoginStats()
 })
 </script>
 

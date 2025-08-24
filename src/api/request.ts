@@ -33,6 +33,19 @@ service.interceptors.request.use(
 service.interceptors.response.use(
   (response: AxiosResponse) => {
     console.log('Response:', response.status, response.data)
+    
+    // 检查响应状态码
+    if (!response || response.status < 200 || response.status >= 300) {
+      console.error('响应状态码异常:', response.status)
+      throw new Error(`HTTP Error: ${response.status}`)
+    }
+    
+    // 检查响应数据
+    if (!response.data) {
+      console.error('响应数据为空')
+      throw new Error('Empty response data')
+    }
+    
     return response.data
   },
   (error: AxiosError) => {

@@ -309,7 +309,7 @@
                   </a-tag>
                 </div>
                 <div class="info-item">
-                  <span class="label">客户日期：</span>
+                  <span class="label">首次接触日期：</span>
                   <span>{{ formatDate(customer.customer_date) }}</span>
                 </div>
                 <div v-if="customer.remark" class="info-item remark">
@@ -463,20 +463,11 @@
         </a-row>
         <a-row :gutter="16">
           <a-col :span="12">
-            <a-form-item label="客户日期" name="customer_date">
+            <a-form-item label="首次接触日期" name="customer_date">
               <a-date-picker 
                 v-model:value="formData.customer_date" 
                 style="width: 100%" 
-                placeholder="选择客户日期"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="添加日期" name="add_date">
-              <a-date-picker 
-                v-model:value="formData.add_date" 
-                style="width: 100%" 
-                placeholder="选择添加日期"
+                placeholder="选择首次接触客户的日期"
               />
             </a-form-item>
           </a-col>
@@ -590,8 +581,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, h, onMounted } from 'vue'
+import { ref, reactive, computed, h, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
+import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
   PlusOutlined,
   UserOutlined,
@@ -693,6 +685,9 @@ const searchParams = reactive<CustomerQuery>({
   sort_order: 'desc'
 })
 
+// 用户偏好设置
+const { itemsPerPage, loadPreferencesOnce } = useUserPreferences()
+
 // 分页配置
 const pagination = reactive({
   current: 1,
@@ -789,7 +784,7 @@ const columns = computed(() => [
     ]
   },
   {
-    title: '客户日期',
+    title: '首次接触日期',
     key: 'customer_date',
     width: 120,
     sorter: true
@@ -929,7 +924,6 @@ const handlePaginationChange = (page: number, pageSize: number) => {
 
 // 显示新增弹窗
 const showCreateModal = () => {
-  editingCustomer.value = null
   resetForm()
   modalVisible.value = true
 }
@@ -937,14 +931,18 @@ const showCreateModal = () => {
 // 编辑客户
 const handleEdit = (customer: Customer) => {
   editingCustomer.value = customer
-  Object.assign(formData, {
-    wechat_name: customer.wechat_name,
-    phone: customer.phone,
-    channel: customer.channel,
-    status: customer.status,
-    customer_date: customer.customer_date ? dayjs(customer.customer_date) : null,
-    add_date: customer.add_date ? dayjs(customer.add_date) : null,
-    remark: customer.remark
+  // 先重置表单，再在nextTick中填充数据
+  resetFormFields()
+  nextTick(() => {
+    Object.assign(formData, {
+      wechat_name: customer.wechat_name,
+      phone: customer.phone,
+      channel: customer.channel,
+      status: customer.status,
+      customer_date: customer.customer_date ? dayjs(customer.customer_date) : null,
+      add_date: customer.add_date ? dayjs(customer.add_date) : null,
+      remark: customer.remark
+    })
   })
   modalVisible.value = true
 }
@@ -958,7 +956,9 @@ const handleSubmit = async () => {
     const submitData: CustomerFormData = {
       ...formData,
       customer_date: formData.customer_date?.format('YYYY-MM-DD'),
-      add_date: formData.add_date?.format('YYYY-MM-DD')
+      add_date: editingCustomer.value 
+        ? (formData.add_date?.format('YYYY-MM-DD') || dayjs().format('YYYY-MM-DD'))
+        : dayjs().format('YYYY-MM-DD') // 新增时自动填充当前日期
     }
     
     if (editingCustomer.value) {
@@ -985,8 +985,8 @@ const handleCancel = () => {
   resetForm()
 }
 
-// 重置表单
-const resetForm = () => {
+// 重置表单字段（用于编辑前清理）
+const resetFormFields = () => {
   Object.assign(formData, {
     wechat_name: '',
     phone: '',
@@ -997,6 +997,15 @@ const resetForm = () => {
     remark: ''
   })
   formRef.value?.resetFields()
+}
+
+// 完全重置表单（用于新增）
+const resetForm = () => {
+  // 先清空编辑状态
+  editingCustomer.value = null
+  
+  // 重置表单数据
+  resetFormFields()
 }
 
 // 删除客户
@@ -1088,8 +1097,17 @@ const resetFilters = () => {
 }
 
 // 初始化
-onMounted(() => {
+onMounted(async () => {
+  // 首先加载用户偏好设置
+  await loadPreferencesOnce()
+  
+  // 设置默认分页大小为用户偏好
+  pagination.pageSize = itemsPerPage.value || 20
+  searchParams.per_page = itemsPerPage.value || 20
+  
+  // 然后加载客户数据
   loadCustomers()
+  
   // 移动端默认使用卡片视图
   if (isMobile.value) {
     viewMode.value = 'card'

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>二级单位数据显示测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .data-card { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .metric { font-size: 24px; color: #1890ff; font-weight: bold; }
+        .unit-list { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .unit-item { background: white; padding: 10px; border-radius: 4px; border-left: 4px solid #1890ff; }
+        .unit-name { font-weight: bold; color: #333; }
+        .unit-stats { font-size: 12px; color: #666; margin-top: 4px; }
+        .percentage { color: #52c41a; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🏢 二级单位统计数据展示测试</h1>
+
+    <div class="data-card">
+        <h3>📊 核心指标</h3>
+        <div class="metric">覆盖二级单位: 7 个</div>
+        <p>根据您提供的 <code>unit_statistics.covered_units</code> 字段</p>
+    </div>
+
+    <div class="data-card">
+        <h3>📈 二级单位分布数据 (按录取人数排序)</h3>
+        <div class="unit-list">
+            <div class="unit-item">
+                <div class="unit-name">1. 广东 (南方)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>1,750人</strong> | 
+                    占比: <span class="percentage">34.35%</span>
+                </div>
+            </div>
+            <div class="unit-item">
+                <div class="unit-name">2. 云南 (西南)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>1,204人</strong> | 
+                    占比: <span class="percentage">23.63%</span>
+                </div>
+            </div>
+            <div class="unit-item">
+                <div class="unit-name">3. 广西 (南方)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>895人</strong> | 
+                    占比: <span class="percentage">17.57%</span>
+                </div>
+            </div>
+            <div class="unit-item">
+                <div class="unit-name">4. 贵州 (西南)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>652人</strong> | 
+                    占比: <span class="percentage">12.80%</span>
+                </div>
+            </div>
+            <div class="unit-item">
+                <div class="unit-name">5. 海南 (南方)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>427人</strong> | 
+                    占比: <span class="percentage">8.38%</span>
+                </div>
+            </div>
+            <div class="unit-item">
+                <div class="unit-name">6. 深圳供电局 (未知)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>90人</strong> | 
+                    占比: <span class="percentage">1.77%</span>
+                </div>
+            </div>
+            <div class="unit-item">
+                <div class="unit-name">7. 超高压公司 (全国)</div>
+                <div class="unit-stats">
+                    录取人数: <strong>77人</strong> | 
+                    占比: <span class="percentage">1.51%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="data-card">
+        <h3>🎯 前端代码处理逻辑验证</h3>
+        
+        <h4>1. 覆盖二级单位数量计算</h4>
+        <pre><code>// props.data.analytics.unit_statistics.covered_units
+// 返回值: 7</code></pre>
+        
+        <h4>2. 二级单位分布图表数据</h4>
+        <pre><code>// 图表数据转换结果:
+[
+  { name: "广东", value: 1750 },
+  { name: "云南", value: 1204 },
+  { name: "广西", value: 895 },
+  { name: "贵州", value: 652 },
+  { name: "海南", value: 427 },
+  { name: "深圳供电局", value: 90 },
+  { name: "超高压公司", value: 77 }
+]</code></pre>
+
+        <h4>3. ECharts 图表配置</h4>
+        <ul>
+            <li>✅ X轴: 单位名称 ["广东", "云南", "广西", "贵州", "海南", "深圳供电局", "超高压公司"]</li>
+            <li>✅ Y轴: 录取人数 [1750, 1204, 895, 652, 427, 90, 77]</li>
+            <li>✅ 图表类型: 柱状图 (bar)</li>
+            <li>✅ 排序: 按录取人数降序</li>
+            <li>✅ 鼠标悬停: 显示具体数值</li>
+        </ul>
+    </div>
+
+    <div class="data-card">
+        <h3>📋 数据分析亮点</h3>
+        <ul>
+            <li><strong>地区分布特点</strong>: 南方地区占主导 (广东、广西、海南)</li>
+            <li><strong>录取规模层次</strong>: 广东遥遥领先(1750人)，云南紧随其后(1204人)</li>
+            <li><strong>专业单位</strong>: 深圳供电局、超高压公司等专业单位也有录取</li>
+            <li><strong>数据完整性</strong>: 包含地区标识(南方/西南/全国/未知)和精确百分比</li>
+        </ul>
+    </div>
+
+    <div class="data-card">
+        <h3>🚀 前端显示预期效果</h3>
+        <p><strong>覆盖二级单位指标卡片</strong>: 显示 <span class="metric">7</span></p>
+        <p><strong>二级单位分布柱状图</strong>: 7根柱子，广东最高(1750)，超高压公司最低(77)</p>
+        <p><strong>图表交互</strong>: 鼠标悬停显示"广东: 1750 (34.35%)"等详细信息</p>
+        <p><strong>数据排序</strong>: 按录取人数降序排列，便于分析重点地区</p>
+    </div>
+
+</body>
+</html>

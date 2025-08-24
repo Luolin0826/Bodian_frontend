@@ -3,6 +3,7 @@ import { createPinia } from 'pinia'
 import Antd from 'ant-design-vue'
 import router from './router'
 import App from './App.vue'
+import { setupPermissionDirective } from './directives/permission'
 
 // 样式导入
 import 'ant-design-vue/dist/reset.css'
@@ -15,6 +16,9 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.use(Antd)
+
+// 设置权限指令
+setupPermissionDirective(app)
 
 // 全局错误处理
 app.config.errorHandler = (err, _vm, info) => {

@@ -2,6 +2,7 @@ import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
 import NProgress from 'nprogress'
 import 'nprogress/nprogress.css'
 import { useUserStore } from '@/stores/user'
+import { getPermissionKeyByPath, DEFAULT_ROLE_PERMISSIONS } from '@/utils/menuPermissions'
 
 NProgress.configure({ showSpinner: false })
 
@@ -104,6 +105,12 @@ const authRoutes: RouteRecordRaw[] = [
         meta: { title: '知识库', icon: 'BookOutlined' }
       },
       {
+        path: 'data-query',
+        name: 'DataQuery',
+        component: () => import('@/views/data-query/index.vue'),
+        meta: { title: '数查一点通', icon: 'SearchOutlined' }
+      },
+      {
         path: 'user-center',
         name: 'UserCenter',
         component: () => import('@/views/user-center/index.vue'),
@@ -138,6 +145,12 @@ const authRoutes: RouteRecordRaw[] = [
         name: 'UserLoginLogs',
         component: () => import('@/views/user-center/login-logs.vue'),
         meta: { title: '登录日志', parent: 'UserCenter' }
+      },
+      {
+        path: 'user-center/devices',
+        name: 'UserDevices',
+        component: () => import('@/views/user-center/devices.vue'),
+        meta: { title: '设备管理', parent: 'UserCenter' }
       },
       {
         path: 'system',
@@ -196,7 +209,7 @@ const router = createRouter({
 })
 
 // 路由守卫
-router.beforeEach((to, _from, next) => {
+router.beforeEach(async (to, _from, next) => {
   NProgress.start()
   
   // 设置页面标题
@@ -216,9 +229,67 @@ router.beforeEach((to, _from, next) => {
     return
   }
   
-  // TODO: 这里可以添加权限校验逻辑
-  
-  next()
+  // 权限校验逻辑
+  try {
+    console.log('🔍 路由守卫权限检查:', {
+      hasUserInfo: !!userStore.userInfo,
+      userRole: userStore.userInfo?.role,
+      menuCount: userStore.permissions.menu?.length || 0,
+      targetPath: to.path
+    })
+    
+    // 如果用户信息为空或权限数据为空，先获取用户信息和权限
+    if (!userStore.userInfo || !userStore.permissions.menu || userStore.permissions.menu.length === 0) {
+      console.log('🔄 获取用户信息和权限数据...')
+      await userStore.getUserInfo()
+    }
+    
+    // 检查菜单访问权限
+    const requiresPermission = to.path !== '/' && to.path !== '/dashboard'
+    
+    if (requiresPermission) {
+      let hasPermission = false
+      
+      // 首先检查用户存储的权限
+      if (userStore.hasMenuPermission && typeof userStore.hasMenuPermission === 'function') {
+        hasPermission = userStore.hasMenuPermission(to.path)
+      }
+      
+      // 如果用户存储没有权限检查方法或返回false，使用默认权限配置作为后备
+      if (!hasPermission) {
+        const permissionKey = getPermissionKeyByPath(to.path)
+        if (permissionKey && userStore.userInfo?.role) {
+          const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[userStore.userInfo.role] || []
+          hasPermission = defaultPermissions.includes(permissionKey)
+          
+          console.log('🔄 使用默认权限配置检查:', {
+            path: to.path,
+            permissionKey,
+            userRole: userStore.userInfo.role,
+            hasDefaultPermission: hasPermission
+          })
+        }
+      }
+      
+      if (!hasPermission) {
+        console.log(`❌ 用户无权限访问页面: ${to.path}`, {
+          userRole: userStore.userInfo?.role,
+          menuPermissions: userStore.permissions.menu
+        })
+        next('/403')
+        return
+      }
+    }
+    
+    console.log(`✅ 用户有权限访问页面: ${to.path}`, {
+      userRole: userStore.userInfo?.role
+    })
+    next()
+  } catch (error) {
+    console.error('权限验证失败:', error)
+    // 权限验证失败，重新登录
+    next('/login')
+  }
 })
 
 router.afterEach(() => {

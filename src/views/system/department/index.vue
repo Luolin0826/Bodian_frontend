@@ -402,7 +402,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { 
   ApartmentOutlined,
@@ -676,7 +676,6 @@ const handleSearch = () => {
 
 // 显示新增弹窗
 const showCreateModal = (parentId?: number) => {
-  editingDepartment.value = null
   resetForm()
   if (parentId) {
     formData.parent_id = parentId
@@ -687,24 +686,21 @@ const showCreateModal = (parentId?: number) => {
 // 编辑部门
 const handleEdit = (department: Department) => {
   editingDepartment.value = department
-  // 清空表单并填充数据
-  resetForm()
-  Object.assign(formData, {
-    code: department.code || '',
-    name: department.name || '',
-    type: department.type || 'sales',
-    parent_id: department.parent_id || undefined,
-    region: department.region || '',
-    manager_id: department.manager_id || undefined,
-    description: department.description || '',
-    is_active: department.is_active ?? true
+  // 先重置表单字段，再在nextTick中填充数据
+  resetFormFields()
+  nextTick(() => {
+    Object.assign(formData, {
+      code: department.code || '',
+      name: department.name || '',
+      type: department.type || 'sales',
+      parent_id: department.parent_id || undefined,
+      region: department.region || '',
+      manager_id: department.manager_id || undefined,
+      description: department.description || '',
+      is_active: department.is_active ?? true
+    })
   })
   modalVisible.value = true
-  
-  // 确保表单验证状态正确
-  setTimeout(() => {
-    formRef.value?.clearValidate()
-  }, 100)
 }
 
 // 显示详情
@@ -815,8 +811,8 @@ const handleCancel = () => {
   resetForm()
 }
 
-// 重置表单
-const resetForm = () => {
+// 重置表单字段（用于编辑前清理）
+const resetFormFields = () => {
   Object.assign(formData, {
     code: '',
     name: '',
@@ -828,6 +824,15 @@ const resetForm = () => {
     is_active: true
   })
   formRef.value?.resetFields()
+}
+
+// 完全重置表单（用于新增）
+const resetForm = () => {
+  // 先清空编辑状态
+  editingDepartment.value = null
+  
+  // 重置表单数据
+  resetFormFields()
 }
 
 // 树展开事件

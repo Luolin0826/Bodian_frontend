@@ -141,8 +141,8 @@
     const forgotPasswordVisible = ref(false)
     
     const formState = reactive({
-      username: 'admin',
-      password: 'admin123'
+      username: '',
+      password: ''
     })
     
     // 从localStorage恢复记住的账号信息

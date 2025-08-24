@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>单位统计调试工具</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .section { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 8px; }
+        .debug-box { background: #e6f7ff; padding: 10px; margin: 10px 0; border-left: 4px solid #1890ff; font-family: monospace; font-size: 12px; }
+        .result { background: #f6ffed; padding: 10px; margin: 10px 0; border-left: 4px solid #52c41a; }
+        .error { background: #fff2f0; padding: 10px; margin: 10px 0; border-left: 4px solid #ff4d4f; }
+        .step { margin: 10px 0; padding: 8px; background: white; border-radius: 4px; }
+        .highlight { background: #fff1b8; padding: 2px 4px; border-radius: 3px; font-weight: bold; }
+        button { padding: 10px 20px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        button:hover { background: #40a9ff; }
+        textarea { width: 100%; height: 200px; font-family: monospace; font-size: 12px; }
+    </style>
+</head>
+<body>
+    <h1>🔧 单位统计调试工具</h1>
+    
+    <div class="section">
+        <h3>📥 1. 输入您的API响应数据</h3>
+        <p>请将从 <code>/api/v1/data-search/search</code> 获得的JSON响应粘贴到下面：</p>
+        <textarea id="inputData" placeholder="请粘贴您的JSON数据..."></textarea>
+        <br>
+        <button onclick="analyzeData()">🔍 分析数据</button>
+        <button onclick="loadSampleData()">📋 加载示例数据</button>
+    </div>
+    
+    <div class="section">
+        <h3>📊 2. 数据结构分析</h3>
+        <div id="dataStructureAnalysis"></div>
+    </div>
+    
+    <div class="section">
+        <h3>🧮 3. 前端逻辑模拟</h3>
+        <div id="frontendLogicResults"></div>
+    </div>
+    
+    <div class="section">
+        <h3>🎯 4. 问题诊断</h3>
+        <div id="problemDiagnosis"></div>
+    </div>
+
+    <script>
+        function loadSampleData() {
+            const sampleData = {
+                "total_records": 209,
+                "unit_statistics": {
+                    "available": true,
+                    "covered_units": 3,
+                    "units": [
+                        {"unit_name": "湖南", "region": "华中", "recruitment_count": 92, "percentage": 44.02},
+                        {"unit_name": "冀北博望", "region": "未知", "recruitment_count": 77, "percentage": 36.84},
+                        {"unit_name": "甘肃", "region": "西北", "recruitment_count": 40, "percentage": 19.14}
+                    ]
+                },
+                "statistics": {
+                    "university_level_distribution": {
+                        "211工程": 19,
+                        "985工程": 3,
+                        "双一流": 9,
+                        "普通本科": 148,
+                        "海外高校": 1,
+                        "独立学院": 29
+                    },
+                    "gender_distribution": {
+                        "女": 70,
+                        "男": 139
+                    }
+                }
+            };
+            
+            document.getElementById('inputData').value = JSON.stringify(sampleData, null, 2);
+            analyzeData();
+        }
+        
+        function analyzeData() {
+            const inputData = document.getElementById('inputData').value.trim();
+            
+            if (!inputData) {
+                alert('请先输入数据！');
+                return;
+            }
+            
+            try {
+                const data = JSON.parse(inputData);
+                
+                // 1. 数据结构分析
+                analyzeDataStructure(data);
+                
+                // 2. 模拟前端逻辑
+                simulateFrontendLogic(data);
+                
+                // 3. 问题诊断
+                diagnoseProblem(data);
+                
+            } catch (error) {
+                alert('JSON格式错误: ' + error.message);
+            }
+        }
+        
+        function analyzeDataStructure(data) {
+            const analysis = document.getElementById('dataStructureAnalysis');
+            let html = '';
+            
+            // 检查关键字段
+            const checks = [
+                {
+                    name: 'unit_statistics 字段存在',
+                    condition: !!data.unit_statistics,
+                    value: !!data.unit_statistics
+                },
+                {
+                    name: 'unit_statistics.available',
+                    condition: data.unit_statistics?.available === true,
+                    value: data.unit_statistics?.available
+                },
+                {
+                    name: 'unit_statistics.covered_units',
+                    condition: typeof data.unit_statistics?.covered_units === 'number',
+                    value: data.unit_statistics?.covered_units
+                },
+                {
+                    name: 'unit_statistics.units 数组',
+                    condition: Array.isArray(data.unit_statistics?.units),
+                    value: data.unit_statistics?.units?.length || 0
+                },
+                {
+                    name: 'statistics 字段存在',
+                    condition: !!data.statistics,
+                    value: !!data.statistics
+                }
+            ];
+            
+            checks.forEach(check => {
+                const status = check.condition ? '✅' : '❌';
+                const className = check.condition ? 'result' : 'error';
+                html += `<div class="${className}">${status} <strong>${check.name}</strong>: ${check.value}</div>`;
+            });
+            
+            // 显示原始数据结构
+            html += '<h4>📋 原始数据结构：</h4>';
+            html += '<div class="debug-box">' + JSON.stringify({
+                total_records: data.total_records,
+                unit_statistics: data.unit_statistics,
+                statistics: data.statistics
+            }, null, 2) + '</div>';
+            
+            analysis.innerHTML = html;
+        }
+        
+        function simulateFrontendLogic(backendData) {
+            const results = document.getElementById('frontendLogicResults');
+            let html = '<h4>🧮 模拟前端DataAnalytics.vue逻辑：</h4>';
+            
+            // 模拟API适配层 (recruitment.ts)
+            const adaptedData = {
+                analytics: {
+                    total_count: backendData.total_records,
+                    unit_statistics: backendData.unit_statistics,
+                    university_level_distribution: backendData.statistics?.university_level_distribution,
+                    gender_distribution: backendData.statistics?.gender_distribution
+                }
+            };
+            
+            html += '<div class="step"><strong>步骤1: API适配层处理</strong></div>';
+            html += '<div class="debug-box">props.data = ' + JSON.stringify(adaptedData, null, 2) + '</div>';
+            
+            // 模拟前端计算逻辑
+            html += '<div class="step"><strong>步骤2: 前端computed计算</strong></div>';
+            
+            // secondaryUnitsCount 计算
+            let secondaryUnitsCount = 0;
+            if (adaptedData.analytics?.unit_statistics?.covered_units !== undefined) {
+                secondaryUnitsCount = adaptedData.analytics.unit_statistics.covered_units;
+                html += '<div class="result">✅ secondaryUnitsCount = ' + secondaryUnitsCount + ' (使用covered_units字段)</div>';
+            } else if (adaptedData.analytics?.unit_statistics?.units) {
+                const units = adaptedData.analytics.unit_statistics.units;
+                const validUnits = units.filter(unit => (unit.recruitment_count || 0) > 0);
+                secondaryUnitsCount = validUnits.length;
+                html += '<div class="result">✅ secondaryUnitsCount = ' + secondaryUnitsCount + ' (统计有效units数量)</div>';
+            } else {
+                html += '<div class="error">❌ 无法计算secondaryUnitsCount</div>';
+            }
+            
+            // regionChartTitle 计算
+            let regionChartTitle = '二级单位分布';
+            if (adaptedData.analytics?.unit_statistics?.units) {
+                const units = adaptedData.analytics.unit_statistics.units;
+                const provinceLevelKeywords = ['山东', '江苏', '浙江', '河南', '四川', '湖北', '福建', '安徽', '湖南', '陕西', '江西', '辽宁', '黑龙江', '新疆', '甘肃', '河北', '山西', '重庆', '青海', '吉林', '宁夏', '上海', '北京', '天津', '西藏'];
+                
+                const hasSubUnits = units.some(unit => {
+                    const unitName = unit.unit_name || '';
+                    if (provinceLevelKeywords.includes(unitName)) return false;
+                    return unitName.includes('供电局') || unitName.includes('超高压公司') || 
+                           unitName.includes('电力科学研究院') || unitName.includes('分公司') ||
+                           unitName.includes('分部') || unitName.includes('产业集团');
+                });
+                
+                regionChartTitle = hasSubUnits ? '下属单位分布' : '二级单位分布';
+                html += '<div class="result">✅ regionChartTitle = "' + regionChartTitle + '"</div>';
+            }
+            
+            // 图表数据计算
+            let chartData = [];
+            if (adaptedData.analytics?.unit_statistics?.units) {
+                const units = adaptedData.analytics.unit_statistics.units;
+                chartData = units
+                    .filter(unit => (unit.recruitment_count || 0) > 0)
+                    .map(unit => ({
+                        name: unit.unit_name || '未知',
+                        value: unit.recruitment_count || 0,
+                        region: unit.region || '未知',
+                        percentage: unit.percentage || 0
+                    }));
+                html += '<div class="result">✅ 图表数据: ' + chartData.length + ' 个单位</div>';
+                html += '<div class="debug-box">' + JSON.stringify(chartData, null, 2) + '</div>';
+            } else {
+                html += '<div class="error">❌ 无法生成图表数据</div>';
+            }
+            
+            results.innerHTML = html;
+            
+            // 返回结果供诊断使用
+            return {
+                secondaryUnitsCount,
+                regionChartTitle,
+                chartData,
+                adaptedData
+            };
+        }
+        
+        function diagnoseProblem(data) {
+            const diagnosis = document.getElementById('problemDiagnosis');
+            let html = '<h4>🔍 问题诊断结果：</h4>';
+            
+            const frontendResult = simulateFrontendLogic(data);
+            
+            // 检查常见问题
+            const issues = [];
+            
+            if (!data.unit_statistics) {
+                issues.push('❌ 后端响应缺少 unit_statistics 字段');
+            } else if (!data.unit_statistics.available) {
+                issues.push('⚠️ unit_statistics.available = false，可能影响前端显示');
+            } else if (data.unit_statistics.covered_units === 0) {
+                issues.push('⚠️ covered_units = 0，可能没有有效的单位数据');
+            } else if (!Array.isArray(data.unit_statistics.units) || data.unit_statistics.units.length === 0) {
+                issues.push('❌ unit_statistics.units 数组为空或不存在');
+            }
+            
+            if (issues.length === 0) {
+                html += '<div class="result">✅ <strong>数据结构正常！</strong></div>';
+                html += '<div class="result">📊 预期显示效果：</div>';
+                html += '<div class="step">• 覆盖二级单位: <span class="highlight">' + frontendResult.secondaryUnitsCount + '</span></div>';
+                html += '<div class="step">• 图表标题: <span class="highlight">' + frontendResult.regionChartTitle + '</span></div>';
+                html += '<div class="step">• 图表显示: <span class="highlight">' + frontendResult.chartData.length + ' 个单位</span></div>';
+                
+                html += '<div class="result">🤔 <strong>如果前端仍然不显示，可能的原因：</strong></div>';
+                html += '<div class="step">1. 检查网络请求是否成功到达前端组件</div>';
+                html += '<div class="step">2. 检查Vue组件的props是否正确传递</div>';
+                html += '<div class="step">3. 检查浏览器控制台是否有JavaScript错误</div>';
+                html += '<div class="step">4. 检查组件是否正确更新和重新渲染</div>';
+            } else {
+                html += '<div class="error"><strong>发现问题：</strong></div>';
+                issues.forEach(issue => {
+                    html += '<div class="step">' + issue + '</div>';
+                });
+            }
+            
+            // 提供解决方案
+            html += '<div class="result">🛠️ <strong>调试建议：</strong></div>';
+            html += '<div class="step">1. 在浏览器开发者工具中检查网络请求</div>';
+            html += '<div class="step">2. 在Vue组件中添加console.log(props.data)查看数据</div>';
+            html += '<div class="step">3. 检查DataAnalytics组件是否被正确渲染</div>';
+            html += '<div class="step">4. 确认数据更新时组件重新计算了computed属性</div>';
+            
+            diagnosis.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

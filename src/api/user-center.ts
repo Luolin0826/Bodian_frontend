@@ -93,27 +93,47 @@ export interface UnreadCountResponse {
 // 登录日志接口
 export interface LoginLog {
   id: number
+  user_id: number
+  session_id?: string
   login_time: string
   logout_time?: string
   ip_address: string
-  user_agent: string
-  location: string
-  device_type: string
+  user_agent?: string
+  browser?: string
+  os?: string
+  device_type?: string
+  location?: string
   status: 'success' | 'failed'
+  failure_reason?: string
+  username?: string
+  real_name?: string
+  department_name?: string
 }
 
 export interface LoginLogResponse {
-  logs: LoginLog[]
-  total: number
-  page: number
-  per_page: number
-  pages: number
-  current_session: {
-    session_id: string
-    login_time: string
-    ip_address: string
-    expires_at: string
+  login_logs: LoginLog[]
+  pagination: {
+    page: number
+    pages: number
+    per_page: number
+    total: number
+    has_prev: boolean
+    has_next: boolean
   }
+}
+
+export interface LoginStatsResponse {
+  stats: {
+    total_logins: number
+    failed_logins: number
+    success_rate: number
+    last_login_time: string
+    last_login_ip: string
+    last_login_location: string
+    unique_ips: number
+    unique_locations: number
+  }
+  period_days: number
 }
 
 // 活跃会话接口
@@ -211,13 +231,17 @@ export const deleteNotification = (id: number): Promise<{ code: number; message:
 // 安全设置相关
 export interface LoginLogQueryParams {
   page?: number
-  per_page?: number
-  start_date?: string
-  end_date?: string
+  page_size?: number
+  status?: 'success' | 'failed'
+  days?: number
 }
 
-export const getLoginLogs = (params?: LoginLogQueryParams): Promise<{ code: number; message: string; data: LoginLogResponse }> => {
-  return request.get('/api/v1/user/login-logs', { params })
+export const getLoginLogs = (params?: LoginLogQueryParams): Promise<LoginLogResponse> => {
+  return request.get('/api/v1/auth/login-logs', { params })
+}
+
+export const getLoginStats = (params?: { days?: number }): Promise<LoginStatsResponse> => {
+  return request.get('/api/v1/auth/login-stats', { params })
 }
 
 export const logoutOtherSessions = (): Promise<{ code: number; message: string; data: { logged_out_sessions: number } }> => {

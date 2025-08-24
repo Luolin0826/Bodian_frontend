@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>学历层次映射测试</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+    }
+    .test-case {
+      margin: 10px 0;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    .result {
+      color: #666;
+      font-weight: bold;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>学历层次中英文映射测试</h1>
+  
+  <div id="test-results"></div>
+  
+  <script>
+    // 复制前端的映射逻辑
+    const educationLevelMapping = {
+      // 本科层次映射
+      '985本': 'bachelor_985',
+      '211本': 'bachelor_211',
+      '省内双一流本': 'bachelor_provincial_double_first',
+      '省外双一流本': 'bachelor_external_double_first',
+      '省内双非一本': 'bachelor_provincial_non_double',
+      '省外双非一本': 'bachelor_external_non_double',
+      '省内二本': 'bachelor_provincial_second',
+      '省外二本': 'bachelor_external_second',
+      '民办本': 'bachelor_private',
+      '专升本': 'bachelor_upgrade',
+      '专科': 'bachelor_college',
+      
+      // 硕士层次映射
+      '985硕': 'master_985',
+      '211硕': 'master_211',
+      '省内双一流硕': 'master_provincial_double_first',
+      '省外双一流硕': 'master_external_double_first',
+      '省内双非硕': 'master_provincial_non_double',
+      '省外双非硕': 'master_external_non_double'
+    }
+    
+    const convertEducationLevelToEnglish = (chineseLevel) => {
+      return educationLevelMapping[chineseLevel] || null
+    }
+    
+    // 测试用例
+    const testCases = [
+      '985本', '211本', '省内双一流本', '省外双一流本',
+      '省内双非一本', '省外双非一本', '省内二本', '省外二本',
+      '民办本', '专升本', '专科',
+      '985硕', '211硕', '省内双一流硕', '省外双一流硕',
+      '省内双非硕', '省外双非硕',
+      '不存在的层次' // 错误用例
+    ]
+    
+    const resultsDiv = document.getElementById('test-results')
+    
+    testCases.forEach(testCase => {
+      const result = convertEducationLevelToEnglish(testCase)
+      const div = document.createElement('div')
+      div.className = 'test-case'
+      
+      const isSuccess = result !== null
+      div.innerHTML = `
+        <strong>${testCase}</strong> → 
+        <span class="result ${isSuccess ? 'success' : 'error'}">
+          ${result || '映射失败'}
+        </span>
+      `
+      
+      resultsDiv.appendChild(div)
+    })
+    
+    console.log('✅ 学历层次映射测试完成')
+    console.table(educationLevelMapping)
+  </script>
+</body>
+</html>

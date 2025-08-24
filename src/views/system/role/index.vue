@@ -371,90 +371,126 @@ const dataPermissions = reactive({
   sensitive: []
 })
 
-// 菜单树数据
+// 菜单树数据 - 基于实际路由结构
 const menuTreeData = [
   {
-    title: '首页',
-    key: 'dashboard',
-    description: '系统首页',
-    children: [
-      { title: '数据统计', key: 'dashboard.stats', description: '查看统计数据' },
-      { title: '快捷操作', key: 'dashboard.shortcuts', description: '快捷操作面板' }
-    ]
+    title: '工作台',
+    key: '/dashboard',
+    description: '系统工作台首页'
   },
   {
     title: '客户管理',
-    key: 'customer',
-    description: '学生客户管理',
+    key: '/customer',
+    description: '学生客户管理模块',
     children: [
-      { title: '客户列表', key: 'customer.list', description: '查看客户列表' },
-      { title: '客户跟进', key: 'customer.follow', description: '客户跟进记录' }
+      { title: '客户列表', key: '/customer/list', description: '查看和管理客户列表' },
+      { title: '跟进管理', key: '/customer/follow', description: '客户跟进记录管理' },
+      { title: '跟进提醒', key: '/customer/reminders', description: '客户跟进提醒功能' },
+      { title: '跟进分析', key: '/customer/analytics', description: '客户跟进数据分析' }
     ]
   },
   {
     title: '销售管理',
-    key: 'sales',
-    description: '销售业务管理',
+    key: '/sales',
+    description: '销售业务管理模块',
     children: [
-      { title: '销售记录', key: 'sales.record', description: '销售记录管理' },
-      { title: '销售统计', key: 'sales.stats', description: '销售数据统计' }
+      { title: '销售记录', key: '/sales/record', description: '销售记录管理' },
+      { title: '销售统计', key: '/sales/stats', description: '销售数据统计分析' }
     ]
+  },
+  {
+    title: '话术库',
+    key: '/script',
+    description: '营销话术库管理'
   },
   {
     title: '知识库',
-    key: 'knowledge',
-    description: '知识库管理',
+    key: '/knowledge',
+    description: '企业知识库管理'
+  },
+  {
+    title: '数查一点通',
+    key: '/data-query',
+    description: '电网录取信息查询和分析工具'
+  },
+  {
+    title: '用户中心',
+    key: '/user-center',
+    description: '个人用户中心',
     children: [
-      { title: '知识查看', key: 'knowledge.view', description: '查看知识库' },
-      { title: '知识管理', key: 'knowledge.manage', description: '管理知识库' }
+      { title: '个人信息', key: '/user-center/profile', description: '个人资料管理' },
+      { title: '偏好设置', key: '/user-center/preferences', description: '个人偏好设置' },
+      { title: '消息通知', key: '/user-center/notifications', description: '消息通知管理' },
+      { title: '安全设置', key: '/user-center/security', description: '账户安全设置' },
+      { title: '登录日志', key: '/user-center/login-logs', description: '登录历史记录' }
     ]
   },
   {
-    title: '营销脚本',
-    key: 'script',
-    description: '营销脚本管理',
+    title: '系统设置',
+    key: '/system',
+    description: '系统管理设置',
     children: [
-      { title: '脚本查看', key: 'script.view', description: '查看营销脚本' },
-      { title: '脚本管理', key: 'script.manage', description: '管理营销脚本' }
-    ]
-  },
-  {
-    title: '系统管理',
-    key: 'system',
-    description: '系统设置管理',
-    children: [
-      { title: '用户管理', key: 'system.user', description: '用户账户管理' },
-      { title: '部门管理', key: 'system.department', description: '部门组织管理' },
-      { title: '角色权限', key: 'system.role', description: '角色权限配置' },
-      { title: '操作日志', key: 'system.log', description: '系统操作日志' }
+      { title: '用户管理', key: '/system/user', description: '系统用户账户管理' },
+      { title: '部门管理', key: '/system/department', description: '组织部门结构管理' },
+      { title: '角色权限', key: '/system/role', description: '系统角色权限配置' },
+      { title: '操作日志', key: '/system/log', description: '系统操作日志查看' },
+      { title: 'API测试', key: '/system/test-api', description: '系统API接口测试' }
     ]
   }
 ]
 
-// 操作权限模块
+// 操作权限模块 - 基于实际业务功能
 const operationModules = [
+  {
+    key: 'dashboard',
+    title: '工作台',
+    permissions: [
+      { key: 'dashboard.view_stats', name: '查看统计', description: '查看工作台统计数据' },
+      { key: 'dashboard.export_report', name: '导出报表', description: '导出工作台报表' }
+    ]
+  },
   {
     key: 'customer',
     title: '客户管理',
     permissions: [
       { key: 'customer.create', name: '新增客户', description: '创建新客户记录' },
-      { key: 'customer.edit', name: '编辑客户', description: '修改客户信息' },
+      { key: 'customer.edit', name: '编辑客户', description: '修改客户基本信息' },
       { key: 'customer.delete', name: '删除客户', description: '删除客户记录' },
+      { key: 'customer.view_sensitive', name: '查看敏感信息', description: '查看客户手机号等敏感信息' },
       { key: 'customer.export', name: '导出客户', description: '导出客户数据' },
-      { key: 'customer.import', name: '导入客户', description: '批量导入客户' },
-      { key: 'customer.assign', name: '分配客户', description: '分配客户给销售' }
+      { key: 'customer.import', name: '批量导入', description: '批量导入客户数据' },
+      { key: 'customer.assign', name: '分配客户', description: '分配客户给其他销售' },
+      { key: 'customer.follow_create', name: '新增跟进', description: '创建客户跟进记录' },
+      { key: 'customer.follow_edit', name: '编辑跟进', description: '修改跟进记录' },
+      { key: 'customer.follow_delete', name: '删除跟进', description: '删除跟进记录' },
+      { key: 'customer.reminder_manage', name: '提醒管理', description: '管理跟进提醒' },
+      { key: 'customer.analytics_view', name: '查看分析', description: '查看客户跟进分析报表' }
     ]
   },
   {
     key: 'sales',
     title: '销售管理',
     permissions: [
-      { key: 'sales.create', name: '新增记录', description: '创建销售记录' },
-      { key: 'sales.edit', name: '编辑记录', description: '修改销售记录' },
-      { key: 'sales.delete', name: '删除记录', description: '删除销售记录' },
-      { key: 'sales.approve', name: '审核记录', description: '审核销售记录' },
-      { key: 'sales.stats', name: '查看统计', description: '查看销售统计' },
-      { key: 'sales.commission', name: '提成管理', description: '管理销售提成' }
+      { key: 'sales.record_create', name: '新增记录', description: '创建销售记录' },
+      { key: 'sales.record_edit', name: '编辑记录', description: '修改销售记录' },
+      { key: 'sales.record_delete', name: '删除记录', description: '删除销售记录' },
+      { key: 'sales.record_approve', name: '审核记录', description: '审核销售记录' },
+      { key: 'sales.stats_view', name: '查看统计', description: '查看销售统计数据' },
+      { key: 'sales.stats_export', name: '导出统计', description: '导出销售统计报表' },
+      { key: 'sales.commission_view', name: '查看提成', description: '查看销售提成信息' },
+      { key: 'sales.commission_manage', name: '提成管理', description: '管理销售提成设置' }
+    ]
+  },
+  {
+    key: 'script',
+    title: '话术库',
+    permissions: [
+      { key: 'script.create', name: '新增话术', description: '创建新话术条目' },
+      { key: 'script.edit', name: '编辑话术', description: '修改话术内容' },
+      { key: 'script.delete', name: '删除话术', description: '删除话术条目' },
+      { key: 'script.copy', name: '复制话术', description: '复制话术内容' },
+      { key: 'script.category_manage', name: '分类管理', description: '管理话术分类' },
+      { key: 'script.export', name: '导出话术', description: '导出话术数据' }
     ]
   },
   {
@@ -464,21 +500,32 @@ const operationModules = [
       { key: 'knowledge.create', name: '新增知识', description: '创建知识条目' },
       { key: 'knowledge.edit', name: '编辑知识', description: '修改知识内容' },
       { key: 'knowledge.delete', name: '删除知识', description: '删除知识条目' },
-      { key: 'knowledge.publish', name: '发布知识', description: '发布知识条目' },
-      { key: 'knowledge.category', name: '分类管理', description: '管理知识分类' },
-      { key: 'knowledge.audit', name: '内容审核', description: '审核知识内容' }
+      { key: 'knowledge.copy', name: '复制知识', description: '复制知识内容' },
+      { key: 'knowledge.publish', name: '发布管理', description: '管理知识发布状态' },
+      { key: 'knowledge.category_manage', name: '分类管理', description: '管理知识分类' },
+      { key: 'knowledge.audit', name: '内容审核', description: '审核知识内容' },
+      { key: 'knowledge.export', name: '导出知识', description: '导出知识数据' }
     ]
   },
   {
     key: 'system',
     title: '系统管理',
     permissions: [
-      { key: 'system.user.manage', name: '用户管理', description: '管理系统用户' },
-      { key: 'system.role.manage', name: '角色管理', description: '管理系统角色' },
-      { key: 'system.dept.manage', name: '部门管理', description: '管理组织部门' },
-      { key: 'system.config', name: '系统配置', description: '系统参数配置' },
-      { key: 'system.backup', name: '数据备份', description: '系统数据备份' },
-      { key: 'system.log.view', name: '查看日志', description: '查看操作日志' }
+      { key: 'system.user_create', name: '新增用户', description: '创建系统用户' },
+      { key: 'system.user_edit', name: '编辑用户', description: '修改用户信息' },
+      { key: 'system.user_delete', name: '删除用户', description: '删除系统用户' },
+      { key: 'system.user_reset_password', name: '重置密码', description: '重置用户密码' },
+      { key: 'system.dept_create', name: '新增部门', description: '创建组织部门' },
+      { key: 'system.dept_edit', name: '编辑部门', description: '修改部门信息' },
+      { key: 'system.dept_delete', name: '删除部门', description: '删除组织部门' },
+      { key: 'system.role_create', name: '新增角色', description: '创建系统角色' },
+      { key: 'system.role_edit', name: '编辑角色', description: '修改角色信息' },
+      { key: 'system.role_delete', name: '删除角色', description: '删除系统角色' },
+      { key: 'system.role_permission', name: '权限配置', description: '配置角色权限' },
+      { key: 'system.log_view', name: '查看日志', description: '查看系统操作日志' },
+      { key: 'system.log_export', name: '导出日志', description: '导出操作日志' },
+      { key: 'system.config', name: '系统配置', description: '修改系统参数配置' },
+      { key: 'system.backup', name: '数据备份', description: '执行系统数据备份' }
     ]
   }
 ]
@@ -513,6 +560,21 @@ const displayOperationModules = computed(() => {
   // 获取所有后端返回的操作权限模块
   const backendModules = Object.keys(operationPermissions)
   
+  // 如果后端没有返回模块或选项卡切换时数据为空，使用硬编码模块作为备用
+  if (backendModules.length === 0) {
+    return operationModules.map(module => ({
+      ...module,
+      // 确保每个模块在operationPermissions中有对应的数组
+      permissions: module.permissions.map(perm => {
+        // 初始化模块权限数组（如果不存在）
+        if (!operationPermissions[module.key]) {
+          operationPermissions[module.key] = []
+        }
+        return perm
+      })
+    }))
+  }
+  
   // 为每个模块生成显示信息
   for (const moduleKey of backendModules) {
     // 查找是否有硬编码的模块配置
@@ -520,7 +582,14 @@ const displayOperationModules = computed(() => {
     
     if (hardcodedModule) {
       // 使用硬编码配置
-      modules.push(hardcodedModule)
+      modules.push({
+        ...hardcodedModule,
+        // 确保权限数组存在
+        permissions: hardcodedModule.permissions.map(perm => ({
+          ...perm,
+          // 这里可以添加动态状态检查
+        }))
+      })
     } else {
       // 动态生成模块配置
       const permissions = operationPermissions[moduleKey] || []
@@ -679,9 +748,24 @@ const selectRole = async (role: Role) => {
     // 设置菜单权限
     menuPermissions.value = permissions.menu || []
     
+    // 重置操作权限对象
+    Object.keys(operationPermissions).forEach(key => {
+      delete operationPermissions[key]
+    })
+    
     // 设置操作权限 - 直接使用后端返回的所有操作权限
     console.log('🔍 后端返回的操作权限:', permissions.operation)
-    Object.assign(operationPermissions, permissions.operation || {})
+    const backendOperationPermissions = permissions.operation || {}
+    
+    // 如果后端返回了权限数据，使用后端数据
+    if (Object.keys(backendOperationPermissions).length > 0) {
+      Object.assign(operationPermissions, backendOperationPermissions)
+    } else {
+      // 如果后端没有返回权限数据，初始化为空数组以确保UI正常显示
+      operationModules.forEach(module => {
+        operationPermissions[module.key] = []
+      })
+    }
     console.log('✅ 操作权限设置完成:', operationPermissions)
     
     // 设置数据权限
@@ -692,6 +776,10 @@ const selectRole = async (role: Role) => {
     })
   } catch (error) {
     message.error('加载角色权限失败')
+    // 出错时也要初始化操作权限，确保UI能显示
+    operationModules.forEach(module => {
+      operationPermissions[module.key] = []
+    })
   } finally {
     // 添加延迟让用户能感受到切换动画
     setTimeout(() => {
@@ -707,8 +795,8 @@ const viewRoleUsers = async (role: Role) => {
   userListLoading.value = true
   
   try {
-    const response = await getUsers({ role: role.name })
-    roleUsers.value = response.data
+    const response = await getRoleUsers(role.name)
+    roleUsers.value = response.data || response
   } catch (error) {
     message.error('加载用户列表失败')
   } finally {
@@ -740,8 +828,21 @@ const savePermissions = async () => {
   }
 }
 
+// 初始化操作权限模块
+const initializeOperationPermissions = () => {
+  // 为所有硬编码模块初始化空数组，确保UI能正常显示
+  operationModules.forEach(module => {
+    if (!operationPermissions[module.key]) {
+      operationPermissions[module.key] = []
+    }
+  })
+}
+
 // 初始化
 onMounted(() => {
+  // 先初始化操作权限模块
+  initializeOperationPermissions()
+  // 然后加载角色列表
   loadRoles()
 })
 </script>

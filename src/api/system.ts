@@ -122,13 +122,23 @@ export interface OperationLog {
   username: string
   employee_no: string
   department_name: string
+  avatar?: string
   action: string
   resource: string
   resource_id?: string
+  resource_name?: string
   description: string
   ip_address: string
   user_agent?: string
+  browser?: string
+  os?: string
+  device?: string
+  location?: string
   sensitive_operation: boolean
+  duration?: number
+  result?: 'success' | 'failed' | 'warning'
+  error_message?: string
+  changes?: any
   created_at: string
 }
 

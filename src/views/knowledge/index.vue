@@ -193,6 +193,10 @@
                       <EditOutlined />
                       编辑
                     </a-menu-item>
+                    <a-menu-item @click="copyToClipboard(knowledge.answer, knowledge)">
+                      <CopyOutlined />
+                      复制答案
+                    </a-menu-item>
                     <a-menu-divider />
                     <a-menu-item danger @click="handleDelete(knowledge)">
                       <DeleteOutlined />
@@ -262,6 +266,10 @@
                         <EditOutlined />
                         编辑
                       </a-menu-item>
+                      <a-menu-item @click="copyToClipboard(knowledge.answer, knowledge)">
+                        <CopyOutlined />
+                        复制答案
+                      </a-menu-item>
                       <a-menu-divider />
                       <a-menu-item danger @click="handleDelete(knowledge)">
                         <DeleteOutlined />
@@ -288,17 +296,28 @@
                     {{ formatDate(knowledge.created_at) }}
                   </span>
                 </div>
-                <div class="footer-tags">
-                  <span 
-                    v-for="tag in getTagList(knowledge.tags).slice(0, 2)" 
-                    :key="tag" 
-                    class="mini-tag"
+                <div class="footer-actions">
+                  <div class="footer-tags">
+                    <span 
+                      v-for="tag in getTagList(knowledge.tags).slice(0, 4)" 
+                      :key="tag" 
+                      class="mini-tag"
+                    >
+                      {{ tag }}
+                    </span>
+                    <span v-if="getTagList(knowledge.tags).length > 4" class="more-tags">
+                      +{{ getTagList(knowledge.tags).length - 4 }}
+                    </span>
+                  </div>
+                  <a-button 
+                    type="primary" 
+                    size="small" 
+                    @click.stop="copyToClipboard(knowledge.answer, knowledge)"
+                    class="copy-btn"
                   >
-                    {{ tag }}
-                  </span>
-                  <span v-if="getTagList(knowledge.tags).length > 2" class="more-tags">
-                    +{{ getTagList(knowledge.tags).length - 2 }}
-                  </span>
+                    <CopyOutlined />
+                    复制
+                  </a-button>
                 </div>
               </div>
             </div>
@@ -733,6 +752,10 @@
 
         <!-- 操作按钮 -->
         <div class="detail-actions">
+          <a-button @click="copyToClipboard(currentKnowledge.answer, currentKnowledge)" class="copy-action">
+            <CopyOutlined />
+            复制答案
+          </a-button>
           <a-button @click="handleEdit(currentKnowledge)" type="primary">
             <EditOutlined />
             编辑知识
@@ -747,8 +770,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted, watch, computed, createVNode } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, watch, computed, createVNode, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
+import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
   PlusOutlined, 
   MoreOutlined, 
@@ -767,7 +791,8 @@ import {
   LinkOutlined,
   TagsOutlined,
   InfoCircleOutlined,
-  ExclamationCircleOutlined
+  ExclamationCircleOutlined,
+  CopyOutlined
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { useResponsive } from '@/composables/useResponsive'
@@ -797,7 +822,7 @@ const submitLoading = ref(false)
 const modalVisible = ref(false)
 const detailVisible = ref(false)
 const showMobileFilters = ref(false)
-const viewMode = ref<'list' | 'grid'>('list')
+const viewMode = ref<'list' | 'grid'>('grid')
 const knowledgeList = ref<Knowledge[]>([])
 const knowledgeTypes = ref<string[]>([])
 const categories = ref<string[]>([])
@@ -834,10 +859,13 @@ const suggestedTags = computed(() => {
   }))
 })
 
+// 用户偏好设置
+const { itemsPerPage, loadPreferencesOnce } = useUserPreferences()
+
 // 分页配置
 const pagination = reactive({
   current: 1,
-  pageSize: 10,
+  pageSize: 24,
   total: 0
 })
 
@@ -978,7 +1006,6 @@ const handlePageChange = () => {
 
 // 显示新增弹窗
 const showCreateModal = () => {
-  editingKnowledge.value = null
   resetForm()
   modalVisible.value = true
 }
@@ -1077,6 +1104,10 @@ const handleCancel = () => {
 
 // 重置表单
 const resetForm = () => {
+  // 先清空编辑状态
+  editingKnowledge.value = null
+  
+  // 重置表单数据
   Object.assign(formData, {
     type: '电网考试',
     category: '',
@@ -1085,7 +1116,11 @@ const resetForm = () => {
     related_questions: '',
     tags: ''
   })
-  formRef.value?.resetFields()
+  
+  // 在下一个 tick 中重置表单字段
+  nextTick(() => {
+    formRef.value?.resetFields()
+  })
 }
 
 // 类型变化处理
@@ -1217,12 +1252,59 @@ const loadPopularTags = async () => {
   }
 }
 
+// 复制到剪贴板
+const copyToClipboard = async (text: string, knowledge?: any) => {
+  try {
+    // 检查是否支持现代剪贴板API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // 降级到传统方法（兼容HTTP环境）
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      
+      try {
+        document.execCommand('copy')
+      } finally {
+        document.body.removeChild(textArea)
+      }
+    }
+    
+    message.success('知识内容已复制到剪贴板')
+    
+    // 如果提供了knowledge对象，可以在这里更新浏览次数或其他统计
+    if (knowledge && knowledge.id) {
+      try {
+        // 这里可以调用API增加复制次数统计
+        console.log('知识复制统计:', knowledge.id)
+      } catch (error) {
+        console.error('更新复制统计失败:', error)
+      }
+    }
+  } catch (error) {
+    console.error('复制失败:', error)
+    message.error('复制失败，请手动复制')
+  }
+}
+
 // 初始化
 onMounted(async () => {
   console.log('知识库页面初始化开始')
   
   try {
-    // 并行加载基础数据
+    // 首先加载用户偏好设置
+    await loadPreferencesOnce()
+    
+    // 设置默认分页大小为用户偏好
+    pagination.pageSize = itemsPerPage.value || 20
+    
+    // 然后并行加载基础数据
     await Promise.all([
       loadKnowledge(),
       loadTypes(),
@@ -1242,6 +1324,8 @@ onMounted(async () => {
   // 设置默认视图模式
   if (isMobile.value) {
     viewMode.value = 'list'
+  } else {
+    viewMode.value = 'grid'  // 桌面端默认网格视图
   }
 })
 </script>
@@ -1648,8 +1732,8 @@ onMounted(async () => {
 // 网格视图
 .knowledge-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 24px;
   
   @media (max-width: 767px) {
     grid-template-columns: 1fr;
@@ -1661,27 +1745,48 @@ onMounted(async () => {
   cursor: pointer;
   
   .grid-card {
-    background: white;
-    border: 1px solid #f0f0f0;
-    border-radius: 12px;
+    background: linear-gradient(135deg, #ffffff 0%, #fafafa 100%);
+    border: 1px solid #e8e8e8;
+    border-radius: 16px;
     overflow: hidden;
     transition: all 0.3s ease;
     height: 100%;
     display: flex;
     flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     
     &:hover {
       border-color: #1890ff;
-      box-shadow: 0 8px 24px rgba(24, 144, 255, 0.15);
-      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(24, 144, 255, 0.2);
+      transform: translateY(-4px);
     }
     
     .card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px;
-      border-bottom: 1px solid #f5f5f5;
+      padding: 20px;
+      border-bottom: 1px solid #f0f0f0;
+      background: linear-gradient(135deg, #f8fbff 0%, #f0f9ff 100%);
+      position: relative;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #1890ff 0%, #40a9ff 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+      
+      .grid-card:hover & {
+        &::after {
+          opacity: 1;
+        }
+      }
       
       .header-tags {
         display: flex;
@@ -1702,37 +1807,47 @@ onMounted(async () => {
     }
     
     .card-content {
-      padding: 16px;
+      padding: 20px;
       flex: 1;
+      background: #ffffff;
       
       .card-question {
-        font-size: 15px;
-        font-weight: 600;
-        color: #262626;
-        margin: 0 0 12px 0;
+        font-size: 16px;
+        font-weight: 700;
+        color: #1a202c;
+        margin: 0 0 16px 0;
         line-height: 1.4;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        cursor: pointer;
+        
+        &:hover {
+          color: #1890ff;
+        }
       }
       
       .card-answer {
-        color: #595959;
-        font-size: 13px;
-        line-height: 1.5;
+        color: #666;
+        font-size: 14px;
+        line-height: 1.6;
         display: -webkit-box;
-        -webkit-line-clamp: 3;
+        -webkit-line-clamp: 4;
         -webkit-box-orient: vertical;
         overflow: hidden;
         margin: 0;
+        background: linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%);
+        padding: 12px;
+        border-radius: 8px;
+        border-left: 4px solid #52c41a;
       }
     }
     
     .card-footer {
-      padding: 12px 16px;
-      border-top: 1px solid #f5f5f5;
-      background: #fafafa;
+      padding: 16px 20px;
+      border-top: 1px solid #f0f0f0;
+      background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
       
       .footer-stats {
         display: flex;
@@ -1748,23 +1863,45 @@ onMounted(async () => {
         }
       }
       
-      .footer-tags {
+      .footer-actions {
         display: flex;
-        gap: 4px;
+        justify-content: space-between;
         align-items: center;
         
-        .mini-tag {
-          background: #f6ffed;
-          color: #52c41a;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-size: 10px;
-          border: 1px solid #d9f7be;
+        .footer-tags {
+          display: flex;
+          gap: 4px;
+          align-items: center;
+          flex: 1;
+          
+          .mini-tag {
+            background: #f6ffed;
+            color: #52c41a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 10px;
+            border: 1px solid #d9f7be;
+          }
+          
+          .more-tags {
+            color: #8c8c8c;
+            font-size: 10px;
+          }
         }
         
-        .more-tags {
-          color: #8c8c8c;
-          font-size: 10px;
+        .copy-btn {
+          background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+          border: none;
+          border-radius: 6px;
+          font-weight: 600;
+          box-shadow: 0 2px 6px rgba(24, 144, 255, 0.3);
+          margin-left: 12px;
+          
+          &:hover {
+            background: linear-gradient(135deg, #40a9ff 0%, #69c0ff 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4);
+          }
         }
       }
     }

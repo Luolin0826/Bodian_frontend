@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>头像修复测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .avatar-test {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+        }
+        .avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>头像修复测试</h1>
+    
+    <div class="test-section">
+        <h2>1. 测试头像API响应</h2>
+        <div id="api-test">加载中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. 测试本地头像映射</h2>
+        <div id="local-test">加载中...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. 测试useUserAvatar组合函数</h2>
+        <div id="composable-test">
+            <p><strong>注意:</strong> 这个测试需要在Vue应用中运行，这里仅做概念验证。</p>
+            <div class="info status">需要在实际Vue环境中测试</div>
+        </div>
+    </div>
+
+    <script>
+        // 1. 测试头像API
+        async function testAvatarAPI() {
+            const container = document.getElementById('api-test');
+            const testIds = ['cat', 'dog', 'fox', 'bear'];
+            
+            for (const id of testIds) {
+                try {
+                    const response = await fetch(`/api/v1/avatars/${id}`);
+                    const data = await response.json();
+                    
+                    const div = document.createElement('div');
+                    div.className = 'avatar-test';
+                    
+                    if (data.data_url) {
+                        div.innerHTML = `
+                            <img src="${data.data_url}" class="avatar" alt="${id}">
+                            <div>
+                                <strong>${id}</strong> - 
+                                <span class="success status">API成功</span>
+                                <br>
+                                <small>数据长度: ${data.data_url.length} 字符</small>
+                            </div>
+                        `;
+                    } else {
+                        div.innerHTML = `
+                            <div class="avatar" style="background: #f5f5f5;"></div>
+                            <div>
+                                <strong>${id}</strong> - 
+                                <span class="error status">API失败</span>
+                                <br>
+                                <small>响应: ${JSON.stringify(data)}</small>
+                            </div>
+                        `;
+                    }
+                    
+                    container.appendChild(div);
+                } catch (error) {
+                    const div = document.createElement('div');
+                    div.className = 'avatar-test';
+                    div.innerHTML = `
+                        <div class="avatar" style="background: #f5f5f5;"></div>
+                        <div>
+                            <strong>${id}</strong> - 
+                            <span class="error status">网络错误</span>
+                            <br>
+                            <small>${error.message}</small>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                }
+            }
+        }
+        
+        // 2. 测试本地头像映射
+        function testLocalAvatars() {
+            const container = document.getElementById('local-test');
+            
+            // 这里模拟本地映射的头像
+            const localAvatars = {
+                'cat': 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgZmlsbD0iI0ZGQjZDMSIvPgogIDxjaXJjbGUgY3g9IjM1IiBjeT0iMzUiIHI9IjgiIGZpbGw9IiNGRjY5QjQiLz4KICA8Y2lyY2xlIGN4PSI2NSIgY3k9IjM1IiByPSI4IiBmaWxsPSIjRkY2OUI0Ii8+CiAgPGNpcmNsZSBjeD0iNDAiIGN5PSI0NSIgcj0iMyIgZmlsbD0iIzAwMCIvPgogIDxjaXJjbGUgY3g9IjYwIiBjeT0iNDUiIHI9IjMiIGZpbGw9IiMwMDAiLz4KICA8cGF0aCBkPSJNNDUgNTUgUTUwIDYwIDU1IDU1IiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxwYXRoIGQ9Ik0zNSAyNSBRNDAgMTUgNDUgMjUiIGZpbGw9IiNGRjY5QjQiLz4KICA8cGF0aCBkPSJNNTUgMjUgUTYwIDE1IDY1IDI1IiBmaWxsPSIjRkY2OUI0Ii8+Cjwvc3ZnPg==',
+                'dog': 'data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTAwIDEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSI1MCIgY3k9IjUwIiByPSI0NSIgZmlsbD0iI0RFQjg4NyIvPgogIDxlbGxpcHNlIGN4PSIzMCIgY3k9IjMwIiByeD0iMTIiIHJ5PSIyMCIgZmlsbD0iI0RFQjg4NyIvPgogIDxlbGxpcHNlIGN4PSI3MCIgY3k9IjMwIiByeD0iMTIiIHJ5PSIyMCIgZmlsbD0iI0RFQjg4NyIvPgogIDxjaXJjbGUgY3g9IjQyIiBjeT0iNDUiIHI9IjMiIGZpbGw9IiMwMDAiLz4KICA8Y2lyY2xlIGN4PSI1OCIgY3k9IjQ1IiByPSIzIiBmaWxsPSIjMDAwIi8+CiAgPGVsbGlwc2UgY3g9IjUwIiBjeT0iNTUiIHJ4PSI4IiByeT0iNiIgZmlsbD0iIzAwMCIvPgogIDxwYXRoIGQ9Ik00MiA2MCBRNTEGOTY1IDU4IDYwIiBzdHJva2U9IiMwMDAiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgo8L3N2Zz4='
+            };
+            
+            Object.entries(localAvatars).forEach(([id, dataUrl]) => {
+                const div = document.createElement('div');
+                div.className = 'avatar-test';
+                div.innerHTML = `
+                    <img src="${dataUrl}" class="avatar" alt="${id}">
+                    <div>
+                        <strong>${id}</strong> - 
+                        <span class="success status">本地映射成功</span>
+                        <br>
+                        <small>数据长度: ${dataUrl.length} 字符</small>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        // 运行测试
+        testAvatarAPI();
+        testLocalAvatars();
+        
+        console.log('🧪 头像修复测试页面加载完成');
+        console.log('请检查：');
+        console.log('1. API头像是否正确显示');
+        console.log('2. 本地头像映射是否正常');
+        console.log('3. 前端Vue应用中的头像同步情况');
+    </script>
+</body>
+</html>

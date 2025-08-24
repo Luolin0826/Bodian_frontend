@@ -191,7 +191,7 @@
                     <KeyOutlined />
                   </a-button>
                 </a-tooltip>
-                <a-tooltip title="删除">
+                <a-tooltip title="删除" v-if="showDeleteButton(record)">
                   <a-button type="text" size="small" danger @click="handleDelete(record)">
                     <DeleteOutlined />
                   </a-button>
@@ -403,7 +403,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import dayjs, { Dayjs } from 'dayjs'
 import { 
@@ -429,9 +429,13 @@ import {
   type User,
   type Department
 } from '@/api/system'
+import { useUserStore } from '@/stores/user'
 
 // 响应式工具
 const { isMobile } = useResponsive()
+
+// 用户状态管理
+const userStore = useUserStore()
 
 // 响应式数据
 const loading = ref(false)
@@ -666,7 +670,6 @@ const onSelectChange = (keys: number[]) => {
 
 // 显示新增弹窗
 const showCreateModal = () => {
-  editingUser.value = null
   resetForm()
   modalVisible.value = true
 }
@@ -674,16 +677,20 @@ const showCreateModal = () => {
 // 编辑用户
 const handleEdit = (user: User) => {
   editingUser.value = user
-  Object.assign(formData, {
-    username: user.username,
-    real_name: user.real_name,
-    role: user.role,
-    department_id: user.department_id,
-    phone: user.phone,
-    email: user.email,
-    hire_date: user.hire_date ? dayjs(user.hire_date) : undefined,
-    is_active: user.is_active,
-    employee_no: user.employee_no
+  // 先重置表单，再在nextTick中填充数据
+  resetFormFields()
+  nextTick(() => {
+    Object.assign(formData, {
+      username: user.username,
+      real_name: user.real_name,
+      role: user.role,
+      department_id: user.department_id,
+      phone: user.phone,
+      email: user.email,
+      hire_date: user.hire_date ? dayjs(user.hire_date) : undefined,
+      is_active: user.is_active,
+      employee_no: user.employee_no
+    })
   })
   modalVisible.value = true
 }
@@ -694,12 +701,81 @@ const showDetail = (user: User) => {
   detailVisible.value = true
 }
 
+// 检查用户删除权限
+const canDeleteUser = (currentUser: User, targetUser: User): { 
+  canDelete: boolean; 
+  reason?: string 
+} => {
+  // 基础权限检查 - 只有管理员级别才能删除用户
+  if (!userStore.hasOperationPermission('user', 'delete') && 
+      !['super_admin', 'admin'].includes(currentUser.role)) {
+    return { canDelete: false, reason: '无用户删除权限' }
+  }
+
+  // 自删保护
+  if (currentUser.id === targetUser.id) {
+    return { canDelete: false, reason: '不能删除自己的账户' }
+  }
+
+  // 角色层级检查
+  const roleHierarchy = {
+    'super_admin': 4,
+    'admin': 3, 
+    'manager': 2,
+    'sales': 1,
+    'teacher': 1,
+    'viewer': 1
+  }
+
+  const currentUserLevel = roleHierarchy[currentUser.role] || 0
+  const targetUserLevel = roleHierarchy[targetUser.role] || 0
+
+  if (currentUserLevel <= targetUserLevel) {
+    return { canDelete: false, reason: '权限不足，无法删除同级或更高级用户' }
+  }
+
+  // 部门权限检查（管理员级别）
+  if (currentUser.role === 'manager') {
+    if (currentUser.department_id !== targetUser.department_id) {
+      return { canDelete: false, reason: '只能删除本部门用户' }
+    }
+  }
+
+  return { canDelete: true }
+}
+
+// 检查是否显示删除按钮
+const showDeleteButton = (user: User) => {
+  if (!userStore.userInfo) return false
+  const authResult = canDeleteUser(userStore.userInfo, user)
+  return authResult.canDelete
+}
+
 // 删除用户
 const handleDelete = (user: User) => {
+  if (!userStore.userInfo) {
+    message.error('用户信息异常')
+    return
+  }
+
+  // 权限检查
+  const authResult = canDeleteUser(userStore.userInfo, user)
+  
+  if (!authResult.canDelete) {
+    message.error(authResult.reason!)
+    return
+  }
   Modal.confirm({
-    title: '确认删除',
-    content: `确定要删除用户"${user.real_name}"吗？此操作不可恢复。`,
-    okText: '确认',
+    title: '⚠️ 危险操作确认',
+    content: `您即将删除用户"${user.real_name}"(${user.username})，此操作将：
+    
+    • 永久删除用户账户和相关数据
+    • 无法恢复已删除的信息
+    • 影响该用户的所有关联记录
+    
+    请确认您有权限执行此操作！`,
+    okText: '确认删除',
+    okType: 'danger',
     cancelText: '取消',
     onOk: async () => {
       try {
@@ -819,8 +895,8 @@ const handlePasswordCancel = () => {
   passwordForm.confirmPassword = ''
 }
 
-// 重置表单
-const resetForm = () => {
+// 重置表单字段（用于编辑前清理）
+const resetFormFields = () => {
   Object.assign(formData, {
     username: '',
     real_name: '',
@@ -835,6 +911,15 @@ const resetForm = () => {
     employee_no: ''
   })
   formRef.value?.resetFields()
+}
+
+// 完全重置表单（用于新增）
+const resetForm = () => {
+  // 先清空编辑状态
+  editingUser.value = null
+  
+  // 重置表单数据
+  resetFormFields()
 }
 
 // 初始化

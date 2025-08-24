@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10s npm run dev:*)",
+      "Bash(npx vue-tsc:*)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(vue-tsc:*)",
+      "Bash(npx vite:*)",
+      "Bash(chmod:*)",
+      "Bash(git checkout:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "defaultMode": "acceptEdits"
+  }
+}

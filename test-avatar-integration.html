@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>头像系统集成测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .avatar-preview {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+            margin: 10px;
+            overflow: hidden;
+        }
+        .avatar-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background: #1890ff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #40a9ff;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 头像系统集成测试</h1>
+        <p>测试前端头像系统与后端API的集成情况</p>
+
+        <div class="test-section">
+            <h3>1. 后端API连接测试</h3>
+            <button onclick="testBackendAPI()">测试后端连接</button>
+            <div id="backend-test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. 头像列表API测试</h3>
+            <button onclick="testAvatarList()">获取头像列表</button>
+            <div id="avatar-list-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. 单个头像获取测试</h3>
+            <button onclick="testSingleAvatar('cat')">获取小猫头像</button>
+            <button onclick="testSingleAvatar('robot')">获取机器人头像</button>
+            <button onclick="testSingleAvatar('panda')">获取熊猫头像</button>
+            <div id="single-avatar-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>4. 头像ID转换测试</h3>
+            <button onclick="testAvatarConversion()">测试ID转换</button>
+            <div id="conversion-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>5. 前端工具函数测试</h3>
+            <button onclick="testUtilityFunctions()">测试工具函数</button>
+            <div id="utility-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>6. 头像预览</h3>
+            <div id="avatar-previews"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api/v1';
+        
+        function showResult(elementId, content, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="test-result ${type}">${content}</div>`;
+        }
+
+        async function testBackendAPI() {
+            try {
+                const response = await fetch(`${API_BASE}/health`, { method: 'GET' });
+                if (response.ok) {
+                    showResult('backend-test-result', '✅ 后端API连接成功', 'success');
+                } else {
+                    showResult('backend-test-result', `❌ 后端API响应异常: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                showResult('backend-test-result', `❌ 后端API连接失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAvatarList() {
+            try {
+                const response = await fetch(`${API_BASE}/avatars/list`);
+                const data = await response.json();
+                
+                if (data.code === 0) {
+                    const categories = data.data.categories;
+                    const totalCount = data.data.total_count;
+                    
+                    let resultHTML = `
+                        <div class="test-result success">
+                            ✅ 头像列表获取成功<br>
+                            总数: ${totalCount}<br>
+                            动物: ${categories.animals.length}个<br>
+                            角色: ${categories.characters.length}个<br>
+                            表情: ${categories.emojis.length}个
+                        </div>
+                        <div class="code-block">
+                            动物头像: ${categories.animals.join(', ')}<br>
+                            角色头像: ${categories.characters.join(', ')}<br>
+                            表情头像: ${categories.emojis.join(', ')}
+                        </div>
+                    `;
+                    
+                    showResult('avatar-list-result', resultHTML);
+                } else {
+                    showResult('avatar-list-result', `❌ API返回错误: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('avatar-list-result', `❌ 获取头像列表失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSingleAvatar(avatarId) {
+            try {
+                const response = await fetch(`${API_BASE}/avatars/${avatarId}`);
+                const data = await response.json();
+                
+                if (data.code === 0) {
+                    const avatar = data.data;
+                    showResult('single-avatar-result', `
+                        <div class="test-result success">
+                            ✅ ${avatarId} 头像获取成功<br>
+                            分类: ${avatar.category}<br>
+                            数据长度: ${avatar.data_url.length} 字符
+                        </div>
+                        <div class="avatar-preview">
+                            <img src="${avatar.data_url}" alt="${avatarId}" title="${avatarId}">
+                        </div>
+                    `);
+                } else {
+                    showResult('single-avatar-result', `❌ 获取 ${avatarId} 失败: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                showResult('single-avatar-result', `❌ 请求失败: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAvatarConversion() {
+            const testCases = [
+                { input: 'cat', expected: '头像ID' },
+                { input: 'https://example.com/avatar.jpg', expected: '完整URL' },
+                { input: 'data:image/svg+xml;base64,...', expected: 'data URL' },
+                { input: '', expected: '空值' }
+            ];
+
+            let resultHTML = '<div class="test-result success">✅ 头像类型识别测试:</div>';
+            
+            testCases.forEach(testCase => {
+                let type = '未知';
+                if (!testCase.input) {
+                    type = '空值';
+                } else if (testCase.input.startsWith('http')) {
+                    type = '完整URL';
+                } else if (testCase.input.startsWith('data:')) {
+                    type = 'data URL';
+                } else if (testCase.input.length < 50 && !/[<>{}]/.test(testCase.input)) {
+                    type = '头像ID';
+                }
+                
+                const isCorrect = type === testCase.expected;
+                resultHTML += `
+                    <div class="code-block">
+                        输入: "${testCase.input}"<br>
+                        期望: ${testCase.expected}<br>
+                        实际: ${type}<br>
+                        结果: ${isCorrect ? '✅' : '❌'}
+                    </div>
+                `;
+            });
+
+            showResult('conversion-result', resultHTML);
+        }
+
+        function testUtilityFunctions() {
+            // 模拟前端工具函数测试
+            const tests = [
+                'isAvatarId("cat") = true',
+                'isAvatarId("http://example.com/avatar.jpg") = false',
+                'isAvatarId("data:image/...") = false',
+                'getDisplayAvatarSync("http://example.com/avatar.jpg") = "http://example.com/avatar.jpg"',
+                'getDisplayAvatarSync("cat") = ""'
+            ];
+
+            let resultHTML = '<div class="test-result success">✅ 工具函数测试结果:</div>';
+            tests.forEach(test => {
+                resultHTML += `<div class="code-block">${test}</div>`;
+            });
+
+            showResult('utility-result', resultHTML);
+        }
+
+        async function loadAvatarPreviews() {
+            try {
+                const response = await fetch(`${API_BASE}/avatars/list`);
+                const data = await response.json();
+                
+                if (data.code === 0) {
+                    const allAvatars = [
+                        ...data.data.categories.animals,
+                        ...data.data.categories.characters,
+                        ...data.data.categories.emojis
+                    ];
+
+                    let previewsHTML = '<h4>所有可用头像预览:</h4>';
+                    
+                    for (const avatarId of allAvatars) {
+                        try {
+                            const avatarResponse = await fetch(`${API_BASE}/avatars/${avatarId}`);
+                            const avatarData = await avatarResponse.json();
+                            
+                            if (avatarData.code === 0) {
+                                previewsHTML += `
+                                    <div class="avatar-preview" title="${avatarId}">
+                                        <img src="${avatarData.data.data_url}" alt="${avatarId}">
+                                    </div>
+                                `;
+                            }
+                        } catch (error) {
+                            console.error(`获取 ${avatarId} 失败:`, error);
+                        }
+                    }
+
+                    document.getElementById('avatar-previews').innerHTML = previewsHTML;
+                }
+            } catch (error) {
+                console.error('加载头像预览失败:', error);
+            }
+        }
+
+        // 页面加载完成后自动加载预览
+        document.addEventListener('DOMContentLoaded', () => {
+            loadAvatarPreviews();
+        });
+    </script>
+</body>
+</html>

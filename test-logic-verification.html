@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逻辑验证测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .test-section { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        .result { background: #e6f7ff; padding: 10px; margin: 5px 0; border-left: 4px solid #1890ff; }
+        .success { background: #f6ffed; border-left-color: #52c41a; }
+        .error { background: #fff2f0; border-left-color: #ff4d4f; }
+    </style>
+</head>
+<body>
+    <h1>🔧 DataAnalytics 逻辑验证测试</h1>
+    
+    <div class="test-section">
+        <h3>📊 测试数据（用户提供的最新数据）</h3>
+        <pre id="testData"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h3>🧪 测试结果</h3>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        // 用户提供的测试数据
+        const testData = {
+            analytics: {
+                total_count: 7,
+                university_level_distribution: {
+                    "985工程": 3,
+                    "211工程": 2,
+                    "普通本科": 2
+                },
+                unit_statistics: {
+                    available: true,
+                    covered_units: 7,
+                    total_units: 7,
+                    units: [
+                        {unit_name: "广东", region: "华南", recruitment_count: 2, percentage: 28.57},
+                        {unit_name: "云南", region: "西南", recruitment_count: 1, percentage: 14.29},
+                        {unit_name: "广西", region: "华南", recruitment_count: 1, percentage: 14.29},
+                        {unit_name: "贵州", region: "西南", recruitment_count: 1, percentage: 14.29},
+                        {unit_name: "海南", region: "华南", recruitment_count: 1, percentage: 14.29},
+                        {unit_name: "深圳供电局", region: "华南", recruitment_count: 1, percentage: 14.29},
+                        {unit_name: "超高压公司", region: "华南", recruitment_count: 1, percentage: 14.29}
+                    ]
+                },
+                school_statistics: {
+                    schools: [
+                        {school_name: "华南理工大学", school_type: "985工程", school_level: "985工程", recruitment_count: 2, percentage: 28.57},
+                        {school_name: "中南大学", school_type: "985工程", school_level: "985工程", recruitment_count: 1, percentage: 14.29},
+                        // ... 其他学校数据
+                    ]
+                },
+                gender_distribution: {
+                    "男": 5,
+                    "女": 2
+                }
+            }
+        };
+        
+        document.getElementById('testData').textContent = JSON.stringify(testData, null, 2);
+        
+        // 模拟 DataAnalytics.vue 中的计算逻辑
+        function testSecondaryUnitsCount(data) {
+            // 优先使用新的unit_statistics.covered_units字段
+            if (data?.analytics?.unit_statistics?.covered_units !== undefined) {
+                return data.analytics.unit_statistics.covered_units;
+            }
+            
+            // 如果有unit_statistics.units数据，统计有效单位数量
+            if (data?.analytics?.unit_statistics?.units) {
+                const units = data.analytics.unit_statistics.units;
+                const validUnits = units.filter(unit => (unit.recruitment_count || 0) > 0);
+                return validUnits.length;
+            }
+            
+            return 0;
+        }
+        
+        function testRegionChartTitle(data) {
+            if (!data?.analytics?.unit_statistics?.units) return '二级单位分布';
+            
+            const units = data.analytics.unit_statistics.units;
+            const provinceLevelKeywords = ['山东', '江苏', '浙江', '河南', '四川', '湖北', '福建', '安徽', '湖南', '陕西', '江西', '辽宁', '黑龙江', '新疆', '甘肃', '河北', '山西', '重庆', '青海', '吉林', '宁夏', '上海', '北京', '天津', '西藏'];
+            
+            // 检查是否有更细分的单位
+            const hasSubUnits = units.some(unit => {
+                const unitName = unit.unit_name || '';
+                if (provinceLevelKeywords.includes(unitName)) return false;
+                return unitName.includes('电力科学研究院') || unitName.includes('经济技术研究院') || 
+                       unitName.includes('分公司') || unitName.includes('分部') ||
+                       unitName.includes('产业集团') || unitName.includes('客服中心') ||
+                       unitName.includes('特高压') || unitName.includes('技术学院') ||
+                       unitName.includes('供电局') || unitName.includes('超高压公司');
+            });
+            
+            return hasSubUnits ? '下属单位分布' : '二级单位分布';
+        }
+        
+        function testKeySchoolCount(data) {
+            const levelDist = data?.analytics?.university_level_distribution || {};
+            let keyCount = 0;
+            keyCount += levelDist['985工程'] || 0;
+            keyCount += levelDist['211工程'] || 0;
+            keyCount += levelDist['双一流'] || 0;
+            return keyCount;
+        }
+        
+        function testGenderRatio(data) {
+            const genderDist = data?.analytics?.gender_distribution;
+            if (!genderDist) return '暂无数据';
+            
+            const male = genderDist['男'] || genderDist.male || 0;
+            const female = genderDist['女'] || genderDist.female || 0;
+            
+            if (male === 0 && female === 0) return '暂无数据';
+            if (female === 0) return '全男';
+            if (male === 0) return '全女';
+            
+            const ratio = Math.round(male / female * 10) / 10;
+            return `${ratio}:1`;
+        }
+        
+        // 运行测试
+        const resultsContainer = document.getElementById('results');
+        
+        const secondaryUnits = testSecondaryUnitsCount(testData);
+        const chartTitle = testRegionChartTitle(testData);
+        const keySchools = testKeySchoolCount(testData);
+        const genderRatio = testGenderRatio(testData);
+        
+        const results = [
+            {
+                test: '覆盖二级单位数量',
+                expected: 7,
+                actual: secondaryUnits,
+                success: secondaryUnits === 7
+            },
+            {
+                test: '图表标题判断',
+                expected: '下属单位分布',
+                actual: chartTitle,
+                success: chartTitle === '下属单位分布'
+            },
+            {
+                test: '重点学校录取人数',
+                expected: 5,
+                actual: keySchools,
+                success: keySchools === 5
+            },
+            {
+                test: '男女比例',
+                expected: '2.5:1',
+                actual: genderRatio,
+                success: genderRatio === '2.5:1'
+            }
+        ];
+        
+        results.forEach(result => {
+            const div = document.createElement('div');
+            div.className = `result ${result.success ? 'success' : 'error'}`;
+            div.innerHTML = `
+                <strong>${result.test}</strong><br>
+                预期: ${result.expected}<br>
+                实际: ${result.actual}<br>
+                状态: ${result.success ? '✅ 通过' : '❌ 失败'}
+            `;
+            resultsContainer.appendChild(div);
+        });
+    </script>
+</body>
+</html>

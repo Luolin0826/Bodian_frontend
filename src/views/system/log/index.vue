@@ -156,10 +156,16 @@
             
             <template v-if="column.key === 'user_info'">
               <div class="user-info">
-                <a-avatar :src="record.avatar">{{ record.username?.[0]?.toUpperCase() }}</a-avatar>
+                <a-badge :dot="record.sensitive_operation" :color="record.sensitive_operation ? 'red' : 'transparent'">
+                  <a-avatar :src="record.avatar" :style="{border: record.sensitive_operation ? '2px solid #ff4d4f' : '2px solid #d9d9d9'}">
+                    {{ record.username?.[0]?.toUpperCase() }}
+                  </a-avatar>
+                </a-badge>
                 <div class="user-details">
                   <div class="user-name">{{ record.username }}</div>
-                  <div class="user-employee">{{ record.employee_no }}</div>
+                  <div class="user-employee">
+                    <a-tag size="small" color="blue">{{ record.employee_no }}</a-tag>
+                  </div>
                   <div class="user-department">{{ record.department_name }}</div>
                 </div>
               </div>
@@ -167,22 +173,39 @@
             
             <template v-if="column.key === 'action'">
               <div class="action-info">
-                <a-tag :color="getActionColor(record.action)" class="action-tag">
-                  <component :is="getActionIcon(record.action)" />
-                  {{ getActionLabel(record.action) }}
-                </a-tag>
-                <a-tag v-if="record.sensitive_operation" color="red" size="small">
-                  敏感
-                </a-tag>
+                <div class="action-main">
+                  <a-tag :color="getActionColor(record.action)" class="action-tag">
+                    <component :is="getActionIcon(record.action)" />
+                    {{ getActionLabel(record.action) }}
+                  </a-tag>
+                  <a-badge v-if="getResultIcon(record.result)" :color="getResultColor(record.result)" class="result-badge">
+                    <component :is="getResultIcon(record.result)" />
+                  </a-badge>
+                </div>
+                <div class="action-meta">
+                  <a-tag v-if="record.sensitive_operation" color="red" size="small" class="sensitive-tag">
+                    <ExclamationCircleOutlined />
+                    敏感操作
+                  </a-tag>
+                  <span v-if="record.duration" class="duration">
+                    {{ formatDuration(record.duration) }}
+                  </span>
+                </div>
               </div>
             </template>
             
             <template v-if="column.key === 'resource'">
               <div class="resource-info">
-                <a-tag :color="getResourceColor(record.resource)">
-                  {{ getResourceLabel(record.resource) }}
-                </a-tag>
-                <span v-if="record.resource_id" class="resource-id">#{{ record.resource_id }}</span>
+                <div class="resource-main">
+                  <a-tag :color="getResourceColor(record.resource)" class="resource-tag">
+                    <component :is="getResourceIcon(record.resource)" />
+                    {{ getResourceLabel(record.resource) }}
+                  </a-tag>
+                </div>
+                <div class="resource-meta">
+                  <span v-if="record.resource_id" class="resource-id">#{{ record.resource_id }}</span>
+                  <span v-if="record.resource_name" class="resource-name">{{ record.resource_name }}</span>
+                </div>
               </div>
             </template>
             
@@ -239,62 +262,129 @@
       <div v-if="currentLog" class="detail-content">
         <!-- 基本信息 -->
         <div class="detail-section">
-          <h3 class="section-title">基本信息</h3>
+          <h3 class="section-title">
+            <UserOutlined />
+            基本信息
+          </h3>
           <div class="detail-header">
             <div class="log-user">
-              <a-avatar :src="currentLog.avatar" :size="60">
-                {{ currentLog.username?.[0]?.toUpperCase() }}
-              </a-avatar>
+              <a-badge :dot="currentLog.sensitive_operation" :color="currentLog.sensitive_operation ? 'red' : 'transparent'">
+                <a-avatar :src="currentLog.avatar" :size="60" :style="{border: currentLog.sensitive_operation ? '3px solid #ff4d4f' : '3px solid #d9d9d9'}">
+                  {{ currentLog.username?.[0]?.toUpperCase() }}
+                </a-avatar>
+              </a-badge>
               <div class="user-info">
                 <h4>{{ currentLog.username }}</h4>
-                <p>{{ currentLog.employee_no }} | {{ currentLog.department_name }}</p>
-                <a-tag :color="getActionColor(currentLog.action)">
-                  <component :is="getActionIcon(currentLog.action)" />
-                  {{ getActionLabel(currentLog.action) }}
-                </a-tag>
-                <a-tag v-if="currentLog.sensitive_operation" color="red">
-                  敏感操作
-                </a-tag>
+                <p>
+                  <a-tag size="small" color="blue">{{ currentLog.employee_no }}</a-tag>
+                  <a-divider type="vertical" />
+                  {{ currentLog.department_name }}
+                </p>
+                <div class="user-tags">
+                  <a-tag :color="getActionColor(currentLog.action)">
+                    <component :is="getActionIcon(currentLog.action)" />
+                    {{ getActionLabel(currentLog.action) }}
+                  </a-tag>
+                  <a-tag v-if="getResultIcon(currentLog.result)" :color="getResultColor(currentLog.result)">
+                    <component :is="getResultIcon(currentLog.result)" />
+                    {{ currentLog.result === 'success' ? '成功' : currentLog.result === 'failed' ? '失败' : '警告' }}
+                  </a-tag>
+                  <a-tag v-if="currentLog.sensitive_operation" color="red">
+                    <ExclamationCircleOutlined />
+                    敏感操作
+                  </a-tag>
+                </div>
               </div>
             </div>
             <div class="log-time">
-              <div class="time-label">操作时间</div>
-              <div class="time-value">{{ formatDateTime(currentLog.created_at) }}</div>
+              <div class="time-stats">
+                <div class="time-item">
+                  <div class="time-label">操作时间</div>
+                  <div class="time-value">{{ formatDateTime(currentLog.created_at) }}</div>
+                </div>
+                <div v-if="currentLog.duration" class="time-item">
+                  <div class="time-label">耗时</div>
+                  <div class="time-value">{{ formatDuration(currentLog.duration) }}</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <!-- 操作详情 -->
         <div class="detail-section">
-          <h3 class="section-title">操作详情</h3>
+          <h3 class="section-title">
+            <SettingOutlined />
+            操作详情
+          </h3>
           <div class="operation-details">
             <div class="detail-item">
               <label>操作对象</label>
               <div class="detail-value">
                 <a-tag :color="getResourceColor(currentLog.resource)">
+                  <component :is="getResourceIcon(currentLog.resource)" />
                   {{ getResourceLabel(currentLog.resource) }}
                 </a-tag>
                 <span v-if="currentLog.resource_id" class="resource-id">#{{ currentLog.resource_id }}</span>
+                <span v-if="currentLog.resource_name" class="resource-name">{{ currentLog.resource_name }}</span>
               </div>
             </div>
             <div class="detail-item">
               <label>操作描述</label>
               <div class="detail-value description-full">{{ currentLog.description }}</div>
             </div>
+            <div v-if="currentLog.error_message" class="detail-item">
+              <label>错误信息</label>
+              <div class="detail-value error-message">
+                <a-alert type="error" :message="currentLog.error_message" show-icon />
+              </div>
+            </div>
+            <div v-if="currentLog.changes" class="detail-item">
+              <label>变更内容</label>
+              <div class="detail-value">
+                <a-collapse ghost>
+                  <a-collapse-panel key="changes" header="查看详细变更">
+                    <pre class="changes-content">{{ JSON.stringify(currentLog.changes, null, 2) }}</pre>
+                  </a-collapse-panel>
+                </a-collapse>
+              </div>
+            </div>
           </div>
         </div>
 
         <!-- 技术信息 -->
         <div class="detail-section">
-          <h3 class="section-title">技术信息</h3>
+          <h3 class="section-title">
+            <InfoCircleOutlined />
+            技术信息
+          </h3>
           <div class="tech-details">
-            <div class="detail-item">
-              <label>IP地址</label>
-              <div class="detail-value">{{ currentLog.ip_address }}</div>
+            <div class="detail-grid">
+              <div class="detail-item">
+                <label>IP地址</label>
+                <div class="detail-value ip-value">
+                  <a-tag color="purple">{{ currentLog.ip_address }}</a-tag>
+                  <span v-if="currentLog.location" class="location">{{ currentLog.location }}</span>
+                </div>
+              </div>
+              <div v-if="currentLog.browser" class="detail-item">
+                <label>浏览器</label>
+                <div class="detail-value">{{ currentLog.browser }}</div>
+              </div>
+              <div v-if="currentLog.os" class="detail-item">
+                <label>操作系统</label>
+                <div class="detail-value">{{ currentLog.os }}</div>
+              </div>
+              <div v-if="currentLog.device" class="detail-item">
+                <label>设备类型</label>
+                <div class="detail-value">{{ currentLog.device }}</div>
+              </div>
             </div>
-            <div class="detail-item">
+            <div v-if="currentLog.user_agent" class="detail-item full-width">
               <label>用户代理</label>
-              <div class="detail-value user-agent">{{ currentLog.user_agent }}</div>
+              <div class="detail-value user-agent">
+                <a-typography-text copyable>{{ currentLog.user_agent }}</a-typography-text>
+              </div>
             </div>
           </div>
         </div>
@@ -315,36 +405,96 @@
     <!-- 相关日志弹窗 -->
     <a-modal
       v-model:open="relatedLogsVisible"
-      title="相关操作日志"
-      width="1200px"
+      width="1400px"
       :footer="null"
+      class="related-logs-modal"
     >
-      <a-table
-        :columns="relatedLogColumns"
-        :data-source="relatedLogs"
-        :loading="relatedLogsLoading"
-        :pagination="false"
-        row-key="id"
-        size="small"
-      >
-        <template #bodyCell="{ column, record }">
-          <template v-if="column.key === 'created_at'">
-            {{ formatDateTime(record.created_at) }}
+      <template #title>
+        <div class="related-title">
+          <LinkOutlined />
+          <span>相关操作日志</span>
+          <a-tag color="blue" v-if="relatedLogs.length">{{ relatedLogs.length }} 条相关记录</a-tag>
+        </div>
+      </template>
+      
+      <div class="related-content">
+        <!-- 关联说明 -->
+        <a-alert
+          message="智能关联分析"
+          description="系统自动分析了同一用户的时序操作、同一资源的历史操作、以及相同类型的近期操作"
+          type="info"
+          show-icon
+          class="relation-info"
+        />
+        
+        <a-table
+          :columns="relatedLogColumns"
+          :data-source="relatedLogs"
+          :loading="relatedLogsLoading"
+          :pagination="{ pageSize: 20, showSizeChanger: true }"
+          row-key="id"
+          size="small"
+          :scroll="{ x: 1200 }"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'created_at'">
+              <div class="time-cell">
+                <div>{{ formatDateTime(record.created_at) }}</div>
+                <div class="time-diff">{{ getTimeDiff(record.created_at, currentLog?.created_at) }}</div>
+              </div>
+            </template>
+            
+            <template v-if="column.key === 'user_info'">
+              <div class="mini-user-info">
+                <a-avatar size="small" :src="record.avatar">{{ record.username?.[0]?.toUpperCase() }}</a-avatar>
+                <span class="username">{{ record.username }}</span>
+                <a-tag v-if="record.user_id === currentLog?.user_id" color="green" size="small">同用户</a-tag>
+              </div>
+            </template>
+            
+            <template v-if="column.key === 'action'">
+              <div class="action-cell">
+                <a-tag :color="getActionColor(record.action)" size="small">
+                  <component :is="getActionIcon(record.action)" />
+                  {{ getActionLabel(record.action) }}
+                </a-tag>
+                <a-tag v-if="record.action === currentLog?.action" color="orange" size="small">同操作</a-tag>
+              </div>
+            </template>
+            
+            <template v-if="column.key === 'resource'">
+              <div class="resource-cell">
+                <a-tag :color="getResourceColor(record.resource)" size="small">
+                  <component :is="getResourceIcon(record.resource)" />
+                  {{ getResourceLabel(record.resource) }}
+                </a-tag>
+                <span v-if="record.resource_id" class="resource-id">#{{ record.resource_id }}</span>
+                <a-tag v-if="record.resource === currentLog?.resource && record.resource_id === currentLog?.resource_id" color="purple" size="small">同资源</a-tag>
+              </div>
+            </template>
+            
+            <template v-if="column.key === 'relation'">
+              <div class="relation-tags">
+                <a-tag v-if="record.user_id === currentLog?.user_id" color="green" size="small">
+                  <UserOutlined />用户关联
+                </a-tag>
+                <a-tag v-if="record.resource === currentLog?.resource && record.resource_id === currentLog?.resource_id" color="purple" size="small">
+                  <LinkOutlined />资源关联
+                </a-tag>
+                <a-tag v-if="record.action === currentLog?.action && record.resource === currentLog?.resource" color="orange" size="small">
+                  <SettingOutlined />操作关联
+                </a-tag>
+              </div>
+            </template>
+            
+            <template v-if="column.key === 'actions'">
+              <a-button type="link" size="small" @click="showDetail(record)">
+                <EyeOutlined />详情
+              </a-button>
+            </template>
           </template>
-          
-          <template v-if="column.key === 'action'">
-            <a-tag :color="getActionColor(record.action)" size="small">
-              {{ getActionLabel(record.action) }}
-            </a-tag>
-          </template>
-          
-          <template v-if="column.key === 'resource'">
-            <a-tag :color="getResourceColor(record.resource)" size="small">
-              {{ getResourceLabel(record.resource) }}
-            </a-tag>
-          </template>
-        </template>
-      </a-table>
+        </a-table>
+      </div>
     </a-modal>
   </div>
 </template>
@@ -370,7 +520,15 @@ import {
   DeleteOutlined,
   ExportOutlined,
   ImportOutlined,
-  CheckOutlined
+  CheckOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  WarningOutlined,
+  TeamOutlined,
+  ShoppingOutlined,
+  BookOutlined,
+  SettingOutlined,
+  CustomerServiceOutlined
 } from '@ant-design/icons-vue'
 import { useResponsive } from '@/composables/useResponsive'
 import {
@@ -435,11 +593,13 @@ const tableColumns = [
 
 // 相关日志表格列
 const relatedLogColumns = [
-  { title: '时间', dataIndex: 'created_at', key: 'created_at', width: 150 },
-  { title: '用户', dataIndex: 'username', key: 'username', width: 100 },
-  { title: '操作', dataIndex: 'action', key: 'action', width: 100 },
-  { title: '对象', dataIndex: 'resource', key: 'resource', width: 100 },
-  { title: '描述', dataIndex: 'description', key: 'description', minWidth: 200 }
+  { title: '时间', dataIndex: 'created_at', key: 'created_at', width: 160 },
+  { title: '用户', dataIndex: 'user_info', key: 'user_info', width: 140 },
+  { title: '操作', dataIndex: 'action', key: 'action', width: 140 },
+  { title: '对象', dataIndex: 'resource', key: 'resource', width: 150 },
+  { title: '关联类型', dataIndex: 'relation', key: 'relation', width: 180 },
+  { title: '描述', dataIndex: 'description', key: 'description', minWidth: 200 },
+  { title: '操作', key: 'actions', width: 80, fixed: 'right' }
 ]
 
 // 获取操作图标
@@ -513,6 +673,72 @@ const getResourceLabel = (resource: string) => {
     system: '系统'
   }
   return labelMap[resource] || resource
+}
+
+// 获取资源图标
+const getResourceIcon = (resource: string) => {
+  const iconMap: Record<string, any> = {
+    user: UserOutlined,
+    department: TeamOutlined,
+    customer: CustomerServiceOutlined,
+    sales: ShoppingOutlined,
+    knowledge: BookOutlined,
+    script: FileTextOutlined,
+    system: SettingOutlined
+  }
+  return iconMap[resource] || FileTextOutlined
+}
+
+// 获取结果图标
+const getResultIcon = (result?: string) => {
+  if (!result) return null
+  const iconMap: Record<string, any> = {
+    success: CheckCircleOutlined,
+    failed: CloseCircleOutlined,
+    warning: WarningOutlined
+  }
+  return iconMap[result] || null
+}
+
+// 获取结果颜色
+const getResultColor = (result?: string) => {
+  if (!result) return 'default'
+  const colorMap: Record<string, string> = {
+    success: 'green',
+    failed: 'red',
+    warning: 'orange'
+  }
+  return colorMap[result] || 'default'
+}
+
+// 格式化持续时间
+const formatDuration = (duration: number) => {
+  if (duration < 1000) {
+    return `${duration}ms`
+  } else if (duration < 60000) {
+    return `${(duration / 1000).toFixed(1)}s`
+  } else {
+    return `${(duration / 60000).toFixed(1)}m`
+  }
+}
+
+// 计算时间差
+const getTimeDiff = (timeA?: string, timeB?: string) => {
+  if (!timeA || !timeB) return ''
+  
+  const diff = dayjs(timeA).valueOf() - dayjs(timeB).valueOf()
+  const absDiff = Math.abs(diff)
+  const prefix = diff > 0 ? '+' : '-'
+  
+  if (absDiff < 60000) {
+    return `${prefix}${Math.floor(absDiff / 1000)}秒`
+  } else if (absDiff < 3600000) {
+    return `${prefix}${Math.floor(absDiff / 60000)}分钟`
+  } else if (absDiff < 86400000) {
+    return `${prefix}${Math.floor(absDiff / 3600000)}小时`
+  } else {
+    return `${prefix}${Math.floor(absDiff / 86400000)}天`
+  }
 }
 
 // 格式化日期
@@ -621,18 +847,51 @@ const viewRelatedLogs = async (log: OperationLog) => {
   relatedLogsLoading.value = true
   
   try {
-    // 查找同一用户、同一对象或同一时间段的相关日志
-    const params = {
+    // 构建多种关联查询条件
+    const queries = []
+    
+    // 1. 同一用户在前后1小时的操作
+    queries.push({
       user_id: log.user_id,
-      resource: log.resource,
-      resource_id: log.resource_id,
       date_start: dayjs(log.created_at).subtract(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
       date_end: dayjs(log.created_at).add(1, 'hour').format('YYYY-MM-DD HH:mm:ss'),
-      per_page: 50
+      per_page: 20
+    })
+    
+    // 2. 同一资源对象的所有操作
+    if (log.resource_id) {
+      queries.push({
+        resource: log.resource,
+        resource_id: log.resource_id,
+        date_start: dayjs(log.created_at).subtract(24, 'hour').format('YYYY-MM-DD HH:mm:ss'),
+        per_page: 20
+      })
     }
     
-    const response = await getOperationLogs(params)
-    relatedLogs.value = response.data.filter(item => item.id !== log.id)
+    // 3. 同一类型操作的最近记录
+    queries.push({
+      action: log.action,
+      resource: log.resource,
+      date_start: dayjs(log.created_at).subtract(24, 'hour').format('YYYY-MM-DD HH:mm:ss'),
+      per_page: 10
+    })
+    
+    // 并行查询所有相关日志
+    const responses = await Promise.all(
+      queries.map(params => getOperationLogs(params))
+    )
+    
+    // 合并去重结果
+    const allLogs = responses.flatMap(response => response.data)
+    const uniqueLogs = Array.from(
+      new Map(allLogs.map(item => [item.id, item])).values()
+    ).filter(item => item.id !== log.id)
+    
+    // 按时间排序
+    relatedLogs.value = uniqueLogs.sort((a, b) => 
+      dayjs(b.created_at).valueOf() - dayjs(a.created_at).valueOf()
+    ).slice(0, 50) // 限制显示数量
+    
   } catch (error) {
     message.error('加载相关日志失败')
   } finally {
@@ -947,6 +1206,13 @@ onMounted(() => {
       font-weight: 600;
       margin-bottom: 16px;
       color: #262626;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .anticon {
+        color: #1890ff;
+      }
     }
   }
   
@@ -1051,6 +1317,171 @@ onMounted(() => {
     justify-content: flex-end;
     padding-top: 16px;
     border-top: 1px solid #f0f0f0;
+  }
+  
+  .user-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  
+  .time-stats {
+    .time-item {
+      margin-bottom: 12px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+  
+  .detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  
+  .full-width {
+    grid-column: 1 / -1;
+  }
+  
+  .ip-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .location {
+      color: #8c8c8c;
+      font-size: 12px;
+    }
+  }
+  
+  .changes-content {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 12px;
+    font-size: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  
+  .error-message {
+    margin-top: 4px;
+  }
+}
+
+// 操作信息美化
+.action-info {
+  .action-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  
+  .action-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .duration {
+      font-size: 11px;
+      color: #8c8c8c;
+      background: #f5f5f5;
+      padding: 1px 4px;
+      border-radius: 2px;
+    }
+    
+    .sensitive-tag {
+      font-size: 11px;
+    }
+  }
+  
+  .result-badge {
+    .anticon {
+      font-size: 12px;
+    }
+  }
+}
+
+.resource-info {
+  .resource-main {
+    margin-bottom: 4px;
+  }
+  
+  .resource-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .resource-id {
+      font-size: 11px;
+      color: #8c8c8c;
+      font-family: 'Courier New', monospace;
+    }
+    
+    .resource-name {
+      font-size: 11px;
+      color: #595959;
+      max-width: 120px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+// 相关日志弹窗
+.related-logs-modal {
+  .related-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    
+    .anticon {
+      color: #1890ff;
+    }
+  }
+  
+  .related-content {
+    .relation-info {
+      margin-bottom: 16px;
+    }
+    
+    .time-cell {
+      .time-diff {
+        font-size: 11px;
+        color: #8c8c8c;
+        margin-top: 2px;
+      }
+    }
+    
+    .mini-user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .username {
+        font-size: 12px;
+        color: #262626;
+      }
+    }
+    
+    .action-cell,
+    .resource-cell {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .relation-tags {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
   }
 }
 </style>

@@ -154,6 +154,7 @@
                 <a-select-option :value="20">20条/页</a-select-option>
                 <a-select-option :value="50">50条/页</a-select-option>
                 <a-select-option :value="100">100条/页</a-select-option>
+                <a-select-option :value="300">300条/页</a-select-option>
               </a-select>
               <div class="setting-desc">列表页面默认显示条数</div>
             </a-form-item>

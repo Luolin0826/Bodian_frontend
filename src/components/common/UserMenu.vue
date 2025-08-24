@@ -15,7 +15,7 @@
     <!-- 用户下拉菜单 -->
     <a-dropdown placement="bottomRight" :trigger="['click']">
       <div class="user-avatar-section">
-        <a-avatar :size="32" :src="userInfo?.avatar" class="user-avatar">
+        <a-avatar :size="32" :src="unref(avatar.displayUrl)" class="user-avatar" :class="{ loading: unref(avatar.loading) }">
           <template #icon><UserOutlined /></template>
         </a-avatar>
         <span class="user-name">{{ userInfo?.real_name || userInfo?.username }}</span>
@@ -57,7 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted, unref } from 'vue'
 import { useRouter } from 'vue-router'
 import { message, Modal } from 'ant-design-vue'
 import {
@@ -71,12 +71,24 @@ import {
 } from '@ant-design/icons-vue'
 import { useUserStore } from '@/stores/user'
 import { getUnreadCount } from '@/api/user-center'
+import { useUserAvatar } from '@/composables/useUserAvatar'
 
 const router = useRouter()
 const userStore = useUserStore()
+const avatar = useUserAvatar()
 
 const unreadCount = ref(0)
 const userInfo = ref(userStore.userInfo)
+
+// 调试 - 监听头像变化
+watch(() => unref(avatar.displayUrl), (newUrl) => {
+  console.log('🔍 UserMenu头像值变化:', {
+    type: typeof newUrl,
+    value: newUrl?.substring(0, 50) + '...',
+    isString: typeof newUrl === 'string',
+    length: newUrl?.length
+  })
+}, { immediate: true })
 
 // 定时器ID，用于定时获取未读消息数
 let unreadCountTimer: NodeJS.Timeout | null = null
@@ -96,8 +108,8 @@ const startUnreadCountTimer = () => {
   // 立即获取一次
   fetchUnreadCount()
   
-  // 每30秒更新一次未读消息数
-  unreadCountTimer = setInterval(fetchUnreadCount, 30000)
+  // 每5分钟更新一次未读消息数
+  unreadCountTimer = setInterval(fetchUnreadCount, 300000)
 }
 
 const stopUnreadCountTimer = () => {
@@ -157,6 +169,7 @@ onUnmounted(() => {
 // 监听用户信息变化
 userStore.$subscribe((_mutation, state) => {
   userInfo.value = state.userInfo
+  console.log('🔄 UserMenu监听到userStore变化:', state.userInfo?.avatar)
 })
 </script>
 
@@ -166,6 +179,16 @@ userStore.$subscribe((_mutation, state) => {
   align-items: center;
   gap: 16px;
   height: 100%;
+}
+
+.user-avatar.loading {
+  opacity: 0.7;
+  animation: avatarLoading 1s infinite;
+}
+
+@keyframes avatarLoading {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
 }
 
 .notification-badge {

@@ -1,69 +1,23 @@
 <template>
   <div class="script-library">
-    <!-- 页面头部 -->
-    <div class="page-header">
-      <div class="header-content">
-        <div class="header-info">
-          <h1 class="page-title">
-            <message-outlined class="title-icon" />
-            话术库
-          </h1>
-          <p class="page-description">管理和组织销售话术，提升沟通效率</p>
+    <!-- 紧凑头部统计 -->
+    <div class="compact-header">
+      <div class="compact-stats">
+        <div class="stat-item">
+          <span class="stat-number">{{ scriptStats.total }}</span>
+          <span class="stat-label">总话术数</span>
         </div>
-        <div class="header-stats">
-          <a-statistic
-            title="总话术数"
-            :value="scriptStats.total"
-            suffix="条"
-            :value-style="{ color: '#52c41a', fontSize: '20px' }"
-          />
+        <div class="stat-item">
+          <span class="stat-number">{{ scriptStats.popular }}</span>
+          <span class="stat-label">热门话术</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-number">{{ scriptStats.categories }}</span>
+          <span class="stat-label">分类数</span>
         </div>
       </div>
     </div>
 
-    <!-- 快速统计 -->
-    <div class="stats-section">
-      <div class="stats-grid">
-        <a-card class="stat-card popular" hoverable>
-          <div class="stat-content">
-            <div class="stat-icon popular-icon">
-              <fire-outlined />
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ scriptStats.popular }}</div>
-              <div class="stat-label">热门话术</div>
-              <div class="stat-desc">使用次数>10</div>
-            </div>
-          </div>
-        </a-card>
-        
-        <a-card class="stat-card recent" hoverable>
-          <div class="stat-content">
-            <div class="stat-icon recent-icon">
-              <clock-circle-outlined />
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ scriptStats.recent }}</div>
-              <div class="stat-label">最近新增</div>
-              <div class="stat-desc">近7天内</div>
-            </div>
-          </div>
-        </a-card>
-        
-        <a-card class="stat-card categories" hoverable>
-          <div class="stat-content">
-            <div class="stat-icon categories-icon">
-              <appstore-outlined />
-            </div>
-            <div class="stat-info">
-              <div class="stat-number">{{ scriptStats.categories }}</div>
-              <div class="stat-label">话术分类</div>
-              <div class="stat-desc">已建立分类</div>
-            </div>
-          </div>
-        </a-card>
-      </div>
-    </div>
 
     <!-- 主要内容区域 -->
     <a-card class="main-card" :bordered="false">
@@ -85,46 +39,24 @@
             </a-input-search>
             
             <div class="filter-group desktop-only">
-              <a-select
-                v-model:value="selectedType"
-                placeholder="话术类型"
-                class="filter-select"
-                allow-clear
-                @change="handleSearch"
+              <!-- v2.0新分类体系筛选器 - 级联选择器 -->
+              <a-cascader
+                v-model:value="selectedCascaderValue"
+                :options="cascaderOptions"
+                placeholder="选择话术分类"
+                class="filter-select category-filter"
                 size="large"
-              >
-                <a-select-option
-                  v-for="typeOption in scriptTypeOptions"
-                  :key="typeOption.value"
-                  :value="typeOption.value"
-                >
-                  <span class="option-text">
-                    <book-outlined class="option-icon" />
-                    {{ typeOption.label }} ({{ typeOption.count }})
-                  </span>
-                </a-select-option>
-              </a-select>
-
-              <a-select
-                v-model:value="selectedSource"
-                placeholder="数据来源"
-                class="filter-select"
+                :show-search="true"
+                :filter-option="filterCascaderOption"
+                @change="handleCascaderChange"
                 allow-clear
-                @change="handleSearch"
-                size="large"
-              >
-                <a-select-option
-                  v-for="sourceOption in scriptSourceOptions"
-                  :key="sourceOption.value"
-                  :value="sourceOption.value"
-                >
-                  <span class="option-text">
-                    <database-outlined class="option-icon" />
-                    {{ sourceOption.label }} ({{ sourceOption.count }})
-                  </span>
-                </a-select-option>
-              </a-select>
+                :field-names="{ label: 'label', value: 'value', children: 'children' }"
+                expand-trigger="hover"
+                :display-render="displayRender"
+                change-on-select
+              />
 
+              <!-- 保留平台筛选器（常用功能） -->
               <a-select
                 v-model:value="selectedPlatform"
                 placeholder="适用平台"
@@ -133,30 +65,14 @@
                 @change="handleSearch"
                 size="large"
               >
-                <a-select-option value="小红书">
-                  <span class="option-text">
-                    <mobile-outlined class="option-icon" />
-                    小红书 (12)
-                  </span>
-                </a-select-option>
-              </a-select>
-              
-              <a-select
-                v-model:value="selectedCategory"
-                placeholder="选择分类"
-                class="filter-select"
-                allow-clear
-                @change="handleSearch"
-                size="large"
-              >
                 <a-select-option
-                  v-for="category in categories"
-                  :key="category"
-                  :value="category"
+                  v-for="platformOption in scriptPlatformOptions"
+                  :key="platformOption.value"
+                  :value="platformOption.value"
                 >
                   <span class="option-text">
-                    <tag-outlined class="option-icon" />
-                    {{ category }}
+                    <mobile-outlined class="option-icon" />
+                    {{ platformOption.label }} ({{ platformOption.count }})
                   </span>
                 </a-select-option>
               </a-select>
@@ -195,6 +111,24 @@
               <filter-outlined />
             </a-button>
             
+            <!-- 展示模式切换 -->
+            <a-button-group size="large" class="desktop-only">
+              <a-button 
+                :type="displayMode === 'question' ? 'primary' : 'default'"
+                @click="switchDisplayMode('question')"
+                title="问题列表模式"
+              >
+                <unordered-list-outlined />
+              </a-button>
+              <a-button 
+                :type="displayMode === 'card' ? 'primary' : 'default'"
+                @click="switchDisplayMode('card')"
+                title="卡片模式"
+              >
+                <appstore-outlined />
+              </a-button>
+            </a-button-group>
+            
             <a-button type="primary" @click="showCreateModal" size="large" class="add-btn">
               <plus-outlined />
               <span class="desktop-only">新增话术</span>
@@ -203,242 +137,147 @@
         </div>
       </div>
 
-      <!-- 话术列表 -->
-      <div class="script-list-section">
-        <div class="section-header">
-          <div class="section-title">
-            <message-outlined class="section-icon" />
-            <span>话术列表</span>
-            <a-badge :count="scriptList.length" class="count-badge" />
-          </div>
-          
-          <div class="view-options desktop-only">
-            <a-radio-group v-model:value="viewType" button-style="solid" size="small">
-              <a-radio-button value="grid">
-                <appstore-outlined />
-                网格
-              </a-radio-button>
-              <a-radio-button value="list">
-                <unordered-list-outlined />
-                列表
-              </a-radio-button>
-            </a-radio-group>
-          </div>
-        </div>
-
-        <!-- 网格视图 -->
-        <div v-show="viewType === 'grid'" class="scripts-grid">
-          <a-card
+      <!-- 问题列表模式 -->
+      <div v-if="displayMode === 'question'" class="question-list-mode">
+        <div class="question-list">
+          <div
             v-for="script in scriptList"
             :key="script.id"
-            class="script-card"
-            hoverable
-            :body-style="{ padding: '0' }"
+            class="question-item"
+            :class="{ 'pinned-item': script.is_pinned, 'favorited-item': script.is_favorited && !script.is_pinned }"
             @dblclick="showDetail(script)"
           >
-            <!-- 卡片头部 -->
-            <div class="card-header">
-              <div class="card-title-section">
-                <h3 class="card-title">{{ script.title }}</h3>
-                <div class="card-tags">
-                  <a-tag v-if="script.category" :color="getCategoryColor(script.category)" class="category-tag">
-                    <tag-outlined class="tag-icon" />
-                    {{ script.category }}
-                  </a-tag>
-                  <a-tag v-if="script.usage_count && script.usage_count > 10" color="volcano" class="hot-tag">
-                    <fire-outlined class="tag-icon" />
-                    热门
-                  </a-tag>
-                </div>
-              </div>
-              
-              <a-dropdown>
-                <a-button type="text" class="more-btn">
-                  <more-outlined />
-                </a-button>
-                <template #overlay>
-                  <a-menu>
-                    <a-menu-item @click="showDetail(script)">
-                      <eye-outlined />
-                      查看详情
-                    </a-menu-item>
-                    <a-menu-item @click="handleEdit(script)">
-                      <edit-outlined />
-                      编辑
-                    </a-menu-item>
-                    <a-menu-item @click="copyToClipboard(script.answer, script)">
-                      <copy-outlined />
-                      复制话术
-                    </a-menu-item>
-                    <a-menu-divider />
-                    <a-menu-item danger @click="handleDelete(script)">
-                      <delete-outlined />
-                      删除
-                    </a-menu-item>
-                  </a-menu>
-                </template>
-              </a-dropdown>
+            <div class="question-content">
+              <span class="question-text">{{ script.question || script.title }}</span>
+              <a-tag v-if="getCategoryLabel(script)" :color="getCategoryColor(script)" size="small" class="question-tag">
+                {{ getCategoryLabel(script) }}
+              </a-tag>
             </div>
+            <div class="question-actions">
+              <!-- 置顶按钮：仅管理员可见 -->
+              <a-button 
+                v-if="canManagePin"
+                :type="script.is_pinned ? 'default' : 'text'"
+                size="small" 
+                @click.stop="togglePin(script)"
+                class="pin-btn-question"
+                :title="script.is_pinned ? '取消置顶' : '置顶话术'"
+              >
+                <pushpin-filled v-if="script.is_pinned" class="pinned" />
+                <pushpin-outlined v-else />
+              </a-button>
+              <!-- 收藏按钮：所有用户可见 -->
+              <a-button 
+                :type="script.is_favorited ? 'default' : 'text'"
+                size="small" 
+                @click.stop="toggleFavorite(script)"
+                class="favorite-btn-question"
+                :title="script.is_favorited ? '取消收藏' : '收藏话术'"
+              >
+                <heart-filled v-if="script.is_favorited" class="favorited" />
+                <heart-outlined v-else />
+              </a-button>
+              <a-button 
+                type="primary" 
+                size="small" 
+                @click.stop="copyToClipboard(script.answer, script)"
+                class="copy-btn-question"
+                title="复制话术"
+              >
+                <copy-outlined />
+              </a-button>
+            </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- 卡片内容 -->
-            <div class="card-content">
-              <div v-if="script.question" class="content-section">
-                <div class="section-label">
-                  <question-circle-outlined class="label-icon" />
-                  问题场景
-                </div>
-                <div class="section-text question-text">{{ script.question }}</div>
-              </div>
-              
-              <div class="content-section">
-                <div class="section-label">
-                  <message-outlined class="label-icon" />
-                  话术内容
-                </div>
-                <div class="section-text answer-text">{{ script.answer }}</div>
-              </div>
-              
-              <div v-if="script.keywords" class="content-section">
-                <div class="section-label">
-                  <tags-outlined class="label-icon" />
-                  关键词
-                </div>
-                <div class="keywords-tags">
-                  <a-tag 
-                    v-for="keyword in script.keywords.split(',')"
-                    :key="keyword.trim()"
-                    size="small"
-                    class="keyword-tag"
-                  >
-                    {{ keyword.trim() }}
-                  </a-tag>
-                </div>
-              </div>
+      <!-- 卡片模式 -->
+      <div v-else class="compact-script-list">
+        <div class="script-grid-compact">
+          <div
+            v-for="script in scriptList"
+            :key="script.id"
+            class="script-item-compact"
+            :class="{ 'pinned-item': script.is_pinned, 'favorited-item': script.is_favorited && !script.is_pinned }"
+            @dblclick="showDetail(script)"
+          >
+            <!-- 置顶标识 -->
+            <div class="pin-corner" v-if="script.is_pinned">
+              <pushpin-filled class="pin-icon" />
+            </div>
+            <!-- 收藏标识（仅在非置顶时显示） -->
+            <div class="favorite-corner" v-else-if="script.is_favorited">
+              <heart-filled class="favorite-icon" />
+            </div>
+            <!-- 问题 -->
+            <div class="question-section" v-if="script.question">
+              <div class="section-label">Q:</div>
+              <div class="section-content">{{ script.question }}</div>
             </div>
             
-            <!-- 卡片底部 -->
-            <div class="card-footer">
-              <div class="usage-stats">
-                <span class="usage-count">
-                  <fire-outlined class="usage-icon" />
-                  {{ script.usage_count || 0 }}次使用
-                </span>
-                <span class="create-date">
-                  {{ formatDate(script.created_at) }}
+            <!-- 答案 -->
+            <div class="answer-section">
+              <div class="section-label">A:</div>
+              <div class="section-content">{{ script.answer }}</div>
+            </div>
+            
+            <!-- 底部操作栏 -->
+            <div class="item-footer">
+              <div class="item-meta">
+                <a-tag v-if="getCategoryLabel(script)" :color="getCategoryColor(script)" size="small">
+                  {{ getCategoryLabel(script) }}
+                </a-tag>
+                <span class="usage-count" v-if="script.usage_count">
+                  {{ script.usage_count }}次
                 </span>
               </div>
               
-              <div class="quick-actions">
+              <div class="action-buttons">
+                <!-- 置顶按钮：仅管理员可见 -->
+                <a-button 
+                  v-if="canManagePin"
+                  :type="script.is_pinned ? 'default' : 'text'"
+                  size="small" 
+                  @click.stop="togglePin(script)"
+                  class="pin-btn-compact"
+                  :title="script.is_pinned ? '取消置顶' : '置顶话术'"
+                >
+                  <pushpin-filled v-if="script.is_pinned" class="pinned" />
+                  <pushpin-outlined v-else />
+                </a-button>
+                <!-- 收藏按钮：所有用户可见 -->
+                <a-button 
+                  :type="script.is_favorited ? 'default' : 'text'"
+                  size="small" 
+                  @click.stop="toggleFavorite(script)"
+                  class="favorite-btn-compact"
+                  :title="script.is_favorited ? '取消收藏' : '收藏话术'"
+                >
+                  <heart-filled v-if="script.is_favorited" class="favorited" />
+                  <heart-outlined v-else />
+                </a-button>
                 <a-button 
                   type="primary" 
                   size="small" 
                   @click="copyToClipboard(script.answer, script)"
-                  class="copy-btn"
+                  class="copy-btn-compact"
+                  title="复制答案"
                 >
                   <copy-outlined />
-                  复制
+                </a-button>
+                <a-button 
+                  type="text" 
+                  size="small" 
+                  @click.stop="handleDelete(script)"
+                  class="delete-btn-compact"
+                  danger
+                  title="删除话术"
+                >
+                  <delete-outlined />
                 </a-button>
               </div>
             </div>
-          </a-card>
-        </div>
-
-        <!-- 列表视图 -->
-        <div v-show="viewType === 'list'" class="scripts-list">
-          <a-list 
-            :data-source="scriptList" 
-            :pagination="false"
-            item-layout="vertical"
-            class="script-list"
-          >
-            <template #renderItem="{ item: script }">
-              <a-list-item class="script-list-item">
-                <template #actions>
-                  <a-button type="text" @click="copyToClipboard(script.answer, script)" class="action-btn">
-                    <copy-outlined />
-                    复制
-                  </a-button>
-                  <a-button type="text" @click="handleEdit(script)" class="action-btn">
-                    <edit-outlined />
-                    编辑
-                  </a-button>
-                  <a-dropdown>
-                    <a-button type="text" class="action-btn">
-                      <more-outlined />
-                    </a-button>
-                    <template #overlay>
-                      <a-menu>
-                        <a-menu-item @click="showDetail(script)">
-                          <eye-outlined />
-                          查看详情
-                        </a-menu-item>
-                        <a-menu-item danger @click="handleDelete(script)">
-                          <delete-outlined />
-                          删除
-                        </a-menu-item>
-                      </a-menu>
-                    </template>
-                  </a-dropdown>
-                </template>
-                
-                <a-list-item-meta>
-                  <template #title>
-                    <div class="list-item-title">
-                      <span class="title-text">{{ script.title }}</span>
-                      <div class="title-tags">
-                        <a-tag v-if="script.category" :color="getCategoryColor(script.category)" size="small">
-                          {{ script.category }}
-                        </a-tag>
-                        <a-tag v-if="script.usage_count && script.usage_count > 10" color="volcano" size="small">
-                          热门
-                        </a-tag>
-                      </div>
-                    </div>
-                  </template>
-                  
-                  <template #description>
-                    <div class="list-item-meta">
-                      <div v-if="script.question" class="meta-item">
-                        <span class="meta-label">问题场景：</span>
-                        <span class="meta-text">{{ script.question }}</span>
-                      </div>
-                      <div class="meta-item">
-                        <span class="meta-label">话术内容：</span>
-                        <span class="meta-text answer-preview">{{ script.answer }}</span>
-                      </div>
-                    </div>
-                  </template>
-                </a-list-item-meta>
-                
-                <div class="list-item-footer">
-                  <div class="footer-stats">
-                    <span class="stat-item">
-                      <fire-outlined class="stat-icon" />
-                      {{ script.usage_count || 0 }}次使用
-                    </span>
-                    <span class="stat-item">
-                      <clock-circle-outlined class="stat-icon" />
-                      {{ formatDate(script.created_at) }}
-                    </span>
-                  </div>
-                  
-                  <div v-if="script.keywords" class="footer-keywords">
-                    <a-tag 
-                      v-for="keyword in script.keywords.split(',').slice(0, 3)"
-                      :key="keyword.trim()"
-                      size="small"
-                      class="keyword-tag"
-                    >
-                      {{ keyword.trim() }}
-                    </a-tag>
-                    <span v-if="script.keywords.split(',').length > 3" class="more-keywords">
-                      +{{ script.keywords.split(',').length - 3 }}
-                    </span>
-                  </div>
-                </div>
-              </a-list-item>
-            </template>
-          </a-list>
+          </div>
         </div>
       </div>
 
@@ -451,6 +290,7 @@
           :show-size-changer="true"
           :show-quick-jumper="true"
           :show-total="(total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`"
+          :page-size-options="['10', '20', '50', '100', '300']"
           @change="handlePageChange"
           @showSizeChange="handlePageChange"
         />
@@ -480,38 +320,21 @@
     >
       <div class="mobile-filter-content">
         <a-form layout="vertical">
-          <a-form-item label="话术类型">
-            <a-select
-              v-model:value="selectedType"
-              placeholder="选择类型"
+          <!-- v2.0新分类体系筛选器 - 级联选择器 -->
+          <a-form-item label="话术分类">
+            <a-cascader
+              v-model:value="selectedCascaderValue"
+              :options="cascaderOptions"
+              placeholder="选择话术分类"
               allow-clear
-              @change="handleSearch"
-            >
-              <a-select-option
-                v-for="typeOption in scriptTypeOptions"
-                :key="typeOption.value"
-                :value="typeOption.value"
-              >
-                {{ typeOption.label }} ({{ typeOption.count }})
-              </a-select-option>
-            </a-select>
-          </a-form-item>
-
-          <a-form-item label="数据来源">
-            <a-select
-              v-model:value="selectedSource"
-              placeholder="选择来源"
-              allow-clear
-              @change="handleSearch"
-            >
-              <a-select-option
-                v-for="sourceOption in scriptSourceOptions"
-                :key="sourceOption.value"
-                :value="sourceOption.value"
-              >
-                {{ sourceOption.label }} ({{ sourceOption.count }})
-              </a-select-option>
-            </a-select>
+              :show-search="true"
+              :filter-option="filterCascaderOption"
+              @change="handleCascaderChange"
+              :field-names="{ label: 'label', value: 'value', children: 'children' }"
+              expand-trigger="hover"
+              :display-render="displayRender"
+              change-on-select
+            />
           </a-form-item>
 
           <a-form-item label="适用平台">
@@ -521,26 +344,16 @@
               allow-clear
               @change="handleSearch"
             >
-              <a-select-option value="小红书">小红书 (12)</a-select-option>
-            </a-select>
-          </a-form-item>
-          
-          <a-form-item label="话术分类">
-            <a-select
-              v-model:value="selectedCategory"
-              placeholder="选择分类"
-              allow-clear
-              @change="handleSearch"
-            >
               <a-select-option
-                v-for="category in categories"
-                :key="category"
-                :value="category"
+                v-for="platformOption in scriptPlatformOptions"
+                :key="platformOption.value"
+                :value="platformOption.value"
               >
-                {{ category }}
+                {{ platformOption.label }} ({{ platformOption.count }})
               </a-select-option>
             </a-select>
           </a-form-item>
+          
           
           <a-form-item label="排序方式">
             <a-select
@@ -568,84 +381,79 @@
     <a-modal
       v-model:open="detailVisible"
       title="话术详情"
-      width="700px"
+      width="600px"
       :footer="null"
-      class="detail-modal"
+      class="detail-modal-compact"
     >
-      <div v-if="currentScript" class="script-detail">
-        <!-- 头部信息 -->
-        <div class="detail-header">
-          <h2 class="detail-title">{{ currentScript.title }}</h2>
-          <div class="detail-tags">
-            <a-tag v-if="currentScript.category" :color="getCategoryColor(currentScript.category)">
-              <tag-outlined class="tag-icon" />
-              {{ currentScript.category }}
-            </a-tag>
-            <a-tag v-if="currentScript.usage_count && currentScript.usage_count > 10" color="volcano">
-              <fire-outlined class="tag-icon" />
-              热门话术
-            </a-tag>
-          </div>
-        </div>
-
-        <!-- 问题场景 -->
-        <div v-if="currentScript.question" class="detail-section">
-          <h3 class="section-title">
-            <question-circle-outlined class="section-icon" />
+      <div v-if="currentScript" class="script-detail-compact">
+        <!-- 紧凑的问题场景 -->
+        <div v-if="currentScript.question" class="detail-row">
+          <div class="row-label">
+            <question-circle-outlined />
             问题场景
-          </h3>
-          <div class="section-content question-content">
+          </div>
+          <div class="row-content question-text">
             {{ currentScript.question }}
           </div>
         </div>
 
-        <!-- 话术内容 -->
-        <div class="detail-section">
-          <h3 class="section-title">
-            <message-outlined class="section-icon" />
+        <!-- 紧凑的话术内容 -->
+        <div class="detail-row">
+          <div class="row-label">
+            <message-outlined />
             话术内容
-          </h3>
-          <div class="section-content answer-content">
+          </div>
+          <div class="row-content answer-text">
             {{ currentScript.answer }}
           </div>
         </div>
 
-        <!-- 关键词 -->
-        <div v-if="currentScript.keywords" class="detail-section">
-          <h3 class="section-title">
-            <tags-outlined class="section-icon" />
+        <!-- 紧凑的关键词 -->
+        <div v-if="currentScript.keywords" class="detail-row">
+          <div class="row-label">
+            <tags-outlined />
             关键词
-          </h3>
-          <div class="section-content">
+          </div>
+          <div class="row-content">
             <a-tag 
               v-for="keyword in currentScript.keywords.split(',')"
               :key="keyword.trim()"
-              class="keyword-tag"
+              size="small"
+              class="compact-keyword-tag"
             >
               {{ keyword.trim() }}
             </a-tag>
           </div>
         </div>
 
-        <!-- 统计信息 -->
-        <div class="detail-stats">
-          <div class="stat-item">
-            <fire-outlined class="stat-icon" />
-            <span>使用次数：{{ currentScript.usage_count || 0 }}</span>
+        <!-- 紧凑的统计信息 -->
+        <div class="detail-row stats-row">
+          <div class="row-label">
+            <fire-outlined />
+            使用次数
           </div>
-          <div class="stat-item">
-            <clock-circle-outlined class="stat-icon" />
-            <span>创建时间：{{ formatDate(currentScript.created_at) }}</span>
+          <div class="row-content stats-content">
+            <span class="usage-number">{{ currentScript.usage_count || 0 }}</span>
+            <span class="create-time">{{ formatDate(currentScript.created_at) }}</span>
           </div>
         </div>
 
-        <!-- 操作按钮 -->
-        <div class="detail-actions">
-          <a-button @click="copyToClipboard(currentScript.answer, currentScript)" class="copy-action">
+        <!-- 紧凑的操作按钮 -->
+        <div class="detail-actions-compact">
+          <a-button 
+            @click="copyToClipboard(currentScript.answer, currentScript)" 
+            class="compact-copy-btn"
+            size="small"
+          >
             <copy-outlined />
             复制话术
           </a-button>
-          <a-button type="primary" @click="handleEdit(currentScript); detailVisible = false">
+          <a-button 
+            type="primary" 
+            @click="handleEdit(currentScript); detailVisible = false"
+            class="compact-edit-btn"
+            size="small"
+          >
             <edit-outlined />
             编辑话术
           </a-button>
@@ -668,99 +476,84 @@
         :model="formData"
         :rules="rules"
         layout="vertical"
+        class="compact-form"
       >
-        <!-- 基本信息 -->
-        <a-divider orientation="left">
-          <template #default>
-            <span style="font-size: 16px; font-weight: 600;">
-              <message-outlined style="margin-right: 8px; color: #52c41a;" />
-              基本信息
-            </span>
-          </template>
-        </a-divider>
-        
-        <a-row :gutter="16">
+        <!-- 第一行：主分类、子分类和适用平台 -->
+        <a-row :gutter="12">
           <a-col :span="8">
-            <a-form-item label="话术类型" name="type">
+            <a-form-item label="话术分类" name="primary_category">
               <a-select
-                v-model:value="formData.type"
-                placeholder="选择话术类型"
+                v-model:value="formData.primary_category"
+                placeholder="请选择话术分类"
                 allow-clear
+                class="cascade-select"
               >
                 <a-select-option
-                  v-for="option in scriptTypeOptions"
+                  v-for="option in primaryCategoryOptions"
                   :key="option.value"
                   :value="option.value"
+                  class="category-option"
                 >
-                  {{ option.label }}
+                  <div class="category-option-content">
+                    <component :is="getCategoryIcon(option.value)" :style="{ color: getCategoryIconColor(option.value) }" />
+                    <span class="category-label">{{ option.label }}</span>
+                    <span v-if="hasSubcategories(option.value)" class="subcategory-hint">
+                      <right-outlined style="font-size: 10px; margin-left: 4px; color: #999;" />
+                    </span>
+                  </div>
                 </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="数据来源" name="source">
+            <a-form-item label="子分类" name="secondary_category">
               <a-select
-                v-model:value="formData.source"
-                placeholder="选择数据来源"
+                v-model:value="formData.secondary_category"
+                placeholder="请选择子分类"
+                :disabled="!shouldShowSubcategory || secondaryCategoryOptions.length === 0"
                 allow-clear
               >
                 <a-select-option
-                  v-for="option in scriptSourceOptions"
+                  v-for="option in secondaryCategoryOptions"
                   :key="option.value"
                   :value="option.value"
+                  class="subcategory-option"
                 >
-                  {{ option.label }}
+                  <div class="subcategory-option-content">
+                    <component :is="getSubCategoryIcon(option.value)" :style="{ color: getSubCategoryIconColor(option.value) }" />
+                    <span class="subcategory-label">{{ option.label }}</span>
+                  </div>
                 </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
           <a-col :span="8">
-            <a-form-item label="适用平台" name="platform">
+            <a-form-item label="适用平台" name="platform_new">
               <a-select
-                v-model:value="formData.platform"
+                v-model:value="formData.platform_new"
                 placeholder="选择适用平台"
                 allow-clear
               >
-                <a-select-option value="小红书">
-                  <mobile-outlined style="margin-right: 4px;" />
-                  小红书
-                </a-select-option>
-                <a-select-option value="微信">
-                  <message-outlined style="margin-right: 4px;" />
-                  微信
-                </a-select-option>
-                <a-select-option value="电话">
-                  <phone-outlined style="margin-right: 4px;" />
-                  电话
+                <a-select-option
+                  v-for="option in scriptPlatformOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  <span style="display: flex; align-items: center; gap: 4px;">
+                    <mobile-outlined v-if="option.value === 'xiaohongshu'" />
+                    <message-outlined v-else-if="option.value === 'wechat'" />
+                    <phone-outlined v-else-if="option.value === 'phone'" />
+                    <global-outlined v-else />
+                    {{ option.label }}
+                  </span>
                 </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
         </a-row>
         
-        <a-row :gutter="16">
-          <a-col :span="12">
-            <a-form-item label="分类" name="category">
-              <a-select
-                v-model:value="formData.category"
-                placeholder="选择分类"
-                allow-clear
-                show-search
-                :filter-option="(input, option) => 
-                  option?.label?.toLowerCase().includes(input.toLowerCase())
-                "
-              >
-                <a-select-option
-                  v-for="category in categories"
-                  :key="category"
-                  :value="category"
-                  :label="category"
-                >
-                  {{ category }}
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
+        <!-- 第二行：标题和问题 -->
+        <a-row :gutter="12">
           <a-col :span="12">
             <a-form-item label="标题" name="title">
               <a-input 
@@ -771,27 +564,17 @@
               />
             </a-form-item>
           </a-col>
+          <a-col :span="12">
+            <a-form-item label="问题" name="question">
+              <a-input 
+                v-model:value="formData.question" 
+                placeholder="请输入客户可能提出的问题（可选）"
+                show-count
+                :maxlength="200"
+              />
+            </a-form-item>
+          </a-col>
         </a-row>
-        
-        <!-- 内容信息 -->
-        <a-divider orientation="left">
-          <template #default>
-            <span style="font-size: 16px; font-weight: 600;">
-              <edit-outlined style="margin-right: 8px; color: #1890ff;" />
-              内容信息
-            </span>
-          </template>
-        </a-divider>
-        
-        <a-form-item label="问题场景" name="question">
-          <a-textarea 
-            v-model:value="formData.question" 
-            placeholder="请描述使用此话术的问题场景或客户疑问"
-            :rows="3"
-            show-count
-            :maxlength="500"
-          />
-        </a-form-item>
         
         <a-form-item label="话术内容" name="answer">
           <a-textarea 
@@ -802,16 +585,6 @@
             :maxlength="2000"
           />
         </a-form-item>
-        
-        <!-- 额外信息 -->
-        <a-divider orientation="left">
-          <template #default>
-            <span style="font-size: 16px; font-weight: 600;">
-              <tags-outlined style="margin-right: 8px; color: #fa8c16;" />
-              额外信息
-            </span>
-          </template>
-        </a-divider>
         
         <a-form-item label="关键词" name="keywords">
           <div class="keywords-input-section">
@@ -855,45 +628,71 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { message, Modal } from 'ant-design-vue'
+import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
   PlusOutlined, 
-  MoreOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
+  DeleteOutlined,
   CopyOutlined,
   MessageOutlined,
   FireOutlined,
   ClockCircleOutlined,
-  AppstoreOutlined,
   SearchOutlined,
   FilterOutlined,
-  TagOutlined,
   SortAscendingOutlined,
-  UnorderedListOutlined,
-  EyeOutlined,
   QuestionCircleOutlined,
   TagsOutlined,
-  BookOutlined,
-  DatabaseOutlined,
   MobileOutlined,
-  PhoneOutlined
+  PhoneOutlined,
+  UnorderedListOutlined,
+  AppstoreOutlined,
+  GlobalOutlined,
+  PushpinOutlined,
+  PushpinFilled,
+  HeartOutlined,
+  HeartFilled,
+  RightOutlined,
+  TagOutlined,
+  ThunderboltOutlined,
+  ExperimentOutlined,
+  FormOutlined,
+  SolutionOutlined,
+  CompassOutlined,
+  ProjectOutlined,
+  ShopOutlined,
+  CustomerServiceOutlined,
+  ReadOutlined,
+  ScheduleOutlined,
+  DatabaseOutlined
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { useResponsive } from '@/composables/useResponsive'
+import { useUserStore } from '@/stores/user'
 import { 
   searchScripts, 
-  getScriptCategories,
   createScript, 
   updateScript, 
   deleteScript,
+  pinScript,
+  unpinScript,
+  favoriteScript,
+  unfavoriteScript,
   type Script,
   type ScriptQuery 
 } from '@/api/script'
+import request from '@/api/request'
 
 // 响应式工具
 const { isMobile } = useResponsive()
+const userStore = useUserStore()
+
+// 权限验证
+const canManagePin = computed(() => {
+  // 只有超级管理员和管理员可以操作置顶功能
+  return userStore.userInfo?.role === 'super_admin' || userStore.userInfo?.role === 'admin'
+})
 
 // 响应式数据
 const loading = ref(false)
@@ -901,20 +700,22 @@ const submitLoading = ref(false)
 const modalVisible = ref(false)
 const detailVisible = ref(false)
 const showMobileFilters = ref(false)
+const displayMode = ref('question') // 默认为问题列表模式
 const scriptList = ref<Script[]>([])
-const categories = ref<string[]>([])
 const editingScript = ref<Script | null>(null)
 const currentScript = ref<Script | null>(null)
 const formRef = ref()
-const viewType = ref<'grid' | 'list'>('grid')
+const viewType = ref<'grid' | 'list'>('list')
 const sortBy = ref<string>('date')
 
 // 搜索参数
 const searchKeyword = ref('')
-const selectedCategory = ref<string>()
 const selectedType = ref<string>()
-const selectedSource = ref<string>()
+const selectedContentType = ref<string>()
 const selectedPlatform = ref<string>()
+// v2.0新分类体系搜索参数 - 改为多选
+const selectedCategories = ref<string[]>([])
+const selectedCascaderValue = ref<(string | number)[]>([]) // 级联选择器的值
 
 // 关键词管理
 const selectedKeywords = ref<string[]>([])
@@ -933,8 +734,83 @@ const suggestedKeywords = computed(() => {
 // 话术类型选项（动态获取）
 const scriptTypeOptions = ref<Array<{ value: string; label: string; count: number }>>([])
 
-// 数据来源选项（动态获取）
-const scriptSourceOptions = ref<Array<{ value: string; label: string; count: number }>>([])
+// 内容类型选项（动态获取）
+const scriptContentOptions = ref<Array<{ value: string; label: string; count: number }>>([])
+
+// 适用平台选项（动态获取）
+const scriptPlatformOptions = ref<Array<{ value: string; label: string; count: number }>>([])
+
+// v2.0新分类体系选项 - 合并为综合分类选项
+const categoryOptions = ref<Array<{
+  label: string;
+  value: string;
+  options?: Array<{ value: string; label: string; count: number }>;
+  count?: number;
+}>>([])
+
+// 级联选择器数据
+const cascaderOptions = ref<Array<{
+  label: string;
+  value: string;
+  children?: Array<{ value: string; label: string; count?: number }>;
+  count?: number;
+}>>([])
+
+// 主分类选项（计算属性）
+const primaryCategoryOptions = computed(() => {
+  return [
+    { value: 'project_category', label: '项目分类' },
+    { value: 'product_intro', label: '产品介绍' },
+    { value: 'marketing', label: '营销话术' },
+    { value: 'faq', label: '常见问题' },
+    { value: 'learning_guidance', label: '学习指导' },
+    { value: 'study_planning', label: '学习规划' }
+  ]
+})
+
+// 子分类选项（计算属性）
+const secondaryCategoryOptions = computed(() => {
+  const primaryCategory = formData.primary_category
+  
+  const categoryMap: Record<string, Array<{ value: string; label: string }>> = {
+    'project_category': [
+      { value: 'power_grid', label: '电网' },
+      { value: 'electrical_exam', label: '电气考研' }
+    ],
+    'learning_guidance': [
+      { value: 'application_guide', label: '网申' },
+      { value: 'review_planning', label: '复习规划' },
+      { value: 'consultation', label: '报考咨询' }
+    ]
+  }
+  
+  return categoryMap[primaryCategory] || []
+})
+
+// 检查主分类是否有子分类
+const hasSubcategories = (primaryValue: string): boolean => {
+  const categoriesWithSub = ['project_category', 'learning_guidance']
+  return categoriesWithSub.includes(primaryValue)
+}
+
+// 判断是否应该显示子分类选择框
+const shouldShowSubcategory = computed(() => {
+  return formData.primary_category && hasSubcategories(formData.primary_category)
+})
+
+// 获取主分类的中文标签
+const getPrimaryCategoryLabel = (primaryValue?: string): string => {
+  if (!primaryValue) return ''
+  const categoryMap: Record<string, string> = {
+    'project_category': '项目分类',
+    'product_intro': '产品介绍',
+    'marketing': '营销话术',
+    'faq': '常见问题',
+    'learning_guidance': '学习指导',
+    'study_planning': '学习规划'
+  }
+  return categoryMap[primaryValue] || primaryValue
+}
 
 // 话术统计数据（动态获取）
 const scriptStats = ref({
@@ -944,23 +820,29 @@ const scriptStats = ref({
   categories: 0
 })
 
+// 用户偏好设置
+const { itemsPerPage, loadPreferencesOnce } = useUserPreferences()
+
 // 分页配置
 const pagination = reactive({
   current: 1,
-  pageSize: 12,
+  pageSize: 20, // 初始值，会在onMounted中根据用户偏好设置
   total: 0
 })
 
 // 表单数据
 const formData = reactive<Script>({
-  category: '',
   title: '',
   question: '',
   answer: '',
   keywords: '',
-  type: undefined,
-  source: '',
-  platform: '',
+  // v2.0新分类体系字段
+  primary_category: undefined,
+  secondary_category: undefined,
+  // 保留兼容字段
+  script_type_new: undefined,
+  content_type_new: undefined,
+  platform_new: undefined,
   customer_info: ''
 })
 
@@ -972,11 +854,8 @@ const rules = {
   answer: [
     { required: true, message: '请输入话术内容', trigger: 'blur' }
   ],
-  type: [
-    { required: true, message: '请选择话术类型', trigger: 'change' }
-  ],
-  category: [
-    { required: true, message: '请选择话术分类', trigger: 'change' }
+  primary_category: [
+    { required: true, message: '请选择主分类', trigger: 'change' }
   ]
 } as any
 
@@ -985,11 +864,100 @@ const rules = {
 //   return categories.value.map(cat => ({ label: cat, value: cat }))
 // })
 
+// 获取分类标签文本
+const getCategoryLabel = (script: Script): string => {
+  // 优先显示主分类
+  if (script.primary_category) {
+    // 如果主分类是general，返回空字符串（不显示）
+    if (script.primary_category === 'general') {
+      return ''
+    }
+    
+    const categoryMap: Record<string, string> = {
+      'project_category': '项目分类',
+      'product_intro': '产品介绍',
+      'marketing': '营销话术',
+      'faq': '常见问题',
+      'learning_guidance': '学习指导',
+      'study_planning': '学习规划'
+    }
+    
+    // 如果有子分类，显示更具体的分类
+    if (script.secondary_category) {
+      // 如果子分类是general，返回主分类
+      if (script.secondary_category === 'general') {
+        return categoryMap[script.primary_category] || script.primary_category
+      }
+      
+      const subCategoryMap: Record<string, string> = {
+        // 项目分类的子分类
+        'power_grid': '电网',
+        'electrical_exam': '电气考研',
+        // 学习指导的子分类
+        'application_guide': '网申',
+        'review_planning': '复习规划',
+        'consultation': '报考咨询'
+      }
+      return subCategoryMap[script.secondary_category] || script.secondary_category
+    }
+    
+    return categoryMap[script.primary_category] || script.primary_category
+  }
+  
+  // 回退到原有分类，如果是general则不显示
+  if (script.category === 'general') {
+    return ''
+  }
+  
+  // 处理旧的英文分类值，转换为中文显示
+  if (script.category) {
+    const legacyCategoryMap: Record<string, string> = {
+      // 旧分类系统的英文值映射
+      'power_grid': '电网',
+      'electrical_exam': '电气考研',
+      'product_intro': '产品介绍',
+      'marketing': '营销话术',
+      'faq': '常见问题',
+      'learning_guidance': '学习指导',
+      'application_guide': '网申',
+      'review_planning': '复习规划',
+      'consultation': '报考咨询',
+      'study_planning': '学习规划',
+      // 其他可能的旧分类值
+      'opening': '开场白',
+      'price_negotiation': '价格谈判',
+      'objection_handling': '异议处理',
+      'closing': '成交话术',
+      'after_sales': '售后服务'
+    }
+    
+    return legacyCategoryMap[script.category] || script.category
+  }
+  
+  return ''
+}
+
 // 获取分类颜色
-const getCategoryColor = (category: string) => {
+const getCategoryColor = (script: Script): string => {
+  const category = getCategoryLabel(script)
+  
   const colorMap: Record<string, string> = {
+    // v2.0新分类体系颜色
+    '项目分类': 'blue',
+    '产品介绍': 'green', 
+    '营销话术': 'purple',
+    '常见问题': 'red',
+    '学习指导': 'cyan',
+    '学习规划': 'gold',
+    // 项目分类子分类颜色
+    '电网': 'orange',
+    '电气考研': 'geekblue',
+    // 学习指导子分类颜色
+    '网申': 'volcano',
+    '复习规划': 'magenta',
+    '报考咨询': 'lime',
+    // 兼容旧分类
     '开场白': 'blue',
-    '产品介绍': 'green',
     '价格谈判': 'orange',
     '异议处理': 'red',
     '成交话术': 'purple',
@@ -998,9 +966,74 @@ const getCategoryColor = (category: string) => {
   return colorMap[category] || 'default'
 }
 
+// 获取主分类图标
+const getCategoryIcon = (categoryValue: string) => {
+  const iconMap: Record<string, string> = {
+    'project_category': 'ProjectOutlined',
+    'product_intro': 'ShopOutlined', 
+    'marketing': 'CustomerServiceOutlined',
+    'faq': 'QuestionCircleOutlined',
+    'learning_guidance': 'ReadOutlined',
+    'study_planning': 'ScheduleOutlined'
+  }
+  return iconMap[categoryValue] || 'DatabaseOutlined'
+}
+
+// 获取主分类图标颜色
+const getCategoryIconColor = (categoryValue: string) => {
+  const colorMap: Record<string, string> = {
+    'project_category': '#1890ff',
+    'product_intro': '#52c41a',
+    'marketing': '#722ed1',
+    'faq': '#f5222d',
+    'learning_guidance': '#13c2c2',
+    'study_planning': '#faad14'
+  }
+  return colorMap[categoryValue] || '#666'
+}
+
+// 获取子分类图标
+const getSubCategoryIcon = (subcategoryValue: string) => {
+  const iconMap: Record<string, string> = {
+    // 项目分类的子分类
+    'power_grid': 'ThunderboltOutlined',
+    'electrical_exam': 'ExperimentOutlined',
+    // 学习指导的子分类
+    'application_guide': 'FormOutlined',
+    'review_planning': 'SolutionOutlined',
+    'consultation': 'CompassOutlined'
+  }
+  return iconMap[subcategoryValue] || 'TagOutlined'
+}
+
+// 获取子分类图标颜色
+const getSubCategoryIconColor = (subcategoryValue: string) => {
+  const colorMap: Record<string, string> = {
+    // 项目分类的子分类
+    'power_grid': '#fa8c16',
+    'electrical_exam': '#2f54eb',
+    // 学习指导的子分类
+    'application_guide': '#fa541c',
+    'review_planning': '#eb2f96',
+    'consultation': '#a0d911'
+  }
+  return colorMap[subcategoryValue] || '#666'
+}
+
 // 格式化日期
 const formatDate = (dateStr?: string) => {
   return dateStr ? dayjs(dateStr).format('MM-DD') : ''
+}
+
+// 切换展示模式
+const switchDisplayMode = (mode: 'question' | 'card') => {
+  displayMode.value = mode
+  
+  // 根据用户偏好设置分页大小（所有显示模式统一使用用户偏好）
+  pagination.pageSize = itemsPerPage.value || 300
+  
+  // 重新加载数据
+  loadScripts()
 }
 
 // 加载话术列表
@@ -1015,39 +1048,72 @@ const loadScripts = async () => {
     if (searchKeyword.value.trim()) {
       params.keyword = searchKeyword.value.trim()
     }
-    if (selectedCategory.value) {
-      params.category = selectedCategory.value
-    }
     if (selectedType.value) {
-      params.type = selectedType.value
+      params.script_type_new = selectedType.value
     }
-    if (selectedSource.value) {
-      params.source = selectedSource.value
+    if (selectedContentType.value) {
+      params.content_type_new = selectedContentType.value
     }
     if (selectedPlatform.value) {
-      params.platform = selectedPlatform.value
+      params.platform_new = selectedPlatform.value
+    }
+    // v2.0新分类体系查询参数 - 处理多选分类
+    if (selectedCategories.value.length > 0) {
+      // 将选中的分类解析为主分类和子分类
+      const primaryCategories = new Set<string>()
+      const secondaryCategories = new Set<string>()
+      
+      for (const category of selectedCategories.value) {
+        if (category.includes(':')) {
+          // 带有子分类的格式 "learning_guidance:application_guide"
+          const [primary, secondary] = category.split(':')
+          primaryCategories.add(primary)
+          secondaryCategories.add(secondary)
+        } else {
+          // 纯主分类格式 "product_intro"
+          primaryCategories.add(category)
+        }
+      }
+      
+      if (primaryCategories.size > 0) {
+        params.primary_category = Array.from(primaryCategories).join(',')
+      }
+      if (secondaryCategories.size > 0) {
+        params.secondary_category = Array.from(secondaryCategories).join(',')
+      }
     }
     
     console.log('发送搜索请求，参数:', params)
     const response = await searchScripts(params)
     console.log('收到搜索响应:', response)
     
-    // 根据排序方式处理数据
+    // 根据优先级和排序方式处理数据
     let sortedData = [...(response.data || [])]
     
-    switch (sortBy.value) {
-      case 'usage':
-        sortedData.sort((a, b) => (b.usage_count || 0) - (a.usage_count || 0))
-        break
-      case 'date':
-        sortedData.sort((a, b) => {
+    // 先按优先级排序：置顶 > 收藏 > 普通
+    sortedData.sort((a, b) => {
+      // 置顶的优先级最高
+      if (a.is_pinned && !b.is_pinned) return -1
+      if (!a.is_pinned && b.is_pinned) return 1
+      
+      // 都置顶或都不置顶的情况下，再比较收藏状态
+      if (!a.is_pinned && !b.is_pinned) {
+        if (a.is_favorited && !b.is_favorited) return -1
+        if (!a.is_favorited && b.is_favorited) return 1
+      }
+      
+      // 优先级相同时，按选择的排序方式排序
+      switch (sortBy.value) {
+        case 'usage':
+          return (b.usage_count || 0) - (a.usage_count || 0)
+        case 'date':
           return dayjs(b.created_at || '').diff(dayjs(a.created_at || ''))
-        })
-        break
-      case 'title':
-        sortedData.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
-        break
-    }
+        case 'title':
+          return (a.title || '').localeCompare(b.title || '')
+        default:
+          return 0
+      }
+    })
     
     scriptList.value = sortedData
     pagination.total = response.total
@@ -1069,54 +1135,19 @@ const loadScripts = async () => {
   }
 }
 
-// 加载分类列表
-const loadCategories = async () => {
-  try {
-    // 尝试直接调用API获取分类
-    const response = await fetch('/api/v1/scripts/categories')
-    if (response.ok) {
-      const result = await response.json()
-      console.log('获取到的动态分类:', result)
-      // 解析标准的 {code, data, message} 格式
-      if (result.code === 200 && result.data) {
-        categories.value = result.data
-        console.log('设置分类数据:', result.data)
-      } else {
-        throw new Error(`API返回错误码: ${result.code}`)
-      }
-    } else {
-      throw new Error(`HTTP错误: ${response.status}`)
-    }
-  } catch (error) {
-    console.warn('动态分类API调用失败，尝试使用原有API:', error)
-    try {
-      const cats = await getScriptCategories()
-      console.log('获取到的分类:', cats)
-      categories.value = cats
-    } catch (apiError) {
-      console.error('所有分类API调用都失败:', apiError)
-      categories.value = ['开场白', '产品介绍', '价格谈判', '异议处理', '成交话术', '售后服务'] // 设置默认分类
-    }
-  }
-}
 
 // 加载统计数据
 const loadStats = async () => {
   try {
-    // 尝试调用动态API
-    const response = await fetch('/api/v1/scripts/stats')
-    if (response.ok) {
-      const result = await response.json()
-      console.log('获取到的动态统计数据:', result)
-      // 解析标准的 {code, data, message} 格式
-      if (result.code === 200 && result.data) {
-        scriptStats.value = result.data
-        console.log('设置统计数据:', result.data)
-      } else {
-        throw new Error(`API返回错误码: ${result.code}`)
-      }
+    // 使用axios统一调用API
+    const result = await request.get('/api/v1/scripts/stats')
+    console.log('获取到的动态统计数据:', result)
+    // 解析标准的 {code, data, message} 格式
+    if (result.code === 200 && result.data) {
+      scriptStats.value = result.data
+      console.log('设置统计数据:', result.data)
     } else {
-      throw new Error(`HTTP错误: ${response.status}`)
+      throw new Error(`API返回错误码: ${result.code}`)
     }
   } catch (error) {
     console.warn('动态API调用失败，使用计算的统计数据:', error)
@@ -1128,7 +1159,7 @@ const loadStats = async () => {
         if (!s.created_at) return false
         return dayjs().diff(dayjs(s.created_at), 'day') <= 7
       }).length,
-      categories: categories.value.length || 23
+      categories: 3 // 三维分类体系
     }
     
     console.log('计算的统计数据:', calculatedStats)
@@ -1139,29 +1170,25 @@ const loadStats = async () => {
 // 加载类型统计
 const loadTypeStats = async () => {
   try {
-    // 尝试调用动态API
-    const response = await fetch('/api/v1/scripts/type-stats')
-    if (response.ok) {
-      const result = await response.json()
-      console.log('获取到的动态类型统计:', result)
-      // 解析标准的 {code, data, message} 格式
-      if (result.code === 200 && result.data) {
-        scriptTypeOptions.value = result.data
-        console.log('设置类型统计数据:', result.data)
-      } else {
-        throw new Error(`API返回错误码: ${result.code}`)
-      }
+    // 使用axios统一调用API
+    const result = await request.get('/api/v1/scripts/script-type-new-stats')
+    console.log('获取到的动态类型统计:', result)
+    // 解析标准的 {code, data, message} 格式
+    if (result.code === 200 && result.data) {
+      scriptTypeOptions.value = result.data
+      console.log('设置类型统计数据:', result.data)
     } else {
-      throw new Error(`HTTP错误: ${response.status}`)
+      throw new Error(`API返回错误码: ${result.code}`)
     }
   } catch (error) {
     console.warn('动态API调用失败，使用默认类型数据:', error)
     // 如果API未实现，使用默认数据
     const defaultTypeStats = [
-      { value: 'grid_exam', label: '电网考试', count: 92 },
-      { value: 'sales_conversation', label: '销售对话', count: 198 },
-      { value: 'social_media_reply', label: '社媒回复', count: 12 },
-      { value: 'postgrad_consult', label: '考研咨询', count: 10 }
+      { value: 'sales_promotion', label: '销售转化', count: 27 },
+      { value: 'expert_guidance', label: '专业指导', count: 16 },
+      { value: 'service_support', label: '服务支持', count: 16 },
+      { value: 'consultation', label: '咨询引导', count: 16 },
+      { value: 'content_marketing', label: '内容营销', count: 12 }
     ]
     
     console.log('设置默认类型统计数据:', defaultTypeStats)
@@ -1169,42 +1196,191 @@ const loadTypeStats = async () => {
   }
 }
 
-// 加载来源统计
-const loadSourceStats = async () => {
+// 加载内容类型统计
+const loadContentTypeStats = async () => {
   try {
-    // 尝试调用动态API
-    const response = await fetch('/api/v1/scripts/source-stats')
-    if (response.ok) {
-      const result = await response.json()
-      console.log('获取到的动态来源统计:', result)
-      // 解析标准的 {code, data, message} 格式
-      if (result.code === 200 && result.data) {
-        scriptSourceOptions.value = result.data
-        console.log('设置来源统计数据:', result.data)
-      } else {
-        throw new Error(`API返回错误码: ${result.code}`)
-      }
+    // 使用axios统一调用API
+    const result = await request.get('/api/v1/scripts/content-type-stats')
+    console.log('获取到的动态内容类型统计:', result)
+    // 解析标准的 {code, data, message} 格式
+    if (result.code === 200 && result.data) {
+      scriptContentOptions.value = result.data
+      console.log('设置内容类型统计数据:', result.data)
     } else {
-      throw new Error(`HTTP错误: ${response.status}`)
+      throw new Error(`API返回错误码: ${result.code}`)
     }
   } catch (error) {
-    console.warn('动态API调用失败，使用默认来源数据:', error)
+    console.warn('动态API调用失败，使用默认内容类型数据:', error)
     // 如果API未实现，使用默认数据
-    const defaultSourceStats = [
-      { value: '话术库', label: '话术库', count: 198 },
-      { value: '最新电网术库', label: '电网术库', count: 92 },
-      { value: '小红书回复话术', label: '小红书话术', count: 12 },
-      { value: '考研话术库', label: '考研话术', count: 10 }
+    const defaultContentStats = [
+      { value: 'course_introduction', label: '课程介绍', count: 28 },
+      { value: 'application_process', label: '申请流程', count: 19 },
+      { value: 'career_planning', label: '职业规划', count: 12 },
+      { value: 'exam_guidance', label: '考试指导', count: 7 },
+      { value: 'general_support', label: '综合支持', count: 7 },
+      { value: 'company_service', label: '公司服务', count: 2 }
     ]
     
-    scriptSourceOptions.value = defaultSourceStats
+    scriptContentOptions.value = defaultContentStats
   }
+}
+
+// 加载平台统计
+const loadPlatformStats = async () => {
+  try {
+    // 使用axios统一调用API
+    const result = await request.get('/api/v1/scripts/platform-new-stats')
+    console.log('获取到的动态平台统计:', result)
+    // 解析标准的 {code, data, message} 格式
+    if (result.code === 200 && result.data) {
+      scriptPlatformOptions.value = result.data
+      console.log('设置平台统计数据:', result.data)
+    } else {
+      throw new Error(`API返回错误码: ${result.code}`)
+    }
+  } catch (error) {
+    console.warn('动态API调用失败，使用默认平台数据:', error)
+    // 如果API未实现，使用默认数据
+    const defaultPlatformStats = [
+      { value: 'wechat', label: '微信平台', count: 44 },
+      { value: 'universal', label: '通用平台', count: 28 },
+      { value: 'xiaohongshu', label: '小红书', count: 12 },
+      { value: 'phone', label: '电话沟通', count: 8 },
+      { value: 'qq', label: 'QQ平台', count: 3 }
+    ]
+    
+    scriptPlatformOptions.value = defaultPlatformStats
+  }
+}
+
+// 加载综合分类选项 - 将主分类和子分类合并为分组选项
+const loadCategoryOptions = async () => {
+  try {
+    console.log('使用默认分类数据构建级联选择器选项')
+    buildDefaultCategoryOptions()
+  } catch (error) {
+    console.warn('分类数据构建失败:', error)
+    buildDefaultCategoryOptions()
+  }
+}
+
+
+// 构建默认分类选项
+const buildDefaultCategoryOptions = () => {
+  const defaultOptions = [
+    {
+      label: '项目分类',
+      value: 'project_category',
+      count: 46, // 电网46 + 电气考研0
+      options: [
+        { value: 'project_category:power_grid', label: '项目分类 > 电网', count: 46 },
+        { value: 'project_category:electrical_exam', label: '项目分类 > 电气考研', count: 0 }
+      ]
+    },
+    {
+      label: '产品介绍',
+      value: 'product_intro', 
+      count: 48,
+      options: [
+        { value: 'product_intro:general', label: '产品介绍 > 通用', count: 48 }
+      ]
+    },
+    {
+      label: '营销话术',
+      value: 'marketing',
+      count: 30, // 估计值
+      options: [
+        { value: 'marketing', label: '营销话术', count: 30 }
+      ]
+    },
+    {
+      label: '常见问题',
+      value: 'faq',
+      count: 3,
+      options: [
+        { value: 'faq', label: '常见问题', count: 3 }
+      ]
+    },
+    {
+      label: '学习指导',
+      value: 'learning_guidance',
+      count: 151, // 网申54 + 复习规划57 + 报考咨询40
+      options: [
+        { value: 'learning_guidance:application_guide', label: '学习指导 > 网申', count: 54 },
+        { value: 'learning_guidance:review_planning', label: '学习指导 > 复习规划', count: 57 },
+        { value: 'learning_guidance:consultation', label: '学习指导 > 报考咨询', count: 40 }
+      ]
+    },
+    {
+      label: '学习规划',
+      value: 'study_planning',
+      count: 25, // 估计值
+      options: [
+        { value: 'study_planning', label: '学习规划', count: 25 }
+      ]
+    }
+  ]
+  
+  categoryOptions.value = defaultOptions
+  
+  // 构建级联选择器数据
+  const cascaderData = defaultOptions.map(category => ({
+    label: category.label,
+    value: category.value,
+    count: category.count,
+    children: category.options?.filter(option => option.value.includes(':')).map(option => {
+      // 对于格式如 "learning_guidance:application_guide" 的值，提取子分类部分
+      const parts = option.value.split(':')
+      const childValue = parts.length > 1 ? parts[1] : option.value
+      const childLabel = option.label.includes(' > ') ? option.label.split(' > ')[1] : option.label
+      
+      return {
+        label: childLabel,
+        value: childValue,
+        count: option.count
+      }
+    }) || []
+  }))
+  
+  cascaderOptions.value = cascaderData
 }
 
 // 搜索
 const handleSearch = () => {
   pagination.current = 1
   loadScripts()
+}
+
+// 级联选择器变化处理
+const handleCascaderChange = (values: (string | number)[]) => {
+  if (!values || values.length === 0) {
+    // 清空选择
+    selectedCategories.value = []
+    selectedCascaderValue.value = []
+  } else if (values.length === 1) {
+    // 只选择了主分类
+    selectedCategories.value = [String(values[0])]
+    selectedCascaderValue.value = values
+  } else if (values.length === 2) {
+    // 选择了主分类和子分类
+    selectedCategories.value = [`${values[0]}:${values[1]}`]
+    selectedCascaderValue.value = values
+  }
+  
+  console.log('级联选择器值变化:', { values, categories: selectedCategories.value })
+  handleSearch()
+}
+
+// 级联选择器显示渲染
+const displayRender = ({ labels }: { labels?: string[] }) => {
+  return labels ? labels.join(' > ') : ''
+}
+
+// 级联选择器搜索过滤
+const filterCascaderOption = (inputValue: string, path: any[]) => {
+  return path.some((option: any) => 
+    option.label && String(option.label).toLowerCase().includes(inputValue.toLowerCase())
+  )
 }
 
 // 分页变化
@@ -1223,14 +1399,17 @@ const showCreateModal = () => {
 const handleEdit = (script: Script) => {
   editingScript.value = script
   Object.assign(formData, {
-    category: script.category,
     title: script.title,
     question: script.question,
     answer: script.answer,
     keywords: script.keywords,
-    type: script.type,
-    source: script.source,
-    platform: script.platform,
+    // v2.0新分类体系字段
+    primary_category: script.primary_category,
+    secondary_category: script.secondary_category,
+    // 兼容旧分类字段
+    script_type_new: script.script_type_new,
+    content_type_new: script.content_type_new,
+    platform_new: script.platform_new,
     customer_info: script.customer_info
   })
   // 设置关键词选择
@@ -1267,7 +1446,27 @@ const handleDelete = (script: Script) => {
 // 复制到剪贴板并更新使用次数
 const copyToClipboard = async (text: string, script?: Script) => {
   try {
-    await navigator.clipboard.writeText(text)
+    // 检查是否支持现代剪贴板API
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // 降级到传统方法（兼容HTTP环境）
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-999999px'
+      textArea.style.top = '-999999px'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
+      
+      try {
+        document.execCommand('copy')
+      } finally {
+        document.body.removeChild(textArea)
+      }
+    }
+    
     message.success('话术已复制到剪贴板')
     
     // 如果提供了script对象，更新使用次数
@@ -1289,7 +1488,8 @@ const copyToClipboard = async (text: string, script?: Script) => {
       }
     }
   } catch (error) {
-    message.error('复制失败')
+    console.error('复制失败:', error)
+    message.error('复制失败，请手动复制')
   }
 }
 
@@ -1301,14 +1501,17 @@ const handleSubmit = async () => {
     
     // 准备提交数据，确保格式正确
     const submitData = {
-      category: formData.category,
       title: formData.title,
       question: formData.question || '',
       answer: formData.answer,
       keywords: formData.keywords || '',
-      type: formData.type, // 必填字段，不使用默认值
-      source: formData.source || undefined,
-      platform: formData.platform || undefined,
+      // v2.0新分类体系字段
+      primary_category: formData.primary_category, // 必填字段
+      secondary_category: formData.secondary_category || undefined,
+      // 兼容旧分类字段
+      script_type_new: formData.script_type_new || undefined,
+      content_type_new: formData.content_type_new || undefined,
+      platform_new: formData.platform_new || undefined,
       customer_info: formData.customer_info || undefined
     }
     
@@ -1324,7 +1527,6 @@ const handleSubmit = async () => {
     
     modalVisible.value = false
     loadScripts()
-    loadCategories() // 重新加载分类
   } catch (error) {
     console.error('提交失败:', error)
     if (error?.errorFields) return // 表单验证错误
@@ -1343,14 +1545,17 @@ const handleCancel = () => {
 // 重置表单
 const resetForm = () => {
   Object.assign(formData, {
-    category: '',
     title: '',
     question: '',
     answer: '',
     keywords: '',
-    type: undefined,
-    source: '',
-    platform: '',
+    // v2.0新分类体系字段
+    primary_category: undefined,
+    secondary_category: undefined,
+    // 兼容旧分类字段
+    script_type_new: undefined,
+    content_type_new: undefined,
+    platform_new: undefined,
     customer_info: ''
   })
   selectedKeywords.value = []
@@ -1382,33 +1587,95 @@ const showDetail = (script: Script) => {
   detailVisible.value = true
 }
 
+// 切换置顶状态
+const togglePin = async (script: Script) => {
+  if (!script.id || !canManagePin.value) {
+    message.warning('您没有权限执行此操作')
+    return
+  }
+  
+  try {
+    if (script.is_pinned) {
+      await unpinScript(script.id)
+      message.success('取消置顶成功')
+      script.is_pinned = false
+    } else {
+      await pinScript(script.id)
+      message.success('置顶成功')
+      script.is_pinned = true
+    }
+    
+    // 重新加载列表以显示正确的排序
+    await loadScripts()
+  } catch (error) {
+    console.error('置顶操作失败:', error)
+    message.error('置顶操作失败')
+  }
+}
+
+// 切换收藏状态
+const toggleFavorite = async (script: Script) => {
+  if (!script.id) return
+  
+  try {
+    if (script.is_favorited) {
+      await unfavoriteScript(script.id)
+      message.success('取消收藏成功')
+      script.is_favorited = false
+    } else {
+      await favoriteScript(script.id)
+      message.success('收藏成功')
+      script.is_favorited = true
+    }
+    
+    // 重新加载列表以显示正确的排序
+    await loadScripts()
+  } catch (error) {
+    console.error('收藏操作失败:', error)
+    message.error('收藏操作失败')
+  }
+}
+
 // 重置筛选
 const resetFilters = () => {
-  selectedCategory.value = undefined
   selectedType.value = undefined
-  selectedSource.value = undefined
+  selectedContentType.value = undefined
   selectedPlatform.value = undefined
+  selectedCategories.value = []
+  selectedCascaderValue.value = []
   sortBy.value = 'usage'
   searchKeyword.value = ''
   handleSearch()
 }
+
+// 监听主分类变化，清空子分类
+watch(() => formData.primary_category, (newValue, oldValue) => {
+  if (newValue !== oldValue && oldValue) {
+    formData.secondary_category = undefined
+  }
+})
 
 // 初始化
 onMounted(async () => {
   console.log('页面初始化开始')
   
   try {
-    // 首先加载基础数据
-    await Promise.all([
-      loadScripts(),
-      loadCategories()
-    ])
+    // 首先加载用户偏好设置
+    await loadPreferencesOnce()
+    
+    // 设置默认分页大小为用户偏好（与switchDisplayMode保持一致）
+    pagination.pageSize = itemsPerPage.value || 300
+    
+    // 然后加载基础数据
+    await loadScripts()
     
     // 然后加载统计数据（依赖基础数据）
     await Promise.all([
       loadStats(),
       loadTypeStats(),
-      loadSourceStats()
+      loadContentTypeStats(),
+      loadPlatformStats(),
+      loadCategoryOptions()
     ])
     
     console.log('所有数据加载完成')
@@ -1431,160 +1698,53 @@ onMounted(async () => {
   gap: 16px;
 }
 
-// 页面头部
-.page-header {
-  .header-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 20px 24px;
-    background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
-    border-radius: var(--border-radius-base);
-    color: white;
-    
-    @media (max-width: 768px) {
-      padding: 16px;
-      flex-direction: column;
-      gap: 16px;
-    }
-  }
+// 紧凑头部
+.compact-header {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+  border-radius: 8px;
+  border: 1px solid #d6f4ff;
+  margin-bottom: 8px;
   
-  .page-title {
-    margin: 0;
-    font-size: 24px;
-    font-weight: 600;
+  .compact-stats {
     display: flex;
+    justify-content: space-around;
     align-items: center;
-    gap: 8px;
     
     @media (max-width: 768px) {
-      font-size: 20px;
-    }
-  }
-  
-  .title-icon {
-    font-size: 28px;
-    
-    @media (max-width: 768px) {
-      font-size: 24px;
-    }
-  }
-  
-  .page-description {
-    margin: 4px 0 0 0;
-    opacity: 0.9;
-    font-size: 14px;
-  }
-  
-  .header-stats {
-    :deep(.ant-statistic-title) {
-      color: rgba(255, 255, 255, 0.8);
-      font-size: 12px;
+      flex-direction: row;
+      justify-content: space-between;
     }
     
-    :deep(.ant-statistic-content) {
-      color: white;
+    .stat-item {
+      text-align: center;
+      
+      .stat-number {
+        display: block;
+        font-size: 18px;
+        font-weight: 600;
+        color: #1890ff;
+        line-height: 1;
+        
+        @media (max-width: 768px) {
+          font-size: 16px;
+        }
+      }
+      
+      .stat-label {
+        display: block;
+        font-size: 12px;
+        color: #666;
+        margin-top: 2px;
+        
+        @media (max-width: 768px) {
+          font-size: 11px;
+        }
+      }
     }
   }
 }
 
-// 统计部分
-.stats-section {
-  .stats-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-      gap: 12px;
-    }
-  }
-  
-  .stat-card {
-    transition: var(--transition-base);
-    border: none;
-    
-    &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
-    }
-    
-    &.popular {
-      border-left: 4px solid #fa541c;
-    }
-    
-    &.recent {
-      border-left: 4px solid #1890ff;
-    }
-    
-    &.categories {
-      border-left: 4px solid #722ed1;
-    }
-    
-    :deep(.ant-card-body) {
-      padding: 20px;
-      
-      @media (max-width: 768px) {
-        padding: 16px;
-      }
-    }
-  }
-  
-  .stat-content {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-  
-  .stat-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    
-    &.popular-icon {
-      background: linear-gradient(135deg, #ff7875 0%, #fa541c 100%);
-      color: white;
-    }
-    
-    &.recent-icon {
-      background: linear-gradient(135deg, #69c0ff 0%, #1890ff 100%);
-      color: white;
-    }
-    
-    &.categories-icon {
-      background: linear-gradient(135deg, #b37feb 0%, #722ed1 100%);
-      color: white;
-    }
-  }
-  
-  .stat-info {
-    flex: 1;
-  }
-  
-  .stat-number {
-    font-size: 24px;
-    font-weight: 600;
-    line-height: 1;
-    margin-bottom: 4px;
-  }
-  
-  .stat-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #2c3e50;
-    margin-bottom: 2px;
-  }
-  
-  .stat-desc {
-    font-size: 12px;
-    color: #8c8c8c;
-  }
-}
 
 // 主卡片
 .main-card {
@@ -1596,20 +1756,20 @@ onMounted(async () => {
     flex: 1;
     display: flex;
     flex-direction: column;
-    padding: 24px;
+    padding: 16px;
     
     @media (max-width: 768px) {
-      padding: 16px;
+      padding: 12px;
     }
   }
 }
 
 // 搜索区域
 .search-section {
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   
   @media (max-width: 768px) {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
   }
 }
 
@@ -1657,6 +1817,11 @@ onMounted(async () => {
 
 .filter-select {
   min-width: 150px;
+  
+  &.category-filter {
+    min-width: 200px;
+    max-width: 280px;
+  }
 }
 
 .option-text {
@@ -1688,8 +1853,8 @@ onMounted(async () => {
   }
 }
 
-// 话术列表区域
-.script-list-section {
+// 紧凑话术列表区域
+.compact-script-list {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -1730,36 +1895,464 @@ onMounted(async () => {
   }
 }
 
-// 网格视图
-.scripts-grid {
+// 紧凑三栏网格
+.script-grid-compact {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  
+  @media (max-width: 1200px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
   
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
   }
 }
 
-.script-card {
-  transition: var(--transition-base);
+.script-item-compact {
+  background: white;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: 8px;
+  position: relative;
   
   &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1) !important;
+    border-color: #1890ff;
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  &.pinned-item {
+    background: linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%);
+    border-color: #faad14;
+    box-shadow: 0 2px 8px rgba(250, 173, 20, 0.15);
+    
+    &:hover {
+      border-color: #faad14;
+      box-shadow: 0 4px 12px rgba(250, 173, 20, 0.25);
+    }
+  }
+  
+  &.favorited-item {
+    background: linear-gradient(135deg, #fff0f6 0%, #fff5f5 100%);
+    border-color: #eb2f96;
+    box-shadow: 0 2px 8px rgba(235, 47, 150, 0.15);
+    
+    &:hover {
+      border-color: #eb2f96;
+      box-shadow: 0 4px 12px rgba(235, 47, 150, 0.25);
+    }
+  }
+  
+  .pin-corner {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    
+    .pin-icon {
+      color: #faad14;
+      font-size: 14px;
+      transform: rotate(45deg);
+      filter: drop-shadow(0 1px 2px rgba(250, 173, 20, 0.3));
+    }
+  }
+  
+  .favorite-corner {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    
+    .favorite-icon {
+      color: #eb2f96;
+      font-size: 14px;
+      filter: drop-shadow(0 1px 2px rgba(235, 47, 150, 0.3));
+      animation: heartbeat 2s infinite;
+    }
+  }
+  
+  .question-section,
+  .answer-section {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    
+    .section-label {
+      font-weight: 600;
+      font-size: 14px;
+      color: #1890ff;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    
+    .section-content {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.4;
+      color: #333;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  }
+  
+  .question-section {
+    .section-label {
+      color: #fa8c16;
+    }
+    
+    .section-content {
+      color: #fa8c16;
+      font-style: italic;
+    }
+  }
+  
+  .item-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid #f5f5f5;
+    
+    .item-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      
+      .usage-count {
+        color: #666;
+      }
+    }
+    
+    .action-buttons {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+    }
+    
+    .pin-btn-compact {
+      padding: 2px 6px;
+      height: 24px;
+      font-size: 12px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+      
+      // 未置顶状态：灰色空心图钉
+      &[class*="text"] {
+        color: #8c8c8c;
+        border-color: transparent;
+        
+        &:hover {
+          color: #faad14;
+          background-color: #fff7e6;
+          border-color: #faad14;
+        }
+      }
+      
+      // 置顶状态：橙色填充图钉
+      &[class*="default"] {
+        color: #faad14;
+        background-color: #fff7e6;
+        border-color: #faad14;
+        
+        .pinned {
+          filter: drop-shadow(0 1px 2px rgba(250, 173, 20, 0.3));
+        }
+        
+        &:hover {
+          background-color: #ffd666;
+          border-color: #d48806;
+          color: #d48806;
+        }
+      }
+    }
+    
+    .favorite-btn-compact {
+      padding: 2px 6px;
+      height: 24px;
+      font-size: 12px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+      
+      // 未收藏状态：灰色空心爱心
+      &[class*="text"] {
+        color: #8c8c8c;
+        border-color: transparent;
+        
+        &:hover {
+          color: #eb2f96;
+          background-color: #fff0f6;
+          border-color: #eb2f96;
+        }
+      }
+      
+      // 收藏状态：红色填充爱心
+      &[class*="default"] {
+        color: #eb2f96;
+        background-color: #fff0f6;
+        border-color: #eb2f96;
+        
+        .favorited {
+          filter: drop-shadow(0 1px 2px rgba(235, 47, 150, 0.3));
+        }
+        
+        &:hover {
+          background-color: #ffadd2;
+          border-color: #c41d7f;
+          color: #c41d7f;
+        }
+      }
+    }
+    
+    .copy-btn-compact {
+      padding: 2px 8px;
+      height: 24px;
+      font-size: 12px;
+      border-radius: 4px;
+      
+      &:hover {
+        transform: scale(1.05);
+      }
+    }
+    
+    .delete-btn-compact {
+      padding: 2px 6px;
+      height: 24px;
+      font-size: 12px;
+      border-radius: 4px;
+      color: #ff4d4f;
+      
+      &:hover {
+        transform: scale(1.05);
+        background-color: #fff2f0;
+        border-color: #ff4d4f;
+        color: #ff4d4f;
+      }
+    }
+  }
+}
+
+// 问题列表模式 - 固定宽度三栏布局
+.question-list-mode {
+  .question-list {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    
+    @media (max-width: 1200px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    @media (max-width: 768px) {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+  }
+  
+  .question-item {
+    background: white;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      border-color: #1890ff;
+      box-shadow: 0 2px 4px rgba(24, 144, 255, 0.1);
+    }
+    
+    &.pinned-item {
+      background: linear-gradient(135deg, #fff7e6 0%, #fffbe6 100%);
+      border-color: #faad14;
+      box-shadow: 0 1px 4px rgba(250, 173, 20, 0.15);
+      
+      &:hover {
+        border-color: #faad14;
+        box-shadow: 0 2px 6px rgba(250, 173, 20, 0.25);
+      }
+    }
+    
+    &.favorited-item {
+      background: linear-gradient(135deg, #fff0f6 0%, #fff5f5 100%);
+      border-color: #eb2f96;
+      box-shadow: 0 1px 4px rgba(235, 47, 150, 0.15);
+      
+      &:hover {
+        border-color: #eb2f96;
+        box-shadow: 0 2px 6px rgba(235, 47, 150, 0.25);
+      }
+    }
+    
+    .question-content {
+      display: flex;
+      align-items: center;
+      flex: 1;
+      min-width: 0;
+      gap: 8px;
+      
+      .question-text {
+        flex: 1;
+        font-size: 14px;
+        color: #333;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .question-tag {
+        flex-shrink: 0;
+      }
+    }
+    
+    .question-actions {
+      flex-shrink: 0;
+      margin-left: 12px;
+      display: flex;
+      gap: 4px;
+      
+      .pin-btn-question {
+        padding: 2px 6px;
+        height: 24px;
+        font-size: 12px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.05);
+        }
+        
+        // 未置顶状态：灰色空心图钉
+        &[class*="text"] {
+          color: #8c8c8c;
+          border-color: transparent;
+          
+          &:hover {
+            color: #faad14;
+            background-color: #fff7e6;
+            border-color: #faad14;
+          }
+        }
+        
+        // 置顶状态：橙色填充图钉
+        &[class*="default"] {
+          color: #faad14;
+          background-color: #fff7e6;
+          border-color: #faad14;
+          
+          .pinned {
+            filter: drop-shadow(0 1px 2px rgba(250, 173, 20, 0.3));
+          }
+          
+          &:hover {
+            background-color: #ffd666;
+            border-color: #d48806;
+            color: #d48806;
+          }
+        }
+      }
+      
+      .favorite-btn-question {
+        padding: 2px 6px;
+        height: 24px;
+        font-size: 12px;
+        border-radius: 4px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          transform: scale(1.05);
+        }
+        
+        // 未收藏状态：灰色空心爱心
+        &[class*="text"] {
+          color: #8c8c8c;
+          border-color: transparent;
+          
+          &:hover {
+            color: #eb2f96;
+            background-color: #fff0f6;
+            border-color: #eb2f96;
+          }
+        }
+        
+        // 收藏状态：红色填充爱心
+        &[class*="default"] {
+          color: #eb2f96;
+          background-color: #fff0f6;
+          border-color: #eb2f96;
+          
+          .favorited {
+            filter: drop-shadow(0 1px 2px rgba(235, 47, 150, 0.3));
+          }
+          
+          &:hover {
+            background-color: #ffadd2;
+            border-color: #c41d7f;
+            color: #c41d7f;
+          }
+        }
+      }
+      
+      .copy-btn-question {
+        padding: 2px 8px;
+        height: 24px;
+        font-size: 12px;
+        border-radius: 4px;
+        
+        &:hover {
+          transform: scale(1.05);
+        }
+      }
+    }
   }
 }
 
 .card-header {
-  padding: 16px;
+  padding: 20px;
   border-bottom: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  background: linear-gradient(135deg, #f8fbff 0%, #f0f9ff 100%);
+  position: relative;
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  
+  .script-card:hover & {
+    &::after {
+      opacity: 1;
+    }
+  }
 }
 
 .card-title-section {
@@ -1767,11 +2360,20 @@ onMounted(async () => {
 }
 
 .card-title {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #2c3e50;
+  margin: 0 0 10px 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a202c;
   line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  cursor: pointer;
+  
+  &:hover {
+    color: #52c41a;
+  }
 }
 
 .card-tags {
@@ -1801,11 +2403,12 @@ onMounted(async () => {
 }
 
 .card-content {
-  padding: 16px;
+  padding: 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  background: #ffffff;
 }
 
 .content-section {
@@ -1828,21 +2431,21 @@ onMounted(async () => {
     color: #666;
     
     &.question-text {
-      background: #f0f9ff;
-      padding: 8px;
-      border-radius: 4px;
-      border-left: 3px solid #1890ff;
+      background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #1890ff;
     }
     
     &.answer-text {
-      background: #f6ffed;
-      padding: 8px;
-      border-radius: 4px;
-      border-left: 3px solid #52c41a;
-      max-height: 60px;
+      background: linear-gradient(135deg, #f6ffed 0%, #fcffe6 100%);
+      padding: 12px;
+      border-radius: 8px;
+      border-left: 4px solid #52c41a;
+      max-height: 80px;
       overflow: hidden;
       display: -webkit-box;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 4;
       -webkit-box-orient: vertical;
     }
   }
@@ -1863,11 +2466,12 @@ onMounted(async () => {
 }
 
 .card-footer {
-  padding: 12px 16px;
+  padding: 16px 20px;
   border-top: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
 }
 
 .usage-stats {
@@ -1896,9 +2500,14 @@ onMounted(async () => {
 .copy-btn {
   background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
   border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(82, 196, 26, 0.3);
   
   &:hover {
     background: linear-gradient(135deg, #73d13d 0%, #95de64 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(82, 196, 26, 0.4);
   }
 }
 
@@ -2067,97 +2676,118 @@ onMounted(async () => {
   }
 }
 
-// 详情模态框
-.detail-modal {
+// 紧凑的详情模态框
+.detail-modal-compact {
   :deep(.ant-modal-body) {
-    padding: 24px;
+    padding: 16px;
   }
 }
 
-.script-detail {
-  .detail-header {
-    margin-bottom: 24px;
-    
-    .detail-title {
-      margin: 0 0 12px 0;
-      font-size: 20px;
-      font-weight: 600;
-      color: #2c3e50;
-    }
-    
-    .detail-tags {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-  }
+.script-detail-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   
-  .detail-section {
-    margin-bottom: 24px;
+  .detail-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid #f5f5f5;
     
-    .section-title {
+    &:last-child {
+      border-bottom: none;
+    }
+    
+    .row-label {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin: 0 0 12px 0;
-      font-size: 16px;
+      gap: 6px;
+      min-width: 80px;
+      font-size: 13px;
       font-weight: 600;
-      color: #2c3e50;
+      color: #666;
+      flex-shrink: 0;
       
-      .section-icon {
+      .anticon {
+        font-size: 12px;
         color: #52c41a;
       }
     }
     
-    .section-content {
-      padding: 16px;
-      border-radius: 8px;
-      line-height: 1.6;
+    .row-content {
+      flex: 1;
+      font-size: 13px;
+      line-height: 1.5;
       
-      &.question-content {
+      &.question-text {
+        color: #1890ff;
+        font-style: italic;
         background: #f0f9ff;
-        border-left: 4px solid #1890ff;
+        padding: 8px;
+        border-radius: 4px;
+      }
+      
+      &.answer-text {
+        color: #333;
+        background: #f6ffed;
+        padding: 8px;
+        border-radius: 4px;
+      }
+    }
+    
+    &.stats-row {
+      .stats-content {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        
+        .usage-number {
+          font-weight: 600;
+          color: #fa8c16;
+        }
+        
+        .create-time {
+          font-size: 12px;
+          color: #999;
+        }
+      }
+    }
+  }
+  
+  .compact-keyword-tag {
+    margin: 2px;
+    font-size: 11px;
+    padding: 2px 6px;
+    background: #f5f5f5;
+    border: 1px solid #e8e8e8;
+  }
+  
+  .detail-actions-compact {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    padding-top: 12px;
+    margin-top: 8px;
+    border-top: 1px solid #f0f0f0;
+    
+    .compact-copy-btn,
+    .compact-edit-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      font-size: 12px;
+      height: 28px;
+      border-radius: 4px;
+    }
+    
+    .compact-copy-btn {
+      &:hover {
+        background: #f0f9ff;
+        border-color: #1890ff;
         color: #1890ff;
       }
-      
-      &.answer-content {
-        background: #f6ffed;
-        border-left: 4px solid #52c41a;
-        color: #52c41a;
-      }
-    }
-  }
-  
-  .detail-stats {
-    display: flex;
-    gap: 24px;
-    margin-bottom: 24px;
-    padding: 16px;
-    background: #fafafa;
-    border-radius: 8px;
-    
-    .stat-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 14px;
-      color: #666;
-      
-      .stat-icon {
-        color: #52c41a;
-      }
-    }
-  }
-  
-  .detail-actions {
-    display: flex;
-    gap: 12px;
-    justify-content: flex-end;
-    
-    .copy-action {
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
   }
 }
@@ -2165,9 +2795,45 @@ onMounted(async () => {
 // 话术模态框
 .script-modal {
   :deep(.ant-modal-body) {
-    padding: 24px;
+    padding: 16px;
     max-height: 80vh;
     overflow-y: auto;
+  }
+  
+  .compact-form {
+    :deep(.ant-form-item) {
+      margin-bottom: 16px;
+      
+      .ant-form-item-label {
+        padding-bottom: 4px;
+        
+        label {
+          height: auto;
+          line-height: 1.4;
+          font-size: 13px;
+          font-weight: 500;
+        }
+      }
+      
+      .ant-form-item-control-input {
+        min-height: auto;
+      }
+    }
+    
+    :deep(.ant-row) {
+      margin-bottom: 8px;
+    }
+    
+    :deep(.ant-input),
+    :deep(.ant-select-selector),
+    :deep(.ant-select-selection-search-input) {
+      font-size: 13px;
+    }
+    
+    :deep(.ant-input),
+    :deep(.ant-select-selector) {
+      border-radius: 4px;
+    }
   }
   
   .keywords-input-section {
@@ -2222,6 +2888,161 @@ onMounted(async () => {
   :deep(.ant-select-focused:not(.ant-select-disabled).ant-select:not(.ant-select-customize-input) .ant-select-selector) {
     border-color: #52c41a;
     box-shadow: 0 0 0 2px rgba(82, 196, 26, 0.2);
+  }
+}
+
+// 分类选择框美化样式
+:deep(.category-option) {
+  .category-option-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    
+    .anticon {
+      font-size: 14px;
+      width: 16px;
+      text-align: center;
+    }
+    
+    .category-label {
+      font-weight: 500;
+      font-size: 13px;
+    }
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%) !important;
+  }
+}
+
+:deep(.subcategory-option) {
+  .subcategory-option-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+    
+    .anticon {
+      font-size: 12px;
+      width: 14px;
+      text-align: center;
+    }
+    
+    .subcategory-label {
+      font-weight: 500;
+      font-size: 13px;
+    }
+  }
+  
+  &:hover {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+  }
+}
+
+// 优化选择框整体样式
+:deep(.ant-select) {
+  .ant-select-selector {
+    border-radius: 6px !important;
+    border: 1px solid #d9d9d9 !important;
+    
+    &:hover {
+      border-color: #40a9ff !important;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1) !important;
+    }
+    
+    &.ant-select-focused {
+      border-color: #40a9ff !important;
+      box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2) !important;
+    }
+  }
+  
+  .ant-select-selection-placeholder {
+    color: #bfbfbf !important;
+    font-style: italic;
+  }
+}
+
+// 级联分类选择样式
+.cascade-select {
+  :deep(.ant-select-selector) {
+    border-radius: 8px !important;
+    border: 2px solid #e6f7ff !important;
+    background: linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%) !important;
+    transition: all 0.3s ease !important;
+    
+    &:hover {
+      border-color: #40a9ff !important;
+      box-shadow: 0 0 0 3px rgba(64, 169, 255, 0.1) !important;
+      transform: translateY(-1px);
+    }
+    
+    &.ant-select-focused {
+      border-color: #1890ff !important;
+      box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.15) !important;
+    }
+  }
+}
+
+.subcategory-row {
+  margin-top: 16px;
+  
+  .subcategory-help {
+    padding-top: 30px; // 与表单项标签对齐
+    
+    :deep(.ant-alert) {
+      border: 1px solid #d6f4ff;
+      background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+      border-radius: 8px;
+      
+      .ant-alert-icon {
+        color: #1890ff;
+      }
+      
+      .ant-alert-message {
+        color: #1890ff;
+        font-weight: 600;
+        font-size: 12px;
+      }
+      
+      .ant-alert-description {
+        color: #666;
+        font-size: 11px;
+        line-height: 1.4;
+      }
+    }
+  }
+}
+
+// 主分类选项的子分类提示样式
+.subcategory-hint {
+  .anticon {
+    animation: pulse 2s infinite;
+  }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+// 爱心跳动动画
+@keyframes heartbeat {
+  0% {
+    transform: scale(1);
+  }
+  14% {
+    transform: scale(1.1);
+  }
+  28% {
+    transform: scale(1);
+  }
+  42% {
+    transform: scale(1.1);
+  }
+  70% {
+    transform: scale(1);
   }
 }
 </style>

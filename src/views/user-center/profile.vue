@@ -58,23 +58,12 @@
           <a-col :span="12">
             <a-form-item label="头像" name="avatar">
               <div class="avatar-section">
-                <a-avatar :size="100" :src="form.avatar || userInfo?.avatar">
-                  <template #icon><UserOutlined /></template>
-                </a-avatar>
-                <div class="avatar-actions" v-if="editMode">
-                  <a-upload
-                    name="avatar"
-                    :show-upload-list="false"
-                    :before-upload="beforeUpload"
-                    :custom-request="uploadAvatar"
-                    accept="image/*"
-                  >
-                    <a-button size="small" type="link">
-                      <UploadOutlined />
-                      上传头像
-                    </a-button>
-                  </a-upload>
-                </div>
+                <AvatarSelector
+                  v-model="form.avatar"
+                  :size="100"
+                  :editable="editMode"
+                  @change="handleAvatarChange"
+                />
               </div>
             </a-form-item>
 
@@ -158,8 +147,11 @@ import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import { EditOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons-vue'
 import { getUserProfile, updateUserProfile, changePassword, type UserProfile, type UpdateProfileRequest, type ChangePasswordRequest } from '@/api/user-center'
+import AvatarSelector from '@/components/AvatarSelector.vue'
+import { useUserStore } from '@/stores/user'
 import dayjs from 'dayjs'
 
+const userStore = useUserStore()
 const loading = ref(false)
 const editMode = ref(false)
 const submitting = ref(false)
@@ -263,6 +255,15 @@ const handleSubmit = async () => {
     if (response.code === 0) {
       message.success('个人信息更新成功')
       editMode.value = false
+      
+      // 更新全局用户状态
+      userStore.updateUserInfo({
+        real_name: form.real_name,
+        email: form.email,
+        phone: form.phone,
+        avatar: form.avatar
+      })
+      
       await fetchUserProfile() // 重新获取用户信息
     }
   } catch (error) {
@@ -304,27 +305,41 @@ const beforeUpload = (file: File) => {
   return true
 }
 
-const uploadAvatar = async (options: any) => {
-  const formData = new FormData()
-  formData.append('file', options.file)
-  
+const handleAvatarChange = async (newAvatar: string) => {
   try {
-    // 这里需要实现文件上传的API
-    // const response = await uploadFile(formData)
-    // form.avatar = response.data.url
+    // 更新表单
+    form.avatar = newAvatar
+    console.log('🔄 个人信息页头像变更:', newAvatar)
     
-    // 临时实现：创建本地预览URL
-    const url = URL.createObjectURL(options.file)
-    form.avatar = url
-    message.success('头像上传成功')
+    // 立即调用API更新头像
+    const response = await updateUserProfile({ avatar: newAvatar })
+    if (response.code === 0) {
+      // 更新全局用户状态
+      userStore.updateUserInfo({ avatar: newAvatar })
+      message.success('头像更新成功')
+    } else {
+      message.error(response.message || '头像更新失败')
+    }
   } catch (error) {
-    message.error('头像上传失败')
-    console.error('上传失败:', error)
+    console.error('头像更新失败:', error)
+    message.error('头像更新失败')
   }
 }
 
 onMounted(() => {
   fetchUserProfile()
+})
+
+// 监听用户信息变化，同步更新表单
+userStore.$subscribe((_mutation, state) => {
+  if (state.userInfo && !editMode.value) {
+    // 只在非编辑模式下同步，避免编辑时被覆盖
+    form.real_name = state.userInfo.real_name || ''
+    form.email = state.userInfo.email || ''
+    form.phone = state.userInfo.phone || ''
+    form.avatar = state.userInfo.avatar || ''
+    console.log('🔄 个人信息页监听到userStore变化:', state.userInfo.avatar)
+  }
 })
 </script>
 

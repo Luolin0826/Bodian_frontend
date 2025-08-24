@@ -1,5 +1,28 @@
 <template>
   <div class="security-page">
+    <!-- 安全告警区域 -->
+    <div class="security-alerts" style="margin-bottom: 24px;">
+      <a-alert
+        v-for="alert in securityAlerts"
+        :key="alert.id"
+        :type="alert.type"
+        :message="alert.title"
+        :description="alert.description"
+        show-icon
+        closable
+        @close="dismissAlert(alert.id)"
+        style="margin-bottom: 8px;"
+      >
+        <template #action>
+          <a-space>
+            <a-button v-if="alert.actionText" size="small" @click="handleAlertAction(alert)">
+              {{ alert.actionText }}
+            </a-button>
+          </a-space>
+        </template>
+      </a-alert>
+    </div>
+
     <a-row :gutter="24">
       <!-- 安全概览 -->
       <a-col :span="16">
@@ -257,6 +280,18 @@ const terminatingIds = ref<string[]>([])
 const securitySettings = ref<SecuritySettings>()
 const activeSessions = ref<ActiveSession[]>([])
 
+// 安全告警相关
+interface SecurityAlert {
+  id: string
+  type: 'error' | 'warning' | 'info'
+  title: string
+  description: string
+  actionText?: string
+  action?: () => void
+}
+
+const securityAlerts = ref<SecurityAlert[]>([])
+
 const securityItems = computed(() => [
   {
     type: 'switch',
@@ -345,12 +380,106 @@ const formatDateTime = (datetime?: string) => {
   return datetime ? dayjs(datetime).format('YYYY-MM-DD HH:mm:ss') : '-'
 }
 
+// 安全告警相关函数
+const generateSecurityAlerts = () => {
+  const alerts: SecurityAlert[] = []
+  
+  if (!securitySettings.value) return alerts
+
+  // 检查失败登录次数
+  if (securitySettings.value.failed_login_attempts > 3) {
+    alerts.push({
+      id: 'failed-logins',
+      type: 'warning',
+      title: '异常登录尝试',
+      description: `检测到 ${securitySettings.value.failed_login_attempts} 次登录失败，请检查账户安全。`,
+      actionText: '查看登录日志',
+      action: () => {
+        // 跳转到登录日志页面
+        window.open('/user-center/login-logs', '_blank')
+      }
+    })
+  }
+
+  // 检查密码强度
+  if (securitySettings.value.password_strength === 'weak') {
+    alerts.push({
+      id: 'weak-password',
+      type: 'error',
+      title: '密码强度不足',
+      description: '您的密码强度较弱，建议立即修改为更复杂的密码。',
+      actionText: '修改密码',
+      action: () => {
+        // 跳转到修改密码页面
+        window.open('/user-center/security#change-password', '_blank')
+      }
+    })
+  }
+
+  // 检查密码过期
+  if (securitySettings.value.password_expires_in <= 7 && securitySettings.value.password_expires_in > 0) {
+    alerts.push({
+      id: 'password-expiring',
+      type: 'warning',
+      title: '密码即将过期',
+      description: `您的密码将在 ${securitySettings.value.password_expires_in} 天后过期，请及时更新。`,
+      actionText: '修改密码',
+      action: () => {
+        window.open('/user-center/security#change-password', '_blank')
+      }
+    })
+  }
+
+  // 检查双因素认证
+  if (!securitySettings.value.two_factor_enabled) {
+    alerts.push({
+      id: 'no-2fa',
+      type: 'info',
+      title: '建议启用双因素认证',
+      description: '启用双因素认证可以大大提高您账户的安全性。',
+      actionText: '立即启用',
+      action: () => {
+        handleTwoFactorToggle(true)
+      }
+    })
+  }
+
+  // 检查账户锁定
+  if (securitySettings.value.account_locked_until) {
+    const unlockTime = dayjs(securitySettings.value.account_locked_until)
+    if (unlockTime.isAfter(dayjs())) {
+      alerts.push({
+        id: 'account-locked',
+        type: 'error',
+        title: '账户已被锁定',
+        description: `由于多次登录失败，您的账户已被锁定至 ${formatDateTime(securitySettings.value.account_locked_until)}。`,
+        actionText: '联系管理员'
+      })
+    }
+  }
+
+  return alerts
+}
+
+const dismissAlert = (alertId: string) => {
+  securityAlerts.value = securityAlerts.value.filter(alert => alert.id !== alertId)
+  // 这里可以调用API来记录用户已经关闭了这个告警
+}
+
+const handleAlertAction = (alert: SecurityAlert) => {
+  if (alert.action) {
+    alert.action()
+  }
+}
+
 const fetchSecuritySettings = async () => {
   try {
     loading.value = true
     const response = await getSecuritySettings()
     if (response.code === 0) {
       securitySettings.value = response.data
+      // 生成安全告警
+      securityAlerts.value = generateSecurityAlerts()
     }
   } catch (error) {
     console.error('获取安全设置失败:', error)

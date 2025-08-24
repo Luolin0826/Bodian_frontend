@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据流验证测试</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+        .section { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 8px; }
+        .data-box { background: #e6f7ff; padding: 10px; margin: 10px 0; border-left: 4px solid #1890ff; font-family: monospace; }
+        .result { background: #f6ffed; padding: 10px; margin: 10px 0; border-left: 4px solid #52c41a; }
+        .step { margin: 10px 0; padding: 8px; background: white; border-radius: 4px; }
+        .step-title { font-weight: bold; color: #1890ff; }
+    </style>
+</head>
+<body>
+    <h1>🔄 数据流验证测试</h1>
+    
+    <div class="section">
+        <h3>📡 1. 后端原始响应数据</h3>
+        <div class="step">
+            <div class="step-title">来自 /api/v1/data-search/search 的响应：</div>
+            <div class="data-box" id="backendResponse"></div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h3>🔧 2. API适配层处理</h3>
+        <div class="step">
+            <div class="step-title">recruitment.ts 中的数据适配：</div>
+            <div class="data-box" id="adaptedData"></div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h3>🎯 3. 前端组件数据访问</h3>
+        <div class="step">
+            <div class="step-title">DataAnalytics.vue 中的数据读取：</div>
+            <div class="data-box" id="frontendAccess"></div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h3>✅ 4. 验证结果</h3>
+        <div id="validationResults"></div>
+    </div>
+
+    <script>
+        // 1. 模拟后端原始响应（基于实际测试结果）
+        const backendOriginalResponse = {
+            "total_records": 5095,
+            "unit_statistics": {
+                "available": true,
+                "covered_units": 7,
+                "total_units": 7,
+                "units": [
+                    {"unit_name": "广东", "region": "南方", "recruitment_count": 1750, "percentage": 34.35},
+                    {"unit_name": "云南", "region": "西南", "recruitment_count": 1204, "percentage": 23.63},
+                    {"unit_name": "广西", "region": "南方", "recruitment_count": 895, "percentage": 17.57},
+                    {"unit_name": "贵州", "region": "西南", "recruitment_count": 652, "percentage": 12.80},
+                    {"unit_name": "海南", "region": "南方", "recruitment_count": 427, "percentage": 8.38},
+                    {"unit_name": "深圳供电局", "region": "南方", "recruitment_count": 134, "percentage": 2.63},
+                    {"unit_name": "超高压公司", "region": "南方", "recruitment_count": 33, "percentage": 0.65}
+                ]
+            },
+            "school_statistics": {
+                "schools": [
+                    {"school_name": "华南理工大学", "school_type": "985工程", "school_level": "985工程", "recruitment_count": 234, "percentage": 4.59},
+                    {"school_name": "中南大学", "school_type": "985工程", "school_level": "985工程", "recruitment_count": 187, "percentage": 3.67}
+                ]
+            },
+            "statistics": {
+                "university_level_distribution": {
+                    "985工程": 1256,
+                    "211工程": 2089,
+                    "普通本科": 1750
+                },
+                "gender_distribution": {
+                    "男": 4076,
+                    "女": 1019
+                }
+            }
+        };
+        
+        // 2. 模拟API适配层处理（recruitment.ts中的逻辑）
+        function simulateApiAdapter(backendResponse) {
+            return {
+                query_params: {"company": "南网", "batch": "一批"},
+                policies: [],
+                summary: {
+                    total_records: backendResponse.total_records || 0,
+                    by_level: backendResponse.statistics?.university_level_distribution || {},
+                    by_region_type: {}
+                },
+                data_analysis: {
+                    total_count: backendResponse.total_records,
+                    total_records: backendResponse.total_records,
+                    gender_distribution: backendResponse.statistics?.gender_distribution || {},
+                    school_type_distribution: backendResponse.statistics?.university_level_distribution || {},
+                    university_level_distribution: backendResponse.statistics?.university_level_distribution || {},
+                    school_statistics: backendResponse.school_statistics || {},
+                    // 关键：unit_statistics 数据映射
+                    unit_statistics: backendResponse.unit_statistics || {
+                        available: false,
+                        covered_units: 0,
+                        total_units: 0,
+                        units: []
+                    }
+                }
+            };
+        }
+        
+        // 3. 模拟前端组件数据访问
+        function simulateFrontendAccess(adaptedData) {
+            const propsData = { analytics: adaptedData.data_analysis };
+            
+            // 模拟 secondaryUnitsCount 计算
+            function getSecondaryUnitsCount() {
+                if (propsData?.analytics?.unit_statistics?.covered_units !== undefined) {
+                    return propsData.analytics.unit_statistics.covered_units;
+                }
+                if (propsData?.analytics?.unit_statistics?.units) {
+                    const units = propsData.analytics.unit_statistics.units;
+                    const validUnits = units.filter(unit => (unit.recruitment_count || 0) > 0);
+                    return validUnits.length;
+                }
+                return 0;
+            }
+            
+            // 模拟 regionChartTitle 计算
+            function getRegionChartTitle() {
+                if (!propsData?.analytics?.unit_statistics?.units) return '二级单位分布';
+                
+                const units = propsData.analytics.unit_statistics.units;
+                const provinceLevelKeywords = ['山东', '江苏', '浙江', '河南', '四川', '湖北', '福建', '安徽', '湖南', '陕西', '江西', '辽宁', '黑龙江', '新疆', '甘肃', '河北', '山西', '重庆', '青海', '吉林', '宁夏', '上海', '北京', '天津', '西藏', '广东', '云南', '广西', '贵州', '海南'];
+                
+                const hasSubUnits = units.some(unit => {
+                    const unitName = unit.unit_name || '';
+                    if (provinceLevelKeywords.includes(unitName)) return false;
+                    return unitName.includes('供电局') || unitName.includes('超高压公司') || 
+                           unitName.includes('电力科学研究院') || unitName.includes('分公司') ||
+                           unitName.includes('分部') || unitName.includes('产业集团');
+                });
+                
+                return hasSubUnits ? '下属单位分布' : '二级单位分布';
+            }
+            
+            return {
+                secondaryUnitsCount: getSecondaryUnitsCount(),
+                regionChartTitle: getRegionChartTitle(),
+                totalCount: propsData?.analytics?.total_count || 0,
+                unitsData: propsData?.analytics?.unit_statistics?.units || []
+            };
+        }
+        
+        // 执行验证
+        const adaptedData = simulateApiAdapter(backendOriginalResponse);
+        const frontendResult = simulateFrontendAccess(adaptedData);
+        
+        // 显示数据
+        document.getElementById('backendResponse').textContent = JSON.stringify(backendOriginalResponse, null, 2);
+        document.getElementById('adaptedData').textContent = JSON.stringify(adaptedData.data_analysis, null, 2);
+        document.getElementById('frontendAccess').textContent = JSON.stringify(frontendResult, null, 2);
+        
+        // 验证结果
+        const validationResults = document.getElementById('validationResults');
+        
+        const tests = [
+            {
+                name: '总录取人数',
+                expected: 5095,
+                actual: frontendResult.totalCount,
+                success: frontendResult.totalCount === 5095
+            },
+            {
+                name: '覆盖二级单位数量',
+                expected: 7,
+                actual: frontendResult.secondaryUnitsCount,
+                success: frontendResult.secondaryUnitsCount === 7
+            },
+            {
+                name: '图表标题',
+                expected: '下属单位分布',
+                actual: frontendResult.regionChartTitle,
+                success: frontendResult.regionChartTitle === '下属单位分布'
+            },
+            {
+                name: '单位数据完整性',
+                expected: 7,
+                actual: frontendResult.unitsData.length,
+                success: frontendResult.unitsData.length === 7
+            },
+            {
+                name: '广东单位数据',
+                expected: 1750,
+                actual: frontendResult.unitsData.find(unit => unit.unit_name === '广东')?.recruitment_count,
+                success: frontendResult.unitsData.find(unit => unit.unit_name === '广东')?.recruitment_count === 1750
+            }
+        ];
+        
+        tests.forEach(test => {
+            const div = document.createElement('div');
+            div.className = test.success ? 'result' : 'step';
+            div.style.borderLeftColor = test.success ? '#52c41a' : '#ff4d4f';
+            div.style.background = test.success ? '#f6ffed' : '#fff2f0';
+            div.innerHTML = `
+                <strong>${test.name}</strong><br>
+                预期: ${test.expected}<br>
+                实际: ${test.actual}<br>
+                状态: ${test.success ? '✅ 通过' : '❌ 失败'}
+            `;
+            validationResults.appendChild(div);
+        });
+    </script>
+</body>
+</html>
