@@ -70,7 +70,9 @@ export interface PolicyInfo {
   id: number
   province: string
   city?: string
+  district?: string            // 区县显示名称
   company?: string
+  actual_district?: string     // 实际区县名称（用于API调用）
   company_type?: string         // 公司类型：国网|南网
   batch?: string               // 批次：一批|二批|三批
   data_level: number
@@ -275,14 +277,24 @@ export const recruitmentAPI = {
 
     const response = await request.post('/api/v1/data-search/search', cleanParams)
     
-    console.log('API响应数据:', response) // 调试日志
+    console.log('🔍 API调用参数:', cleanParams) // 调试日志
+    console.log('🔍 API响应数据:', response) // 调试日志
     console.log('🔍 API适配 - unit_statistics原始数据:', (response as any).unit_statistics)
     console.log('🔍 API适配 - policy_info原始数据:', (response as any).policy_info)
     
     // 确定查询级别
     const hasPolicy = (response as any).policy_info?.available && (response as any).policy_info?.policies?.length > 0
     const queryLevel = hasPolicy ? 'policy_included' : 'data_overview'
-    console.log('🔍 API适配 - 查询级别判断:', { hasPolicy, queryLevel, available: (response as any).policy_info?.available, policyCount: (response as any).policy_info?.policies?.length })
+    
+    // 详细调试政策信息
+    console.log('🔍 API适配 - 后端原始policy_info:', (response as any).policy_info)
+    console.log('🔍 API适配 - 查询级别判断:', { 
+      hasPolicy, 
+      queryLevel, 
+      available: (response as any).policy_info?.available, 
+      policyCount: (response as any).policy_info?.policies?.length,
+      policies: (response as any).policy_info?.policies
+    })
     
     // 适配响应数据到前端期望的格式
     const adaptedResponse = {
@@ -629,19 +641,32 @@ export const recruitmentAPI = {
       full_policy?: any // 完整政策信息（仅在detailed_policy级别返回）
     }>
   }> {
-    // 判断查询层级 - 修正判断逻辑，有公司和地理信息就可以查询政策
+    // 判断查询层级 - 支持批次独立查询，优化查询条件判断
     const hasCompany = !!params.company_type
-    const hasLocationInfo = !!(params.province && params.city) // 有省份和城市就够了
+    const hasLocationInfo = !!params.province
+    const hasBatch = !!params.batch
     const hasEducationLevel = !!(params.bachelor_level || params.master_level)
     
-    console.log('🔍 getLayeredQuery 判断条件:', { hasCompany, hasLocationInfo, hasEducationLevel, params })
+    console.log('🔍 getLayeredQuery 判断条件:', { 
+      hasCompany, 
+      hasLocationInfo, 
+      hasBatch, 
+      hasEducationLevel, 
+      params,
+      batch_value: params.batch,
+      is_nanwang: params.batch === '南网批次'
+    })
 
     let queryLevel: 'data_overview' | 'policy_included' | 'detailed_policy'
     
-    if (hasCompany && hasLocationInfo) {
-      queryLevel = 'policy_included'  // 有公司和地理信息就查询政策
-    } else if (hasCompany) {
-      queryLevel = 'data_overview'    // 只有公司信息，显示数据概览
+    // 优化查询层级判断逻辑，支持批次独立查询
+    if (hasLocationInfo) {
+      queryLevel = 'policy_included'  // 有省份信息就尝试查询政策（让后端决定是否有政策）
+    } else if (hasBatch && params.batch === '南网批次') {
+      // 特殊处理南网批次，应该能查询到政策数据
+      queryLevel = 'policy_included'  // 南网批次查询可能有政策数据
+    } else if (hasCompany || hasBatch) {
+      queryLevel = 'data_overview'    // 其他公司信息或批次信息，显示数据概览
     } else {
       queryLevel = 'data_overview'    // 默认数据概览
     }
@@ -652,15 +677,35 @@ export const recruitmentAPI = {
     switch (queryLevel) {
       case 'data_overview':
         const overviewResponse = await recruitmentAPI.getDistrictPolicies(params)
-        return {
-          query_level: 'data_overview',
+        
+        // 即使是 data_overview 级别，如果后端返回了政策信息也要传递给前端
+        const result: any = {
+          query_level: overviewResponse.query_level || 'data_overview',  // 使用后端返回的实际级别
           data_analysis: overviewResponse.data_analysis
         }
+        
+        // 如果后端返回了政策信息，也要传递
+        if (overviewResponse.policy_info) {
+          result.policy_info = overviewResponse.policy_info
+        }
+        if (overviewResponse.policy_analysis) {
+          result.policy_analysis = overviewResponse.policy_analysis  
+        }
+        if (overviewResponse.debug_policy_info) {
+          result.debug_policy_info = overviewResponse.debug_policy_info
+        }
+        
+        return result
       
       case 'policy_included':
         // 直接使用已经修改好的 getDistrictPolicies 函数
         const policyResponse = await recruitmentAPI.getDistrictPolicies(params)
         console.log('🔍 getLayeredQuery policy_included 响应:', policyResponse)
+        console.log('🔍 getLayeredQuery 政策信息详情:', {
+          policy_info: policyResponse.policy_info,
+          policy_analysis: policyResponse.policy_analysis,
+          query_level: policyResponse.query_level
+        })
         
         // 直接返回完整的响应结构，包含政策信息
         return policyResponse

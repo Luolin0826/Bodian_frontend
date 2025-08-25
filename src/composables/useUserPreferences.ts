@@ -22,7 +22,7 @@ const preferences = ref<UserPreferences>({
   },
   workspace: {
     default_page: '/dashboard',
-    items_per_page: 20,
+    items_per_page: 100,
     date_format: 'YYYY-MM-DD',
     time_format: '24h'
   }

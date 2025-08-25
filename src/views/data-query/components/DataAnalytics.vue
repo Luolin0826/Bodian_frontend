@@ -60,23 +60,6 @@
         </div>
       </div>
 
-      <!-- 图表区域 - 上下排列 -->
-      <div class="charts-container vertical">
-        <div class="chart-wrapper">
-          <div class="chart-header">
-            <h5>学校类型分布</h5>
-          </div>
-          <div ref="schoolTypeChartRef" class="chart-container large"></div>
-        </div>
-        
-        <div class="chart-wrapper">
-          <div class="chart-header">
-            <h5>{{ regionChartTitle }}</h5>
-          </div>
-          <div ref="regionChartRef" class="chart-container large"></div>
-        </div>
-      </div>
-
       <!-- 学校数据表格 -->
       <div class="schools-table-section">
         <div class="table-header">
@@ -124,6 +107,56 @@
             </template>
           </template>
         </a-table>
+      </div>
+
+      <!-- 二级单位分布表格 -->
+      <div class="units-table-section">
+        <div class="table-header">
+          <h5>二级单位分布</h5>
+          <div class="table-actions">
+            <span class="sort-tip">点击表头可排序</span>
+          </div>
+        </div>
+        
+        <a-table
+          :columns="unitTableColumns"
+          :data-source="unitTableData"
+          :pagination="{
+            current: unitCurrentPage,
+            pageSize: 30,
+            total: unitTableData.length,
+            showSizeChanger: false,
+            showQuickJumper: true,
+            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 个单位`,
+            onChange: handleUnitPageChange,
+            size: 'small'
+          }"
+          size="small"
+          :scroll="{ y: 350 }"
+        >
+          <template #bodyCell="{ column, record }">
+            <template v-if="column.key === 'unit_name'">
+              <span class="unit-name-cell">{{ record.unit_name }}</span>
+            </template>
+            <template v-if="column.key === 'region'">
+              <a-tag color="blue" size="small">{{ record.region }}</a-tag>
+            </template>
+            <template v-if="column.key === 'recruitment_count'">
+              <span class="count-cell">{{ record.recruitment_count }}</span>
+            </template>
+            <template v-if="column.key === 'percentage'">
+              <span class="percentage-cell">{{ record.percentage }}%</span>
+            </template>
+          </template>
+        </a-table>
+      </div>
+
+      <!-- 学校类型分布图 -->
+      <div class="chart-wrapper">
+        <div class="chart-header">
+          <h5>学校类型分布</h5>
+        </div>
+        <div ref="schoolTypeChartRef" class="chart-container large"></div>
       </div>
     </div>
 
@@ -176,6 +209,7 @@ const emit = defineEmits(['drill-down', 'school-detail'])
 
 // 响应式数据 - 简化版本
 const currentPage = ref(1)
+const unitCurrentPage = ref(1)
 
 // 图表引用
 const schoolTypeChartRef = ref<HTMLDivElement>()
@@ -323,6 +357,45 @@ const schoolTableColumns = [
   }
 ]
 
+// 单位表格列配置
+const unitTableColumns = [
+  {
+    title: '单位名称',
+    dataIndex: 'unit_name',
+    key: 'unit_name',
+    width: 200,
+    ellipsis: true,
+    sorter: (a: any, b: any) => a.unit_name.localeCompare(b.unit_name, 'zh-CN'),
+    showSorterTooltip: false
+  },
+  {
+    title: '地区',
+    dataIndex: 'region',
+    key: 'region',
+    width: 120,
+    align: 'center' as const
+  },
+  {
+    title: '录取人数',
+    dataIndex: 'recruitment_count',
+    key: 'recruitment_count',
+    width: 80,
+    align: 'center' as const,
+    sorter: (a: any, b: any) => a.recruitment_count - b.recruitment_count,
+    showSorterTooltip: false,
+    defaultSortOrder: 'descend' as const
+  },
+  {
+    title: '占比',
+    dataIndex: 'percentage',
+    key: 'percentage',
+    width: 70,
+    align: 'center' as const,
+    sorter: (a: any, b: any) => a.percentage - b.percentage,
+    showSorterTooltip: false
+  }
+]
+
 // 学校统计表格数据 - 使用后端返回的school_statistics数据
 const schoolTableData = computed(() => {
   // 直接使用后端的school_statistics.schools数据
@@ -340,11 +413,34 @@ const schoolTableData = computed(() => {
   }))
 })
 
+// 单位统计表格数据 - 使用后端返回的unit_statistics数据
+const unitTableData = computed(() => {
+  // 直接使用后端的unit_statistics.units数据
+  const unitStats = (props.data?.analytics as any)?.unit_statistics?.units || []
+  
+  if (unitStats.length === 0) return []
+  
+  // 转换为表格数据格式
+  return unitStats
+    .filter((unit: any) => (unit.recruitment_count || 0) > 0)
+    .map((unit: any) => ({
+      unit_name: unit.unit_name || '未知',
+      region: unit.region || '未知',
+      recruitment_count: unit.recruitment_count || 0,
+      percentage: (unit.percentage || 0).toFixed(1)
+    }))
+})
+
 // 学校表格相关方法
 const handlePageChange = (page: number) => {
   currentPage.value = page
   // 调用接口获取对应页面的数据
   loadSchoolData()
+}
+
+// 单位表格相关方法
+const handleUnitPageChange = (page: number) => {
+  unitCurrentPage.value = page
 }
 
 // 移除手动排序处理，由Ant Design表格组件自动处理排序
@@ -395,14 +491,32 @@ const initSchoolTypeChart = () => {
   
   let data: Array<{name: string, value: number}> = []
   
-  // 使用新的university_level_distribution数据结构
-  const levelDist = (props.data.analytics as any)?.university_level_distribution || {}
+  // 多种数据源尝试，确保兼容不同的数据结构
+  const analytics = props.data.analytics as any
+  const levelDist = analytics?.university_level_distribution || 
+                   analytics?.school_type_distribution || 
+                   analytics?.school_statistics?.distribution || 
+                   {}
   
   if (Object.keys(levelDist).length > 0) {
     data = Object.entries(levelDist).map(([level, count]) => ({
       name: level,
       value: count as number
     })).filter(item => item.value > 0)
+  } else {
+    // 如果没有分布数据，尝试从school_statistics的schools数据中构建分布
+    const schools = analytics?.school_statistics?.schools || []
+    if (schools.length > 0) {
+      const distribution: Record<string, number> = {}
+      schools.forEach((school: any) => {
+        const level = school.school_level || school.school_type || '其他'
+        distribution[level] = (distribution[level] || 0) + (school.recruitment_count || 0)
+      })
+      data = Object.entries(distribution).map(([level, count]) => ({
+        name: level,
+        value: count as number
+      })).filter(item => item.value > 0)
+    }
   }
   
   if (data.length === 0) return
@@ -954,7 +1068,8 @@ onUnmounted(() => {
 }
 
 // 学校表格样式
-.schools-table-section {
+.schools-table-section,
+.units-table-section {
   margin-top: 12px;
   
   .table-header {
@@ -1035,6 +1150,11 @@ onUnmounted(() => {
         color: #40a9ff;
         text-decoration: underline;
       }
+    }
+    
+    .unit-name-cell {
+      font-weight: 500;
+      color: #1890ff;
     }
     
     .count-cell {

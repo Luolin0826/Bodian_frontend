@@ -6,24 +6,28 @@
       <div class="region-title">
         <environment-outlined class="location-icon" />
         <span class="location-text">
-          {{ policy.province }}
-          <span v-if="policy.city"> - {{ policy.city }}</span>
-          <span v-if="policy.company"> - {{ policy.company }}</span>
+          {{ detailedPolicy.province }}
+          <span v-if="detailedPolicy.city"> - {{ detailedPolicy.city }}</span>
+          <span v-if="detailedPolicy.company"> - {{ detailedPolicy.company }}</span>
         </span>
       </div>
       <div class="region-badges">
-        <a-tag :color="getRegionTypeColor(policy.region_type_name)" size="small">
-          {{ policy.region_type_name }}
+        <a-tag :color="getRegionTypeColor(detailedPolicy.region_type_name)" size="small">
+          {{ detailedPolicy.region_type_name }}
         </a-tag>
-        <a-tag v-if="policy.company_type" :color="policy.company_type === '国网' ? 'blue' : 'green'">
-          {{ policy.company_type }}
+        <a-tag v-if="detailedPolicy.company_type" :color="detailedPolicy.company_type === '国网' ? 'blue' : 'green'">
+          {{ detailedPolicy.company_type }}
         </a-tag>
-        <a-tag v-if="policy.batch" color="purple">
-          {{ policy.batch }}
+        <a-tag v-if="detailedPolicy.batch" color="purple">
+          {{ detailedPolicy.batch }}
         </a-tag>
-        <a-tag v-if="policy.value_info?.is_best_value_city" color="gold" size="small">
+        <a-tag v-if="detailedPolicy.value_info?.is_best_value_city" color="gold" size="small">
           <star-outlined />
           最佳性价比市
+        </a-tag>
+        <a-tag v-if="detailedPolicy.value_info?.is_best_value_county" color="orange" size="small">
+          <crown-outlined />
+          最佳性价比区县
         </a-tag>
       </div>
     </div>
@@ -60,25 +64,25 @@
           </div>
           <div class="section-content">
             <div class="salary-cards">
-              <div v-if="policy.salary_info?.bachelor_salary" class="salary-card">
+              <div v-if="detailedPolicy.salary_info?.bachelor_salary" class="salary-card">
                 <div class="salary-type">本科薪资</div>
-                <div class="salary-amount">{{ policy.salary_info.bachelor_salary }}</div>
+                <div class="salary-amount">{{ detailedPolicy.salary_info.bachelor_salary }}万</div>
               </div>
-              <div v-if="policy.salary_info?.master_salary" class="salary-card">
+              <div v-if="detailedPolicy.salary_info?.master_salary" class="salary-card">
                 <div class="salary-type">硕士薪资</div>
-                <div class="salary-amount">{{ policy.salary_info.master_salary }}</div>
+                <div class="salary-amount">{{ detailedPolicy.salary_info.master_salary }}万</div>
               </div>
-              <div v-if="policy.salary_info?.bachelor_interview_line" class="salary-card">
+              <div v-if="detailedPolicy.salary_info?.bachelor_interview_line" class="salary-card">
                 <div class="salary-type">本科面试线</div>
-                <div class="salary-amount">{{ policy.salary_info.bachelor_interview_line }}</div>
+                <div class="salary-amount">{{ detailedPolicy.salary_info.bachelor_interview_line }}分</div>
               </div>
-              <div v-if="policy.salary_info?.master_interview_line" class="salary-card">
+              <div v-if="detailedPolicy.salary_info?.master_interview_line" class="salary-card">
                 <div class="salary-type">硕士面试线</div>
-                <div class="salary-amount">{{ policy.salary_info.master_interview_line }}</div>
+                <div class="salary-amount">{{ detailedPolicy.salary_info.master_interview_line }}分</div>
               </div>
-              <div v-if="policy.salary_info?.bachelor_comprehensive_score" class="salary-card highlight">
+              <div v-if="detailedPolicy.salary_info?.bachelor_comprehensive_score" class="salary-card highlight">
                 <div class="salary-type">本科综合分</div>
-                <div class="salary-amount">{{ policy.salary_info.bachelor_comprehensive_score }}</div>
+                <div class="salary-amount">{{ detailedPolicy.salary_info.bachelor_comprehensive_score }}分</div>
               </div>
             </div>
           </div>
@@ -98,13 +102,13 @@
               <div class="education-level-section">
                 <div class="level-header">本科层次</div>
                 <div class="education-grid">
-                  <div v-for="item in bachelorRequirements" :key="item.key" v-if="item.value" class="education-item">
+                  <div v-for="item in bachelorRequirements" :key="item.key" class="education-item" v-show="item.value">
                     <div class="education-label">{{ item.label }}</div>
                     <div class="education-values">
-                      <div v-for="data in detailedPolicyData?.data || []" :key="data.id" class="education-value">
-                        <span class="company-name">{{ data.company || '市级汇总' }}</span>
-                        <a-tag :color="getEducationStatusColor(data[item.key])" size="small">
-                          {{ data[item.key] || '无数据' }}
+                      <div class="education-value">
+                        <span class="company-name">{{ detailedPolicy.company || '市级汇总' }}</span>
+                        <a-tag :color="getEducationStatusColor(detailedPolicy.education_requirements?.[item.key])" size="small">
+                          {{ detailedPolicy.education_requirements?.[item.key] || '无数据' }}
                         </a-tag>
                       </div>
                     </div>
@@ -116,13 +120,13 @@
               <div class="education-level-section">
                 <div class="level-header">硕士层次</div>
                 <div class="education-grid">
-                  <div v-for="item in masterRequirements" :key="item.key" v-if="item.value" class="education-item">
+                  <div v-for="item in masterRequirements" :key="item.key" class="education-item" v-show="item.value">
                     <div class="education-label">{{ item.label }}</div>
                     <div class="education-values">
-                      <div v-for="data in detailedPolicyData?.data || []" :key="data.id" class="education-value">
-                        <span class="company-name">{{ data.company || '市级汇总' }}</span>
-                        <a-tag :color="getEducationStatusColor(data[item.key])" size="small">
-                          {{ data[item.key] || '无数据' }}
+                      <div class="education-value">
+                        <span class="company-name">{{ detailedPolicy.company || '市级汇总' }}</span>
+                        <a-tag :color="getEducationStatusColor(detailedPolicy.education_requirements?.[item.key])" size="small">
+                          {{ detailedPolicy.education_requirements?.[item.key] || '无数据' }}
                         </a-tag>
                       </div>
                     </div>
@@ -144,26 +148,30 @@
           </div>
           <div class="section-content">
             <div class="policy-comparison">
-              <div v-for="data in detailedPolicyData?.data || []" :key="data.id" class="policy-data-section">
+              <div class="policy-data-section">
                 <div class="policy-data-header">
-                  <span class="company-name">{{ data.company || '市级汇总' }}</span>
-                  <a-tag v-if="data.is_best_value_city === '是'" color="gold" size="small">
+                  <span class="company-name">{{ detailedPolicy.company || '市级汇总' }}</span>
+                  <a-tag v-if="detailedPolicy.value_info?.is_best_value_city" color="gold" size="small">
                     <star-outlined />
-                    性价比推荐
+                    最佳性价比市
+                  </a-tag>
+                  <a-tag v-if="detailedPolicy.value_info?.is_best_value_county" color="orange" size="small">
+                    <crown-outlined />
+                    最佳性价比区县
                   </a-tag>
                 </div>
                 <div class="policy-items">
-                  <div v-if="data.admission_ratio" class="policy-item">
-                    <span class="policy-label">报录比:</span>
-                    <span class="policy-value">{{ data.admission_ratio }}</span>
+                  <div v-if="detailedPolicy.detailed_info?.admission_ratio" class="policy-item">
+                    <span class="policy-label">{{ getAdmissionLabel('admission_ratio') }}:</span>
+                    <span class="policy-value">{{ detailedPolicy.detailed_info.admission_ratio }}</span>
                   </div>
-                  <div v-if="data.single_cert_probability" class="policy-item">
-                    <span class="policy-label">单证概率:</span>
-                    <span class="policy-value">{{ data.single_cert_probability }}</span>
+                  <div v-if="detailedPolicy.detailed_info?.single_cert_probability" class="policy-item">
+                    <span class="policy-label">{{ getAdmissionLabel('single_cert_probability') }}:</span>
+                    <span class="policy-value">{{ detailedPolicy.detailed_info.single_cert_probability }}</span>
                   </div>
-                  <div v-if="data.stable_score_range" class="policy-item">
-                    <span class="policy-label">稳定分数:</span>
-                    <span class="policy-value success">{{ data.stable_score_range }}</span>
+                  <div v-if="detailedPolicy.detailed_info?.stable_score_range" class="policy-item">
+                    <span class="policy-label">{{ getAdmissionLabel('stable_score_range') }}:</span>
+                    <span class="policy-value success">{{ detailedPolicy.detailed_info.stable_score_range }}</span>
                   </div>
                 </div>
               </div>
@@ -179,39 +187,39 @@
           </div>
           <div class="section-content">
             <div class="admission-policies">
-              <div v-for="data in detailedPolicyData?.data || []" :key="data.id" class="admission-data-section">
+              <div class="admission-data-section">
                 <div class="policy-data-header">
-                  <span class="company-name">{{ data.company || '市级汇总' }}</span>
+                  <span class="company-name">{{ detailedPolicy.company || '市级汇总' }}</span>
                 </div>
                 <div class="policy-items">
-                  <div v-if="data.first_batch_fail_second_batch" class="policy-item">
-                    <span class="policy-label">一批失败走二批:</span>
-                    <a-tag :color="getPolicyColor(data.first_batch_fail_second_batch)" size="small">
-                      {{ data.first_batch_fail_second_batch }}
+                  <div v-if="detailedPolicy.detailed_info?.first_batch_fail_second_batch" class="policy-item">
+                    <span class="policy-label">{{ getAdmissionLabel('first_batch_fail_second_batch') }}:</span>
+                    <a-tag :color="getPolicyColor(detailedPolicy.detailed_info.first_batch_fail_second_batch)" size="small">
+                      {{ detailedPolicy.detailed_info.first_batch_fail_second_batch }}
                     </a-tag>
                   </div>
-                  <div v-if="data.second_choice_available" class="policy-item">
-                    <span class="policy-label">二次志愿填报:</span>
-                    <a-tag :color="getPolicyColor(data.second_choice_available)" size="small">
-                      {{ data.second_choice_available }}
+                  <div v-if="detailedPolicy.detailed_info?.second_choice_available" class="policy-item">
+                    <span class="policy-label">{{ getAdmissionLabel('second_choice_available') }}:</span>
+                    <a-tag :color="getPolicyColor(detailedPolicy.detailed_info.second_choice_available)" size="small">
+                      {{ detailedPolicy.detailed_info.second_choice_available }}
                     </a-tag>
                   </div>
-                  <div v-if="data.major_mismatch_allowed" class="policy-item">
-                    <span class="policy-label">本硕专业不一致:</span>
-                    <a-tag :color="getPolicyColor(data.major_mismatch_allowed)" size="small">
-                      {{ data.major_mismatch_allowed }}
+                  <div v-if="detailedPolicy.basic_requirements?.major_mismatch_allowed" class="policy-item">
+                    <span class="policy-label">{{ getRequirementLabel('major_mismatch_allowed') }}:</span>
+                    <a-tag :color="getPolicyColor(detailedPolicy.basic_requirements.major_mismatch_allowed)" size="small">
+                      {{ detailedPolicy.basic_requirements.major_mismatch_allowed }}
                     </a-tag>
                   </div>
-                  <div v-if="data.campus_recruit_then_first_batch" class="policy-item">
-                    <span class="policy-label">校招后参加一批:</span>
-                    <a-tag :color="getPolicyColor(data.campus_recruit_then_first_batch)" size="small">
-                      {{ data.campus_recruit_then_first_batch }}
+                  <div v-if="detailedPolicy.detailed_info?.campus_recruit_then_first_batch" class="policy-item">
+                    <span class="policy-label">{{ getAdmissionLabel('campus_recruit_then_first_batch') }}:</span>
+                    <a-tag :color="getPolicyColor(detailedPolicy.detailed_info.campus_recruit_then_first_batch)" size="small">
+                      {{ detailedPolicy.detailed_info.campus_recruit_then_first_batch }}
                     </a-tag>
                   </div>
-                  <div v-if="data.deferred_graduation_impact" class="policy-item">
-                    <span class="policy-label">延毕休学影响:</span>
-                    <a-tag :color="getPolicyColor(data.deferred_graduation_impact)" size="small">
-                      {{ data.deferred_graduation_impact }}
+                  <div v-if="detailedPolicy.basic_requirements?.deferred_graduation_impact" class="policy-item">
+                    <span class="policy-label">{{ getRequirementLabel('deferred_graduation_impact') }}:</span>
+                    <a-tag :color="getPolicyColor(detailedPolicy.basic_requirements.deferred_graduation_impact)" size="small">
+                      {{ detailedPolicy.basic_requirements.deferred_graduation_impact }}
                     </a-tag>
                   </div>
                 </div>
@@ -236,13 +244,43 @@
                 </div>
                 <div class="detail-items">
                   <div v-if="data.position_selection_method" class="detail-item">
-                    <div class="detail-label">具体选岗方式</div>
+                    <div class="detail-label">{{ getAdmissionLabel('position_selection_method') }}</div>
                     <div class="detail-content-text">{{ data.position_selection_method }}</div>
                   </div>
                   
                   <div v-if="data.early_batch_difference" class="detail-item">
-                    <div class="detail-label">提前批与一二批岗位差异</div>
+                    <div class="detail-label">{{ getAdmissionLabel('early_batch_difference') }}</div>
                     <div class="detail-content-text">{{ data.early_batch_difference }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 第五行：详细录取规则和网申不成文规定 -->
+      <div v-if="hasDetailedRules" class="content-row">
+        <div class="info-section full-width">
+          <div class="section-header">
+            <file-text-outlined class="section-icon" />
+            <h4 class="section-title">详细录取规则与网申规定</h4>
+          </div>
+          <div class="section-content">
+            <div class="rules-info">
+              <div v-for="data in detailedPolicyData?.data || []" :key="data.id" class="rules-data-section">
+                <div class="policy-data-header">
+                  <span class="company-name">{{ data.company || '市级汇总' }}</span>
+                </div>
+                <div class="detail-items">
+                  <div v-if="data.detailed_rules" class="detail-item">
+                    <div class="detail-label">{{ getAdmissionLabel('detailed_rules') }}</div>
+                    <div class="detail-content-text success">{{ data.detailed_rules }}</div>
+                  </div>
+                  
+                  <div v-if="data.unwritten_rules" class="detail-item">
+                    <div class="detail-label">{{ getAdmissionLabel('unwritten_rules') }}</div>
+                    <div class="detail-content-text warning">{{ data.unwritten_rules }}</div>
                   </div>
                 </div>
               </div>
@@ -330,55 +368,70 @@ const activeTab = ref('basic')
 const loading = ref(false)
 const detailedPolicyData = ref<any>(null)
 
-// 计算属性
+// 计算属性 - 获取详细政策数据
+const detailedPolicy = computed(() => {
+  if (detailedPolicyData.value?.data?.length > 0) {
+    return detailedPolicyData.value.data[0]
+  }
+  return props.policy // 降级使用原始数据
+})
+
 const filteredBasicRequirements = computed(() => {
-  if (!props.policy.basic_requirements) return {}
+  const basicReq = detailedPolicy.value?.basic_requirements || {}
   
   return Object.fromEntries(
-    Object.entries(props.policy.basic_requirements).filter(([_, value]) => value && value.trim())
+    Object.entries(basicReq).filter(([_, value]) => value && value.trim() && value !== '未明确')
   )
 })
 
 // 检查是否有学历要求数据
 const hasEducationRequirements = computed(() => {
-  if (!detailedPolicyData.value?.data?.length) return false
-  return detailedPolicyData.value.data.some((data: any) => 
-    data.bachelor_985 || data.bachelor_211 || data.master_985 || data.master_211
-  )
+  const eduReq = detailedPolicy.value?.education_requirements || {}
+  return !!(eduReq.bachelor_985 || eduReq.bachelor_211 || eduReq.master_985 || eduReq.master_211)
 })
 
 // 检查是否有选岗和批次差异信息
 const hasPositionOrBatchInfo = computed(() => {
-  if (!detailedPolicyData.value?.data?.length) return false
-  return detailedPolicyData.value.data.some((data: any) => 
-    data.position_selection_method || data.early_batch_difference
-  )
+  const detailInfo = detailedPolicy.value?.detailed_info || {}
+  return !!(detailInfo.position_selection_method || detailInfo.early_batch_difference)
+})
+
+// 检查是否有详细规则信息
+const hasDetailedRules = computed(() => {
+  const detailInfo = detailedPolicy.value?.detailed_info || {}
+  return !!(detailInfo.detailed_rules || detailInfo.unwritten_rules)
 })
 
 // 本科要求配置
-const bachelorRequirements = computed(() => [
-  { key: 'bachelor_985', label: '985高校', value: true },
-  { key: 'bachelor_211', label: '211高校', value: true },
-  { key: 'bachelor_provincial_double_first', label: '省内双一流', value: true },
-  { key: 'bachelor_external_double_first', label: '省外双一流', value: true },
-  { key: 'bachelor_provincial_non_double', label: '省内双非一本', value: true },
-  { key: 'bachelor_external_non_double', label: '省外双非一本', value: true },
-  { key: 'bachelor_provincial_second', label: '省内二本', value: true },
-  { key: 'bachelor_external_second', label: '省外二本', value: true },
-  { key: 'bachelor_private', label: '民办本科', value: true },
-  { key: 'bachelor_upgrade', label: '专升本', value: true },
-  { key: 'bachelor_college', label: '专科', value: true }
-])
+const bachelorRequirements = computed(() => {
+  const eduReq = detailedPolicy.value?.education_requirements || {}
+  return [
+    { key: 'bachelor_985', label: '985高校', value: !!eduReq.bachelor_985 },
+    { key: 'bachelor_211', label: '211高校', value: !!eduReq.bachelor_211 },
+    { key: 'bachelor_provincial_double_first', label: '省内双一流', value: !!eduReq.bachelor_provincial_double_first },
+    { key: 'bachelor_external_double_first', label: '省外双一流', value: !!eduReq.bachelor_external_double_first },
+    { key: 'bachelor_provincial_non_double', label: '省内双非一本', value: !!eduReq.bachelor_provincial_non_double },
+    { key: 'bachelor_external_non_double', label: '省外双非一本', value: !!eduReq.bachelor_external_non_double },
+    { key: 'bachelor_provincial_second', label: '省内二本', value: !!eduReq.bachelor_provincial_second },
+    { key: 'bachelor_external_second', label: '省外二本', value: !!eduReq.bachelor_external_second },
+    { key: 'bachelor_private', label: '民办本科', value: !!eduReq.bachelor_private },
+    { key: 'bachelor_upgrade', label: '专升本', value: !!eduReq.bachelor_upgrade },
+    { key: 'bachelor_college', label: '专科', value: !!eduReq.bachelor_college }
+  ]
+})
 
 // 硕士要求配置
-const masterRequirements = computed(() => [
-  { key: 'master_985', label: '985高校', value: true },
-  { key: 'master_211', label: '211高校', value: true },
-  { key: 'master_provincial_double_first', label: '省内双一流', value: true },
-  { key: 'master_external_double_first', label: '省外双一流', value: true },
-  { key: 'master_provincial_non_double', label: '省内双非', value: true },
-  { key: 'master_external_non_double', label: '省外双非', value: true }
-])
+const masterRequirements = computed(() => {
+  const eduReq = detailedPolicy.value?.education_requirements || {}
+  return [
+    { key: 'master_985', label: '985高校', value: !!eduReq.master_985 },
+    { key: 'master_211', label: '211高校', value: !!eduReq.master_211 },
+    { key: 'master_provincial_double_first', label: '省内双一流', value: !!eduReq.master_provincial_double_first },
+    { key: 'master_external_double_first', label: '省外双一流', value: !!eduReq.master_external_double_first },
+    { key: 'master_provincial_non_double', label: '省内双非', value: !!eduReq.master_provincial_non_double },
+    { key: 'master_external_non_double', label: '省外双非', value: !!eduReq.master_external_non_double }
+  ]
+})
 
 const filteredAdmissionPolicies = computed(() => {
   if (!props.policy.admission_policies) return {}
@@ -425,23 +478,29 @@ const getEducationStatusColor = (status: string) => {
 
 const getRequirementLabel = (key: string) => {
   const labelMap: Record<string, string> = {
-    'cet_requirement': '英语要求',
-    'computer_requirement': '计算机要求',
-    'overage_allowed': '年龄要求',
-    'household_priority': '户口要求',
-    'non_first_choice_pass': '调剂政策'
+    'cet_requirement': '四六级要求',
+    'computer_requirement': '计算机证书要求',
+    'overage_allowed': '超龄能否通过',
+    'household_priority': '是否非常看重户籍',
+    'non_first_choice_pass': '非第一志愿是否通过网申',
+    'major_mismatch_allowed': '本硕专业不一致可否通过网申',
+    'deferred_graduation_impact': '延毕休学影响网申吗'
   }
   return labelMap[key] || key
 }
 
 const getAdmissionLabel = (key: string) => {
   const labelMap: Record<string, string> = {
-    'first_batch_fail_second_batch': '一批失败能否走二批',
-    'second_choice_available': '是否有二志愿',
-    'position_selection_method': '岗位选择方式',
-    'early_batch_difference': '提前批与统招差异',
-    'campus_recruit_then_first_batch': '校招失败能否走统招',
-    'application_requirement': '网申要求'
+    'first_batch_fail_second_batch': '一批进面没录取可以正常报考二批吗',
+    'second_choice_available': '是否有二次志愿填报',
+    'position_selection_method': '具体选岗方式',
+    'early_batch_difference': '提前批岗位和一二批岗位质量有什么差异',
+    'campus_recruit_then_first_batch': '校招给了地方但是不满意是否还可以参加一批',
+    'detailed_rules': '详细录取规则',
+    'unwritten_rules': '网申不成文规定',
+    'stable_score_range': '综合成绩多少分稳一点',
+    'single_cert_probability': '有一个证书网申概率',
+    'admission_ratio': '报录比'
   }
   return labelMap[key] || key
 }
@@ -456,6 +515,36 @@ const getApplicationStatusClass = (status: string) => {
   }
   return 'info'
 }
+
+// 获取规则详情的信息
+const getRuleDetails = computed(() => {
+  const details = detailedPolicy.value?.detailed_info || {}
+  const filteredDetails: Record<string, any> = {}
+  
+  // 只显示有值的字段
+  Object.entries(details).forEach(([key, value]) => {
+    if (value && value !== 'null' && value !== '' && value.trim && value.trim() !== '') {
+      filteredDetails[key] = value
+    }
+  })
+  
+  return filteredDetails
+})
+
+// 获取薪资详情信息
+const getSalaryDetails = computed(() => {
+  const salary = detailedPolicy.value?.salary_info || {}
+  const details: Record<string, any> = {}
+  
+  // 格式化薪资信息
+  if (salary.bachelor_salary) details['本科薪资待遇'] = salary.bachelor_salary
+  if (salary.master_salary) details['硕士薪资待遇'] = salary.master_salary
+  if (salary.bachelor_interview_line) details['本科进面线'] = salary.bachelor_interview_line + '分'
+  if (salary.master_interview_line) details['硕士进面分'] = salary.master_interview_line + '分'
+  if (salary.bachelor_comprehensive_score) details['本科综合分'] = salary.bachelor_comprehensive_score + '分'
+  
+  return details
+})
 
 const handleExport = () => {
   message.info('导出功能开发中...')
@@ -474,18 +563,112 @@ const loadDetailedPolicy = async () => {
     console.log('📋 加载详细政策:', {
       province: props.policy.province,
       city: props.policy.city,
+      district: props.policy.district,
+      actual_district: (props.policy as any).actual_district,
       company: props.policy.company
     })
     console.log('📋 当前学历层次:', props.selectedEducationLevel)
     
+    // 使用实际的区县名称作为company参数，如果没有则使用原始的company字段
+    const companyParam = (props.policy as any).actual_district || 
+                        (props.policy.district !== '全市' ? props.policy.district : undefined)
+    
+    console.log('📋 修正后的API参数:', {
+      province: props.policy.province,
+      city: props.policy.city,
+      company: companyParam
+    })
+    
     const response = await recruitmentAPI.getDetailedPolicy(
       props.policy.province,
       props.policy.city || undefined,
-      props.policy.company || undefined
+      companyParam
     )
     
-    detailedPolicyData.value = response
-    console.log('📋 详细政策加载成功:', response)
+    // 转换API数据结构为组件期望的格式
+    if (response.data && response.data.length > 0) {
+      const rawData = response.data[0] // 取第一条数据
+      
+      // 构建适配的数据结构
+      const adaptedData = {
+        province: rawData.province,
+        city: rawData.city,
+        company: rawData.company,
+        company_type: rawData.company_type,
+        batch: rawData.batch,
+        region_type_name: rawData.data_level,
+        
+        // 基本要求
+        basic_requirements: {
+          cet_requirement: rawData.cet_requirement || '未明确',
+          computer_requirement: rawData.computer_requirement || '未明确',
+          overage_allowed: rawData.overage_allowed || '未明确',
+          household_priority: rawData.household_priority || '未明确',
+          non_first_choice_pass: rawData.non_first_choice_pass || '未明确',
+          major_mismatch_allowed: rawData.major_mismatch_allowed || '未明确',
+          deferred_graduation_impact: rawData.deferred_graduation_impact || '未明确'
+        },
+        
+        // 薪资信息
+        salary_info: {
+          bachelor_salary: rawData.bachelor_salary,
+          master_salary: rawData.master_salary,
+          bachelor_interview_line: rawData.bachelor_interview_line,
+          master_interview_line: rawData.master_interview_line,
+          bachelor_comprehensive_score: rawData.bachelor_comprehensive_score
+        },
+        
+        // 学历要求
+        education_requirements: {
+          // 本科层次要求
+          bachelor_985: rawData.bachelor_985,
+          bachelor_211: rawData.bachelor_211,
+          bachelor_provincial_double_first: rawData.bachelor_provincial_double_first,
+          bachelor_provincial_non_double: rawData.bachelor_provincial_non_double,
+          bachelor_provincial_second: rawData.bachelor_provincial_second,
+          bachelor_external_double_first: rawData.bachelor_external_double_first,
+          bachelor_external_non_double: rawData.bachelor_external_non_double,
+          bachelor_external_second: rawData.bachelor_external_second,
+          bachelor_private: rawData.bachelor_private,
+          bachelor_college: rawData.bachelor_college,
+          bachelor_upgrade: rawData.bachelor_upgrade,
+          
+          // 硕士层次要求
+          master_985: rawData.master_985,
+          master_211: rawData.master_211,
+          master_provincial_double_first: rawData.master_provincial_double_first,
+          master_provincial_non_double: rawData.master_provincial_non_double,
+          master_external_double_first: rawData.master_external_double_first,
+          master_external_non_double: rawData.master_external_non_double
+        },
+        
+        // 其他详细信息
+        detailed_info: {
+          position_selection_method: rawData.position_selection_method,
+          campus_recruit_then_first_batch: rawData.campus_recruit_then_first_batch,
+          first_batch_fail_second_batch: rawData.first_batch_fail_second_batch,
+          second_choice_available: rawData.second_choice_available,
+          early_batch_difference: rawData.early_batch_difference,
+          stable_score_range: rawData.stable_score_range,
+          admission_ratio: rawData.admission_ratio,
+          single_cert_probability: rawData.single_cert_probability,
+          detailed_rules: rawData.detailed_rules,
+          unwritten_rules: rawData.unwritten_rules
+        },
+        
+        // 性价比信息
+        value_info: {
+          is_best_value_city: rawData.is_best_value_city === '是',
+          is_best_value_county: rawData.is_best_value_county === '是'
+        }
+      }
+      
+      detailedPolicyData.value = { data: [adaptedData] }
+      console.log('📋 详细政策加载成功并已适配:', adaptedData)
+    } else {
+      detailedPolicyData.value = response
+      console.log('📋 详细政策加载成功:', response)
+    }
     
   } catch (error) {
     console.error('📋 详细政策加载失败:', error)
@@ -932,13 +1115,15 @@ onMounted(() => {
 }
 
 // 选岗方式和批次差异
-.position-batch-info {
+.position-batch-info,
+.rules-info {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
-.position-data-section {
+.position-data-section,
+.rules-data-section {
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   padding: 12px;

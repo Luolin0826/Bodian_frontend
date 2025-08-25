@@ -772,7 +772,6 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, watch, computed, createVNode, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
-import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
   PlusOutlined, 
   MoreOutlined, 
@@ -859,13 +858,11 @@ const suggestedTags = computed(() => {
   }))
 })
 
-// 用户偏好设置
-const { itemsPerPage, loadPreferencesOnce } = useUserPreferences()
 
 // 分页配置
 const pagination = reactive({
   current: 1,
-  pageSize: 24,
+  pageSize: 30, // 知识库页面固定30条每页
   total: 0
 })
 
@@ -1298,11 +1295,8 @@ onMounted(async () => {
   console.log('知识库页面初始化开始')
   
   try {
-    // 首先加载用户偏好设置
-    await loadPreferencesOnce()
-    
-    // 设置默认分页大小为用户偏好
-    pagination.pageSize = itemsPerPage.value || 20
+    // 设置知识库页面固定分页大小为30条
+    pagination.pageSize = 30
     
     // 然后并行加载基础数据
     await Promise.all([

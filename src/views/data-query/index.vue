@@ -1,27 +1,5 @@
 <template>
-  <div class="data-query-page">
-    <!-- 页面头部统计 -->
-    <div class="stats-header">
-      <div class="stats-cards">
-        <div class="stat-card">
-          <div class="stat-number">{{ stats.totalRecords }}</div>
-          <div class="stat-label">总录取记录</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">{{ stats.provinces }}</div>
-          <div class="stat-label">覆盖省份</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">{{ stats.policyRules }}</div>
-          <div class="stat-label">政策规则</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number">{{ stats.lastUpdate }}</div>
-          <div class="stat-label">数据更新</div>
-        </div>
-      </div>
-    </div>
-
+  <div>
     <!-- 主要内容区域 -->
     <a-card class="main-content" :bordered="false">
       <!-- 查询面板 -->
@@ -50,18 +28,6 @@
         <div class="results-section">
           <div class="section-header">
             <h3>政策查询 <a-badge :count="searchResults.length" class="result-count" /></h3>
-            <div class="view-controls">
-              <a-radio-group v-model:value="viewMode" button-style="solid" size="small">
-                <a-radio-button value="list">
-                  <unordered-list-outlined />
-                  列表
-                </a-radio-button>
-                <a-radio-button value="card">
-                  <appstore-outlined />
-                  卡片
-                </a-radio-button>
-              </a-radio-group>
-            </div>
           </div>
           
           <div class="results-container">
@@ -83,15 +49,100 @@
                 </a-empty>
               </div>
               
-              <div v-else class="results-list" :class="`view-${viewMode}`">
-                <PolicyCard
-                  v-for="policy in searchResults"
-                  :key="`${policy.province}-${policy.city}-${policy.company}`"
-                  :policy="policy"
-                  :view-mode="viewMode"
-                  :selected-education-level="getSelectedEducationLevel()"
-                  @detail="handleViewDetail"
-                />
+              <div class="results-table">
+                <a-table
+                  :dataSource="searchResults"
+                  :columns="tableColumns"
+                  :pagination="{ pageSize: 100, showSizeChanger: true, showQuickJumper: true }"
+                  :scroll="{ x: 'max-content' }"
+                  size="small"
+                  @row-click="handleViewDetail"
+                >
+                  <template #bodyCell="{ column, record }">
+                    <template v-if="column.key === 'location'">
+                      <div class="location-cell">
+                        <div class="city">
+                          {{ record.city }}
+                          <span v-if="record.is_best_value_city" class="value-crown city-crown" title="性价比最高的市">🥈</span>
+                        </div>
+                        <div class="district" v-if="record.district && record.district !== '全市'">
+                          {{ record.district }}
+                          <span v-if="record.is_best_value_county" class="value-crown county-crown" title="性价比最高的区县">🥇</span>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else-if="column.key === 'salary'">
+                      <div class="salary-cell">
+                        <div v-if="!getSelectedEducationLevel() || getSelectedEducationLevel() === 'bachelor'" class="bachelor-salary">
+                          <span class="salary-label">本科:</span> {{ record.salary_info?.bachelor_salary || '-' }}万
+                        </div>
+                        <div v-if="!getSelectedEducationLevel() || getSelectedEducationLevel() === 'master'" class="master-salary">
+                          <span class="salary-label">硕士:</span> {{ record.salary_info?.master_salary || '-' }}万
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else-if="column.key === 'interview'">
+                      <div class="interview-cell">
+                        <div v-if="!getSelectedEducationLevel() || getSelectedEducationLevel() === 'bachelor'" class="bachelor-line">
+                          <div><span class="line-label">面试:</span> {{ record.salary_info?.bachelor_interview_line || '-' }}</div>
+                          <div v-if="record.salary_info?.bachelor_comprehensive_score" class="comprehensive-score">
+                            <span class="line-label">综合:</span> {{ record.salary_info.bachelor_comprehensive_score }}
+                          </div>
+                        </div>
+                        <div v-if="!getSelectedEducationLevel() || getSelectedEducationLevel() === 'master'" class="master-line">
+                          <span class="line-label">硕士:</span> {{ record.salary_info?.master_interview_line || '-' }}
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else-if="column.key === 'basic_requirements'">
+                      <div class="basic-requirements-cell">
+                        <div v-if="record.basic_requirements?.cet_requirement" class="requirement-item">
+                          <span class="req-label">英语:</span> {{ record.basic_requirements.cet_requirement }}
+                        </div>
+                        <div v-if="record.basic_requirements?.computer_requirement" class="requirement-item">
+                          <span class="req-label">计算机:</span> {{ record.basic_requirements.computer_requirement }}
+                        </div>
+                        <div v-if="record.basic_requirements?.overage_allowed" class="requirement-item">
+                          <span class="req-label">应届:</span> {{ record.basic_requirements.overage_allowed }}
+                        </div>
+                      </div>
+                    </template>
+                    <template v-else-if="column.key === 'qualification_requirements'">
+                      <div class="qualification-requirements-cell">
+                        <template v-if="!getSelectedEducationLevel()">
+                          <!-- 未选择学历层次时，显示本科和硕士门槛 -->
+                          <div v-if="record.qualification_requirements?.bachelor_min_requirement" class="qualification-item">
+                            <span class="level-label">本科最低:</span>
+                            <span class="qualification-level">{{ record.qualification_requirements.bachelor_min_requirement }}</span>
+                          </div>
+                          <div v-if="record.qualification_requirements?.master_min_requirement" class="qualification-item">
+                            <span class="level-label">硕士最低:</span>
+                            <span class="qualification-level">{{ record.qualification_requirements.master_min_requirement }}</span>
+                          </div>
+                        </template>
+                        <template v-else-if="getSelectedEducationLevel() === 'bachelor'">
+                          <!-- 选择本科层次时，只显示本科门槛 -->
+                          <div v-if="record.qualification_requirements?.bachelor_min_requirement" class="qualification-item">
+                            <span class="qualification-main">{{ record.qualification_requirements.bachelor_min_requirement }}本科</span>
+                            <span class="qualification-desc">及以上可投递</span>
+                          </div>
+                        </template>
+                        <template v-else-if="getSelectedEducationLevel() === 'master'">
+                          <!-- 选择硕士层次时，只显示硕士门槛 -->
+                          <div v-if="record.qualification_requirements?.master_min_requirement" class="qualification-item">
+                            <span class="qualification-main">{{ record.qualification_requirements.master_min_requirement }}硕士</span>
+                            <span class="qualification-desc">及以上可投递</span>
+                          </div>
+                        </template>
+                      </div>
+                    </template>
+                    <template v-else-if="column.key === 'actions'">
+                      <a-button type="link" size="small" @click.stop="handleViewDetail(record)">
+                        查看详情
+                      </a-button>
+                    </template>
+                  </template>
+                </a-table>
               </div>
             </a-spin>
           </div>
@@ -194,27 +245,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { message } from 'ant-design-vue'
 import {
-  SearchOutlined,
-  UnorderedListOutlined,
-  AppstoreOutlined
+  SearchOutlined
 } from '@ant-design/icons-vue'
 import {
-  getDistrictPolicies,
-  getAnalytics,
-  getLayeredQuery,
-  getDetailedPolicy,
   type PolicyInfo,
   type DistrictPolicyQuery,
   type AnalyticsResponse
 } from '@/api/recruitment'
+// 直接从 API 模块导入函数
+import { recruitmentAPI } from '@/api/recruitment'
 import QueryPanel from './components/QueryPanel.vue'
-import PolicyCard from './components/PolicyCard.vue'
 import DataAnalytics from './components/DataAnalytics.vue'
 import PolicyDetail from './components/PolicyDetail.vue'
-import RecordsList from './components/RecordsList.vue'
 import { useResponsive } from '@/composables/useResponsive'
 
 // 响应式工具
@@ -223,8 +268,55 @@ const { isMobile, isTablet } = useResponsive()
 // 响应式数据
 const loading = ref(false)
 const analyticsLoading = ref(false)
-const viewMode = ref<'list' | 'card'>('card')
 const detailModalVisible = ref(false)
+
+// 动态表格列配置
+const tableColumns = computed(() => {
+  const selectedLevel = getSelectedEducationLevel()
+  
+  return [
+    {
+      title: '地区',
+      key: 'location',
+      dataIndex: 'location',
+      width: 120,
+      fixed: 'left' as const
+    },
+    {
+      title: '薪资待遇',
+      key: 'salary',
+      dataIndex: 'salary_info',
+      width: 140
+    },
+    {
+      title: '面试分数线',
+      key: 'interview',
+      dataIndex: 'salary_info',
+      width: 140
+    },
+    {
+      title: '基本要求',
+      key: 'basic_requirements',
+      dataIndex: 'basic_requirements',
+      width: 160
+    },
+    {
+      title: selectedLevel ? 
+        (selectedLevel === 'bachelor' ? '本科网申门槛' : '硕士网申门槛') : 
+        '网申门槛',
+      key: 'qualification_requirements',
+      dataIndex: 'qualification_requirements',
+      width: 180,
+      ellipsis: true
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 80,
+      fixed: 'right' as const
+    }
+  ]
+})
 
 // 学校详情相关
 const schoolDetailVisible = ref(false)
@@ -257,14 +349,6 @@ const paginationData = ref({
   total: 0
 })
 
-
-// 统计数据
-const stats = reactive({
-  totalRecords: 1900,
-  provinces: 15,
-  policyRules: 29,
-  lastUpdate: '今天'
-})
 
 // 计算属性
 const layoutClass = computed(() => {
@@ -323,25 +407,25 @@ const handleSearch = async () => {
       let selectedField = convertEducationLevelToEnglish(selectedLevel!)
       
       if (selectedField) {
-        requestParams.education_level = selectedField
+        (requestParams as any).education_level = selectedField
         // 移除 education_value，这应该是后端返回的数据
         
         const levelType = queryParams.bachelor_level ? '本科' : '硕士'
         console.log(`📚 ${levelType}层次映射:`, selectedLevel, '=>', selectedField)
         console.log('📚 最终学历层次参数:', {
-          education_level: requestParams.education_level
+          education_level: (requestParams as any).education_level
         })
       }
     }
     
     // 移除中文字段
-    delete requestParams.bachelor_level
-    delete requestParams.master_level
+    delete (requestParams as any).bachelor_level
+    delete (requestParams as any).master_level
     
     console.log('转换后的查询参数:', requestParams)
     
     // 🔥 使用新的分层查询逻辑
-    const layeredResponse = await getLayeredQuery(requestParams)
+    const layeredResponse = await recruitmentAPI.getLayeredQuery(requestParams)
 
     console.log('分层查询结果:', layeredResponse)
     console.log('查询层级:', layeredResponse.query_level)
@@ -362,12 +446,10 @@ const handleSearch = async () => {
           // 直接传递后端结构用于兼容
           gender_distribution: layeredResponse.data_analysis.gender_distribution,
           school_type_distribution: layeredResponse.data_analysis.university_level_distribution,
-          university_level_distribution: layeredResponse.data_analysis.university_level_distribution,
-          detailed_statistics: layeredResponse.data_analysis.detailed_statistics,
-          // 添加school_statistics数据
-          school_statistics: layeredResponse.data_analysis.school_statistics,
           // 添加unit_statistics数据  
-          unit_statistics: layeredResponse.data_analysis.unit_statistics
+          unit_statistics: layeredResponse.data_analysis.unit_statistics,
+          // 添加school_statistics数据用于渲染学校统计表格
+          school_statistics: layeredResponse.data_analysis.school_statistics
         }
       }
 
@@ -387,19 +469,29 @@ const handleSearch = async () => {
     }
 
     // 处理政策查询 - 使用API适配层返回的结构
-    console.log('🔍 政策数据检查:')
+    console.log('🔍 政策数据详细检查:')
+    console.log('layeredResponse完整结构:', layeredResponse)
     console.log('layeredResponse.policy_info:', layeredResponse.policy_info)
     console.log('layeredResponse.policy_analysis:', layeredResponse.policy_analysis)
+    console.log('layeredResponse.debug_policy_info:', layeredResponse.debug_policy_info)
     
-    if (layeredResponse.policy_info?.available || layeredResponse.policy_analysis?.policies?.length) {
+    // 更宽松的政策检查条件
+    const hasPolicyInfo = !!(layeredResponse.policy_info?.policies?.length > 0)
+    const hasPolicyAnalysis = !!(layeredResponse.policy_analysis?.policies?.length > 0)
+    const hasAnyPolicy = hasPolicyInfo || hasPolicyAnalysis
+    
+    console.log('政策检查条件:', { hasPolicyInfo, hasPolicyAnalysis, hasAnyPolicy })
+    console.log('policy_info.available:', layeredResponse.policy_info?.available)
+    console.log('policy_info.policies.length:', layeredResponse.policy_info?.policies?.length)
+    console.log('policy_analysis.policies.length:', layeredResponse.policy_analysis?.policies?.length)
+    
+    if (hasAnyPolicy) {
       const policies = layeredResponse.policy_info?.policies || layeredResponse.policy_analysis?.policies || []
       
       console.log('获取到的政策数据:', policies)
       console.log('政策数据长度:', policies.length)
       
       searchResults.value = policies.map((policy: any) => {
-        const hasEducationLevel = !!(queryParams.bachelor_level || queryParams.master_level)
-        const currentLevel = queryParams.bachelor_level ? 'bachelor' : (queryParams.master_level ? 'master' : 'all')
         
         // 获取具体学历层次的政策数据 - 适配实际API返回结构
         const location = policy.location || {}
@@ -410,21 +502,25 @@ const handleSearch = async () => {
         
         // 添加教育水平政策值处理
         const educationLevelInfo = {
-          education_level: policy.education_level || null,
-          education_value: policy.education_value || null,
-          field_name: policy.field_name || null
+          education_level: (policy as any).education_level || null,
+          education_value: (policy as any).education_value || null,
+          field_name: (policy as any).field_name || null
         }
 
         return {
-          id: `${location.province}-${location.city || ''}-${location.district || ''}-${currentLevel}`,
+          id: `${location.city}-${location.district}-${policy.policy_id}`,
           province: location.province,
-          city: location.city,
-          company: location.district || location.city,
+          city: location.city || '全省',
+          district: location.district || '全市',
+          // 用于显示的company字段（包含城市-区县格式）
+          company: location.city ? `${location.city} - ${location.district || '全市'}` : location.province,
+          // 用于API调用的实际区县名称
+          actual_district: location.district,
           company_type: queryParams.company_type,
           batch: queryParams.batch,
-          data_level: policy.data_level || (hasEducationLevel ? 3 : 2),
-          region_type: 2,
-          region_type_name: hasEducationLevel ? `${currentLevel === 'bachelor' ? '本科' : '硕士'}网申政策` : '网申政策',
+          data_level: policy.data_level || '区县详情',
+          region_type: 1,
+          region_type_name: `${location.city || location.province} ${location.district || ''}网申政策`.trim(),
           
           // 🎯 基本要求 - 根据学历层次显示
           basic_requirements: {
@@ -440,7 +536,8 @@ const handleSearch = async () => {
             bachelor_salary: salaryInfo?.bachelor_salary,
             master_salary: salaryInfo?.master_salary,
             bachelor_interview_line: interviewInfo?.bachelor_interview_line,
-            master_interview_line: interviewInfo?.master_interview_line
+            master_interview_line: interviewInfo?.master_interview_line,
+            bachelor_comprehensive_score: interviewInfo?.bachelor_comprehensive_score
           },
 
           // 🎯 详细信息
@@ -450,32 +547,26 @@ const handleSearch = async () => {
             application_status: '能过网申'
           },
 
-          // 🎯 学历要求 - 根据学校要求显示
-          education_requirements: {
-            bachelor: {
-              '985': schoolRequirements?.bachelor_985 || '能过网申',
-              '211': schoolRequirements?.bachelor_211 || '能过网申'
-            },
-            master: {
-              '985': schoolRequirements?.master_985 || '本科211能过网审',
-              '211': schoolRequirements?.master_211 || '本科211能过网申'
-            }
+          // 🎯 网申门槛要求 - 使用新的最低门槛逻辑
+          qualification_requirements: {
+            bachelor_min_requirement: schoolRequirements?.bachelor_min_requirement,
+            master_min_requirement: schoolRequirements?.master_min_requirement
           },
 
           // 🎯 性价比标记
-          is_cost_effective: false,
-          cost_effective_reason: '',
+          is_best_value_city: policy.additional_info?.is_best_value_city === '是',
+          is_best_value_county: policy.additional_info?.is_best_value_county === '是',
 
           // 🎯 备注信息
           field_notes: [
             {
               field_name: '数据层级',
-              note_content: policy.data_level || '市级汇总',
+              note_content: '省级汇总',
               note_type: 'info'
             },
             {
-              field_name: '政策ID',
-              note_content: `政策编号: ${policy.policy_id}`,
+              field_name: '政策范围',
+              note_content: `${location.province}省${queryParams.company_type || ''}整体政策`,
               note_type: 'info'
             }
           ],
@@ -495,7 +586,7 @@ const handleSearch = async () => {
 
     // 显示查询结果提示
     const dataCount = layeredResponse.data_analysis?.total_count || 0
-    const policyCount = (layeredResponse.policy_info?.policies?.length || 0) + (layeredResponse.policy_analysis?.policies?.length || 0)
+    const policyCount = layeredResponse.policy_info?.policies?.length || layeredResponse.policy_analysis?.policies?.length || 0
     
     if (layeredResponse.query_level) {
       if (dataCount > 0 || policyCount > 0) {
@@ -563,18 +654,10 @@ const handleReset = () => {
   }
 }
 
-const handlePageChange = async (page: number, pageSize?: number) => {
-  // 更新查询参数中的分页信息
-  queryParams.page = page
-  queryParams.limit = pageSize || 50
-  
-  // 重新执行搜索
-  await handleSearch()
-}
 
 
 
-const handleViewDetail = (policy: PolicyInfo) => {
+const handleViewDetail = (policy: any) => {
   // 设置选中的政策并打开详情模态框
   selectedPolicy.value = policy
   detailModalVisible.value = true
@@ -692,11 +775,6 @@ onMounted(async () => {
   }
 })
 
-// 响应式布局监听
-watch([isMobile, isTablet], () => {
-  // 保持列表视图为默认
-  viewMode.value = 'list'
-})
 </script>
 
 <style scoped lang="less">
@@ -710,57 +788,6 @@ watch([isMobile, isTablet], () => {
   @media (max-width: 768px) {
     padding: 8px;
     gap: 6px;
-  }
-}
-
-// 统计头部 - 超紧凑样式
-.stats-header {
-  margin-bottom: 6px;
-
-  .stats-cards {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 8px;
-
-    @media (max-width: 768px) {
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-    }
-  }
-
-  .stat-card {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-    border: 1px solid #d6f4ff;
-    border-radius: 6px;
-    padding: 8px 12px;
-    text-align: center;
-    transition: all 0.2s ease;
-
-    &:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
-    }
-
-    .stat-number {
-      font-size: 18px;
-      font-weight: 600;
-      color: #1890ff;
-      line-height: 1.2;
-
-      @media (max-width: 768px) {
-        font-size: 16px;
-      }
-    }
-
-    .stat-label {
-      font-size: 12px;
-      color: #666;
-      margin-top: 2px;
-
-      @media (max-width: 768px) {
-        font-size: 11px;
-      }
-    }
   }
 }
 
@@ -848,20 +875,163 @@ watch([isMobile, isTablet], () => {
     min-height: 400px;
   }
 
-  .results-list {
-    display: grid;
-    gap: 12px;
 
-    &.view-card {
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  .results-table {
+    width: 100%;
+    
+    :deep(.ant-table) {
+      width: 100% !important;
+    }
+    
+    :deep(.ant-table-container) {
+      width: 100% !important;
+    }
+    
+    :deep(.ant-table-content) {
+      width: 100% !important;
+      overflow-x: auto;
+    }
+    
+    :deep(.ant-table-thead) > tr > th {
+      background: #fafafa;
+      font-weight: 600;
+      color: #262626;
+      white-space: nowrap;
+    }
 
-      @media (max-width: 768px) {
-        grid-template-columns: 1fr;
+    :deep(.ant-table-tbody) > tr {
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: #f5f5f5;
       }
     }
 
-    &.view-list {
-      grid-template-columns: 1fr;
+    .location-cell {
+      .city {
+        font-weight: 600;
+        color: #1890ff;
+        margin-bottom: 2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .district {
+        font-size: 12px;
+        color: #666;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .value-crown {
+        font-size: 14px;
+        margin-left: 4px;
+        vertical-align: middle;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        
+        &.city-crown {
+          // 银牌样式 - 使用银牌emoji，无需filter
+          animation: shimmer 2s ease-in-out infinite alternate;
+        }
+
+        &.county-crown {
+          // 金牌样式 - 使用金牌emoji，无需filter  
+          animation: shimmer 2s ease-in-out infinite alternate;
+        }
+      }
+      
+      @keyframes shimmer {
+        from {
+          opacity: 0.8;
+          transform: scale(1);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1.1);
+        }
+      }
+    }
+
+    .salary-cell,
+    .interview-cell,
+    .basic-requirements-cell,
+    .qualification-requirements-cell {
+      font-size: 12px;
+      line-height: 1.4;
+
+      .bachelor-salary,
+      .bachelor-line {
+        color: #1890ff;
+        margin-bottom: 2px;
+      }
+
+      .master-salary,
+      .master-line {
+        color: #52c41a;
+      }
+
+      .comprehensive-score {
+        color: #fa8c16;
+        font-size: 11px;
+      }
+
+      .salary-label,
+      .line-label,
+      .req-label,
+      .level-label {
+        font-weight: 500;
+        margin-right: 4px;
+        color: #666;
+      }
+
+      .requirement-item,
+      .qualification-item {
+        margin-bottom: 2px;
+        white-space: nowrap;
+
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
+    }
+
+    .basic-requirements-cell {
+      .requirement-item {
+        .req-label {
+          min-width: 40px;
+          display: inline-block;
+        }
+      }
+    }
+
+    .qualification-requirements-cell {
+      .qualification-item {
+        .level-label {
+          min-width: 60px;
+          display: inline-block;
+          color: #666;
+        }
+
+        .qualification-level {
+          color: #1890ff;
+          font-weight: 600;
+        }
+
+        .qualification-main {
+          color: #1890ff;
+          font-weight: 600;
+          font-size: 13px;
+        }
+
+        .qualification-desc {
+          color: #52c41a;
+          font-size: 10px;
+          margin-left: 4px;
+        }
+      }
     }
   }
 }

@@ -3,34 +3,25 @@
     <!-- 基础查询区域 -->
     <div class="basic-query-section">
       <div class="query-form compact-layout">
-        <!-- 第一行：公司类型、批次、二级单位、学校名称 + 查询按钮 -->
+        <!-- 第一行：录取批次、二级单位、学校名称 + 查询按钮 -->
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label">公司类型</label>
-            <a-select
-              v-model:value="localQuery.company_type"
-              placeholder="选择公司类型"
-              allow-clear
-              @change="handleCompanyTypeChange"
-              class="query-select"
-            >
-              <a-select-option value="国网">国家电网</a-select-option>
-              <a-select-option value="南网">南方电网</a-select-option>
-            </a-select>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">批次</label>
+            <label class="form-label">
+              录取批次
+              <a-tooltip title="选择录取批次进行查询">
+                <info-circle-outlined class="help-icon" />
+              </a-tooltip>
+            </label>
             <a-select
               v-model:value="localQuery.batch"
-              placeholder="选择批次"
+              placeholder="选择录取批次"
               allow-clear
-              :disabled="localQuery.company_type !== '国网'"
               class="query-select"
             >
               <a-select-option value="第一批">第一批</a-select-option>
               <a-select-option value="第二批">第二批</a-select-option>
               <a-select-option value="第三批">第三批</a-select-option>
+              <a-select-option value="南网批次">南网批次</a-select-option>
             </a-select>
           </div>
 
@@ -42,7 +33,6 @@
               allow-clear
               show-search
               :filter-option="filterOption"
-              :disabled="!localQuery.company_type"
               @change="handleProvinceChange"
               class="query-select"
             >
@@ -61,7 +51,7 @@
             <a-auto-complete
               v-model:value="localQuery.school_name"
               placeholder="输入学校名称搜索"
-              allow-clear
+              :allow-clear="true"
               :options="schoolOptions"
               @search="handleSchoolSearch"
               @change="handleSchoolChange"
@@ -197,10 +187,20 @@
       <div class="section-title">
         <history-outlined />
         快速查询
+        <a-button
+          type="text"
+          size="small"
+          @click="showAllQuickTags = !showAllQuickTags"
+          class="expand-btn"
+        >
+          {{ showAllQuickTags ? '收起' : '展开' }}
+          <down-outlined v-if="!showAllQuickTags" />
+          <up-outlined v-else />
+        </a-button>
       </div>
       <div class="quick-tags">
         <a-tag
-          v-for="(tag, index) in quickQueryTags"
+          v-for="(tag, index) in displayedQuickTags"
           :key="index"
           :color="tag.color"
           class="quick-tag"
@@ -250,7 +250,10 @@ import {
   ReloadOutlined,
   FilterOutlined,
   HistoryOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  InfoCircleOutlined,
+  DownOutlined,
+  UpOutlined
 } from '@ant-design/icons-vue'
 import { 
   getAvailableOptions, 
@@ -292,6 +295,7 @@ const localQuery = reactive<DistrictPolicyQuery>({
 })
 
 const showAllHistory = ref(false)
+const showAllQuickTags = ref(false)
 
 // 可用选项数据
 const availableOptions = reactive({
@@ -315,14 +319,32 @@ const schoolOptions = ref<Array<{
 }>>([])
 const searchingSchools = ref(false)
 
-// 快速查询标签
+// 快速查询标签 - 按批次优先，然后二级单位
 const quickQueryTags = [
-  { label: '江苏电网', province: '江苏', color: 'blue' },
-  { label: '广东南网', province: '广东', color: 'green' },
-  { label: '北京电网', province: '北京', color: 'purple' },
-  { label: '上海电网', province: '上海', color: 'orange' },
-  { label: '四川电网', province: '四川', color: 'red' },
-  { label: '重庆电网', province: '重庆', color: 'cyan' }
+  // 批次标签
+  { label: '第一批录取', batch: '第一批', color: 'gold' },
+  { label: '第二批录取', batch: '第二批', color: 'lime' },
+  { label: '第三批录取', batch: '第三批', color: 'cyan' },
+  { label: '南网批次', batch: '南网批次', color: 'magenta' },
+  
+  // 二级单位标签（不包含省份电网选项）
+  { label: '国网江苏电力', province: '江苏', color: 'blue' },
+  { label: '国网浙江电力', province: '浙江', color: 'geekblue' },
+  { label: '国网山东电力', province: '山东', color: 'purple' },
+  { label: '国网河南电力', province: '河南', color: 'red' },
+  { label: '国网四川电力', province: '四川', color: 'orange' },
+  { label: '国网湖北电力', province: '湖北', color: 'green' },
+  { label: '国网北京电力', province: '北京', color: 'volcano' },
+  { label: '国网上海电力', province: '上海', color: 'pink' },
+  { label: '国网辽宁电力', province: '辽宁', color: 'grey' },
+  { label: '国网河北电力', province: '河北', color: 'brown' },
+  
+  // 南方电网二级单位
+  { label: '广东电网', province: '广东', color: 'green' },
+  { label: '广西电网', province: '广西', color: 'lime' },
+  { label: '云南电网', province: '云南', color: 'cyan' },
+  { label: '贵州电网', province: '贵州', color: 'orange' },
+  { label: '海南电网', province: '海南', color: 'blue' }
 ]
 
 // 查询历史 (使用localStorage)
@@ -336,6 +358,11 @@ const availableCities = computed(() => {
 const availableCounties = computed(() => {
   const key = `${localQuery.province}-${localQuery.city}`
   return localQuery.city ? availableOptions.counties[key] || [] : []
+})
+
+// 显示的快速查询标签 - 默认显示前10个
+const displayedQuickTags = computed(() => {
+  return showAllQuickTags.value ? quickQueryTags : quickQueryTags.slice(0, 10)
 })
 
 // 方法
@@ -395,34 +422,32 @@ const handleCityChange = async () => {
 
 
 const handleCompanyTypeChange = async () => {
-  // 公司类型变化时，清空相关字段
-  localQuery.batch = undefined
-  localQuery.province = undefined
-  localQuery.city = undefined
-  localQuery.county = undefined
-  
-  // 如果切换到南网则清空批次
-  if (localQuery.company_type === '南网') {
-    localQuery.batch = undefined
-  }
-  
-  // 根据公司类型加载对应的二级单位
-  if (localQuery.company_type) {
+  // 批次选择独立于公司类型，不需要清空批次
+  updateQuery()
+}
+
+// 初始化加载所有二级单位
+const loadAllSecondaryUnits = async () => {
+  try {
+    console.log('🔄 加载全部二级单位...')
+    // 先尝试加载国网的二级单位，如果需要南网的也可以合并
+    const responseGuo = await getSecondaryUnits('国网')
+    let allUnits = [...responseGuo.secondary_units]
+    
     try {
-      console.log(`🔄 加载公司类型 "${localQuery.company_type}" 的二级单位...`)
-      const response = await getSecondaryUnits(localQuery.company_type)
-      availableOptions.secondaryUnits = response.secondary_units
-      console.log(`✅ 成功加载 ${response.count} 个二级单位`, response.secondary_units)
+      const responseNan = await getSecondaryUnits('南网') 
+      allUnits = [...allUnits, ...responseNan.secondary_units]
     } catch (error) {
-      console.error('加载二级单位失败:', error)
-      message.warning('加载二级单位失败，请重试')
-      availableOptions.secondaryUnits = []
+      console.log('南网单位加载失败，只显示国网单位')
     }
-  } else {
+    
+    availableOptions.secondaryUnits = allUnits
+    console.log(`✅ 成功加载 ${allUnits.length} 个二级单位`, allUnits)
+  } catch (error) {
+    console.error('加载二级单位失败:', error)
+    message.warning('加载二级单位失败，请重试')
     availableOptions.secondaryUnits = []
   }
-  
-  updateQuery()
 }
 
 
@@ -508,7 +533,7 @@ const handleSearch = () => {
   })
 }
 
-const handleReset = () => {
+const handleReset = async () => {
   Object.assign(localQuery, {
     company_type: undefined,
     batch: undefined,
@@ -520,9 +545,9 @@ const handleReset = () => {
     master_level: undefined
   })
   
-  // 清空学校搜索选项和二级单位
+  // 清空学校搜索选项，重新加载二级单位
   schoolOptions.value = []
-  availableOptions.secondaryUnits = []
+  await loadAllSecondaryUnits()
   
   updateQuery()
   emit('reset')
@@ -530,9 +555,12 @@ const handleReset = () => {
 
 
 const handleQuickQuery = (tag: any) => {
-  Object.assign(localQuery, {
-    province: tag.province
-  })
+  // 支持省份或批次的快捷查询
+  const updates: any = {}
+  if (tag.province) updates.province = tag.province
+  if (tag.batch) updates.batch = tag.batch
+  
+  Object.assign(localQuery, updates)
   updateQuery()
   handleSearch()
 }
@@ -638,6 +666,7 @@ watch(() => props.query, (newQuery) => {
 // 生命周期
 onMounted(async () => {
   await loadAvailableOptions()
+  await loadAllSecondaryUnits()
   loadQueryHistory()
 })
 </script>
@@ -658,32 +687,83 @@ onMounted(async () => {
     &.compact-layout {
       .form-row {
         display: grid;
-        grid-template-columns: repeat(4, 1fr) auto;
         gap: 12px;
         margin-bottom: 10px;
         align-items: end;
-
-        @media (max-width: 1200px) {
-          grid-template-columns: repeat(2, 1fr) auto;
+        
+        // 第一行：4个元素（3个表单项 + 1个查询按钮）
+        &:first-child {
+          grid-template-columns: repeat(3, 1fr) auto;
           
-          .form-group:nth-child(n+3):not(.button-group) {
-            grid-column: 1 / -2;
+          @media (max-width: 1200px) {
+            grid-template-columns: repeat(2, 1fr) auto;
+            
+            .form-group:nth-child(3):not(.button-group) {
+              grid-column: 1;
+            }
+            
+            .button-group {
+              grid-column: -1;
+              grid-row: 1;
+            }
           }
-          
-          .button-group {
-            grid-column: -2;
+
+          @media (max-width: 768px) {
+            grid-template-columns: 1fr auto;
+            
+            .form-group:not(.button-group) {
+              grid-column: 1;
+            }
+            
+            .button-group {
+              grid-column: 2;
+              grid-row: 1;
+            }
           }
         }
-
-        @media (max-width: 768px) {
-          grid-template-columns: 1fr auto;
+        
+        // 第二行：5个元素（4个表单项 + 1个重置按钮）
+        &:last-child {
+          grid-template-columns: repeat(4, 1fr) auto;
           
-          .form-group:not(.button-group) {
-            grid-column: 1;
+          @media (max-width: 1400px) {
+            grid-template-columns: repeat(3, 1fr) auto;
+            
+            .form-group:nth-child(4):not(.button-group) {
+              grid-column: 1;
+              grid-row: 2;
+            }
+            
+            .button-group {
+              grid-column: -1;
+              grid-row: 1;
+            }
           }
           
-          .button-group {
-            grid-column: 2;
+          @media (max-width: 1200px) {
+            grid-template-columns: repeat(2, 1fr) auto;
+            
+            .form-group:nth-child(n+3):not(.button-group) {
+              grid-column: 1 / -2;
+            }
+            
+            .button-group {
+              grid-column: -1;
+              grid-row: 1;
+            }
+          }
+
+          @media (max-width: 768px) {
+            grid-template-columns: 1fr auto;
+            
+            .form-group:not(.button-group) {
+              grid-column: 1;
+            }
+            
+            .button-group {
+              grid-column: 2;
+              grid-row: 1;
+            }
           }
         }
       }
@@ -792,11 +872,26 @@ onMounted(async () => {
   .section-title {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
     font-size: 14px;
     font-weight: 500;
     color: #666;
     margin-bottom: 12px;
+    
+    .expand-btn {
+      font-size: 12px;
+      color: #1890ff;
+      
+      &:hover {
+        color: #40a9ff;
+      }
+      
+      .anticon {
+        font-size: 10px;
+        margin-left: 4px;
+      }
+    }
   }
 
   .quick-tags {

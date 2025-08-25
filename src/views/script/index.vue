@@ -111,6 +111,7 @@
               <filter-outlined />
             </a-button>
             
+            
             <!-- 展示模式切换 -->
             <a-button-group size="large" class="desktop-only">
               <a-button 
@@ -129,6 +130,16 @@
               </a-button>
             </a-button-group>
             
+            <a-button 
+              v-if="userStore.role === 'super_admin'" 
+              @click="showCategoryManager" 
+              size="large" 
+              title="分类管理"
+            >
+              <apartment-outlined />
+              <span class="desktop-only">分类管理</span>
+            </a-button>
+            
             <a-button type="primary" @click="showCreateModal" size="large" class="add-btn">
               <plus-outlined />
               <span class="desktop-only">新增话术</span>
@@ -136,6 +147,7 @@
           </div>
         </div>
       </div>
+      
 
       <!-- 问题列表模式 -->
       <div v-if="displayMode === 'question'" class="question-list-mode">
@@ -478,56 +490,23 @@
         layout="vertical"
         class="compact-form"
       >
-        <!-- 第一行：主分类、子分类和适用平台 -->
+        <!-- 第一行：话术分类和适用平台 -->
         <a-row :gutter="12">
-          <a-col :span="8">
-            <a-form-item label="话术分类" name="primary_category">
-              <a-select
-                v-model:value="formData.primary_category"
+          <a-col :span="12">
+            <a-form-item label="话术分类" name="category_id">
+              <CategorySelector
+                :key="categorySelectorKey"
+                ref="categorySelectorRef"
+                v-model="formData.category_id"
                 placeholder="请选择话术分类"
-                allow-clear
-                class="cascade-select"
-              >
-                <a-select-option
-                  v-for="option in primaryCategoryOptions"
-                  :key="option.value"
-                  :value="option.value"
-                  class="category-option"
-                >
-                  <div class="category-option-content">
-                    <component :is="getCategoryIcon(option.value)" :style="{ color: getCategoryIconColor(option.value) }" />
-                    <span class="category-label">{{ option.label }}</span>
-                    <span v-if="hasSubcategories(option.value)" class="subcategory-hint">
-                      <right-outlined style="font-size: 10px; margin-left: 4px; color: #999;" />
-                    </span>
-                  </div>
-                </a-select-option>
-              </a-select>
+                :allow-create="true"
+                :show-count="false"
+                @create="handleCategoryCreate"
+                @change="handleCategoryChange"
+              />
             </a-form-item>
           </a-col>
-          <a-col :span="8">
-            <a-form-item label="子分类" name="secondary_category">
-              <a-select
-                v-model:value="formData.secondary_category"
-                placeholder="请选择子分类"
-                :disabled="!shouldShowSubcategory || secondaryCategoryOptions.length === 0"
-                allow-clear
-              >
-                <a-select-option
-                  v-for="option in secondaryCategoryOptions"
-                  :key="option.value"
-                  :value="option.value"
-                  class="subcategory-option"
-                >
-                  <div class="subcategory-option-content">
-                    <component :is="getSubCategoryIcon(option.value)" :style="{ color: getSubCategoryIconColor(option.value) }" />
-                    <span class="subcategory-label">{{ option.label }}</span>
-                  </div>
-                </a-select-option>
-              </a-select>
-            </a-form-item>
-          </a-col>
-          <a-col :span="8">
+          <a-col :span="12">
             <a-form-item label="适用平台" name="platform_new">
               <a-select
                 v-model:value="formData.platform_new"
@@ -624,6 +603,23 @@
         </a-form-item>
       </a-form>
     </a-modal>
+    
+    <!-- 分类管理弹窗 -->
+    <a-modal
+      v-model:open="categoryManagerVisible"
+      title="分类管理"
+      :width="800"
+      :footer="null"
+      class="category-manager-modal"
+    >
+      <CategoryManager
+        :height="500"
+        @create="handleCategoryManagerCreate"
+        @update="handleCategoryManagerUpdate"
+        @delete="handleCategoryManagerDelete"
+        @refresh="handleCategoryManagerRefresh"
+      />
+    </a-modal>
   </div>
 </template>
 
@@ -665,7 +661,9 @@ import {
   CustomerServiceOutlined,
   ReadOutlined,
   ScheduleOutlined,
-  DatabaseOutlined
+  DatabaseOutlined,
+  FolderOutlined,
+  ApartmentOutlined
 } from '@ant-design/icons-vue'
 import dayjs from 'dayjs'
 import { useResponsive } from '@/composables/useResponsive'
@@ -679,9 +677,13 @@ import {
   unpinScript,
   favoriteScript,
   unfavoriteScript,
+  // 新分类管理API
+  getScriptCategoriesTree,
   type Script,
-  type ScriptQuery 
+  type ScriptQuery,
+  type ScriptCategory
 } from '@/api/script'
+import { CategorySelector, CategoryManager } from '@/components/script'
 import request from '@/api/request'
 
 // 响应式工具
@@ -705,11 +707,16 @@ const scriptList = ref<Script[]>([])
 const editingScript = ref<Script | null>(null)
 const currentScript = ref<Script | null>(null)
 const formRef = ref()
+const categorySelectorRef = ref()
+const categorySelectorKey = ref(0) // 用于强制刷新CategorySelector
 const viewType = ref<'grid' | 'list'>('list')
 const sortBy = ref<string>('date')
 
 // 搜索参数
 const searchKeyword = ref('')
+// 新分类系统相关数据
+const categories = ref<ScriptCategory[]>([])
+const categoryManagerVisible = ref(false)
 const selectedType = ref<string>()
 const selectedContentType = ref<string>()
 const selectedPlatform = ref<string>()
@@ -836,6 +843,8 @@ const formData = reactive<Script>({
   question: '',
   answer: '',
   keywords: '',
+  // 新分类系统字段
+  category_id: null,
   // v2.0新分类体系字段
   primary_category: undefined,
   secondary_category: undefined,
@@ -1083,6 +1092,7 @@ const loadScripts = async () => {
       }
     }
     
+    
     console.log('发送搜索请求，参数:', params)
     const response = await searchScripts(params)
     console.log('收到搜索响应:', response)
@@ -1256,14 +1266,82 @@ const loadPlatformStats = async () => {
 // 加载综合分类选项 - 将主分类和子分类合并为分组选项
 const loadCategoryOptions = async () => {
   try {
-    console.log('使用默认分类数据构建级联选择器选项')
-    buildDefaultCategoryOptions()
+    console.log('从接口加载分类数据构建级联选择器选项')
+    await buildCategoryOptionsFromAPI()
   } catch (error) {
-    console.warn('分类数据构建失败:', error)
+    console.warn('分类数据构建失败，使用默认数据:', error)
     buildDefaultCategoryOptions()
   }
 }
 
+// 从API构建分类选项
+const buildCategoryOptionsFromAPI = async () => {
+  try {
+    // 获取新分类系统数据
+    const response = await getScriptCategoriesTree()
+    const apiCategories = response.data || []
+    
+    if (apiCategories.length === 0) {
+      console.log('API返回空分类数据，使用默认分类')
+      buildDefaultCategoryOptions()
+      return
+    }
+    
+    // 构建级联选择器选项
+    const cascaderData = apiCategories.map((category: ScriptCategory) => {
+      const option: any = {
+        label: category.name,
+        value: category.id,
+        count: category.script_count || 0
+      }
+      
+      // 如果有子分类，添加children
+      if (category.children && category.children.length > 0) {
+        option.children = category.children.map((child: ScriptCategory) => ({
+          label: child.name,
+          value: child.id,
+          count: child.script_count || 0
+        }))
+      }
+      
+      return option
+    })
+    
+    // 更新级联选择器数据
+    cascaderOptions.value = cascaderData
+    
+    // 同时构建平铺的选项列表用于v2.0分类体系
+    const flatOptions: Array<{ value: string; label: string; count: number; options?: Array<{ value: string; label: string; count: number }> }> = []
+    
+    apiCategories.forEach((category: ScriptCategory) => {
+      const mainOption = {
+        label: category.name,
+        value: String(category.id),
+        count: category.script_count || 0,
+        options: [] as Array<{ value: string; label: string; count: number }>
+      }
+      
+      if (category.children && category.children.length > 0) {
+        category.children.forEach((child: ScriptCategory) => {
+          mainOption.options.push({
+            value: `${category.id}:${child.id}`,
+            label: `${category.name} > ${child.name}`,
+            count: child.script_count || 0
+          })
+        })
+      }
+      
+      flatOptions.push(mainOption)
+    })
+    
+    categoryOptions.value = flatOptions
+    
+    console.log('从API构建分类选项完成:', { cascaderData, flatOptions })
+  } catch (error) {
+    console.error('从API构建分类选项失败:', error)
+    throw error
+  }
+}
 
 // 构建默认分类选项
 const buildDefaultCategoryOptions = () => {
@@ -1345,6 +1423,92 @@ const buildDefaultCategoryOptions = () => {
   cascaderOptions.value = cascaderData
 }
 
+// 新分类系统方法
+const loadCategories = async () => {
+  try {
+    const response = await getScriptCategoriesTree()
+    categories.value = response.data || []
+  } catch (error) {
+    console.error('获取分类失败:', error)
+    message.error('获取分类失败')
+  }
+}
+
+
+const handleCategoryCreate = (category: ScriptCategory) => {
+  // CategorySelector组件已经显示了成功提示，这里不需要重复显示
+  loadCategories()
+  loadStats()
+}
+
+const handleCategoryUpdate = (category: ScriptCategory) => {
+  message.success(`分类 "${category.name}" 更新成功`)
+  loadCategories()
+}
+
+const handleCategoryDelete = (categoryId: number) => {
+  loadCategories()
+  loadStats()
+}
+
+const handleCategoryChange = (categoryId: number | null, category?: ScriptCategory) => {
+  formData.category_id = categoryId
+  if (category) {
+    console.log('选择分类:', category.name)
+  }
+}
+
+// 分类管理相关方法
+const showCategoryManager = () => {
+  categoryManagerVisible.value = true
+}
+
+const handleCategoryManagerCreate = async (category: ScriptCategory) => {
+  message.success(`分类 "${category.name}" 创建成功`)
+  // 并行执行所有刷新操作
+  await Promise.all([
+    loadCategories(),
+    loadStats(),
+    loadCategoryOptions()
+  ])
+  // 强制刷新CategorySelector组件
+  categorySelectorKey.value += 1
+}
+
+const handleCategoryManagerUpdate = async (category: ScriptCategory) => {
+  message.success(`分类 "${category.name}" 更新成功`)
+  // 并行执行所有刷新操作
+  await Promise.all([
+    loadCategories(),
+    loadStats(),
+    loadCategoryOptions()
+  ])
+  // 强制刷新CategorySelector组件
+  categorySelectorKey.value += 1
+}
+
+const handleCategoryManagerDelete = async (categoryId: number) => {
+  // 并行执行所有刷新操作
+  await Promise.all([
+    loadCategories(),
+    loadStats(),
+    loadCategoryOptions()
+  ])
+  // 强制刷新CategorySelector组件
+  categorySelectorKey.value += 1
+}
+
+const handleCategoryManagerRefresh = async () => {
+  // 并行执行所有刷新操作
+  await Promise.all([
+    loadCategories(),
+    loadStats(),
+    loadCategoryOptions()
+  ])
+  // 强制刷新CategorySelector组件
+  categorySelectorKey.value += 1
+}
+
 // 搜索
 const handleSearch = () => {
   pagination.current = 1
@@ -1403,6 +1567,8 @@ const handleEdit = (script: Script) => {
     question: script.question,
     answer: script.answer,
     keywords: script.keywords,
+    // 新分类系统字段
+    category_id: script.category_id || null,
     // v2.0新分类体系字段
     primary_category: script.primary_category,
     secondary_category: script.secondary_category,
@@ -1549,6 +1715,8 @@ const resetForm = () => {
     question: '',
     answer: '',
     keywords: '',
+    // 新分类系统字段
+    category_id: null,
     // v2.0新分类体系字段
     primary_category: undefined,
     secondary_category: undefined,
@@ -1664,7 +1832,7 @@ onMounted(async () => {
     await loadPreferencesOnce()
     
     // 设置默认分页大小为用户偏好（与switchDisplayMode保持一致）
-    pagination.pageSize = itemsPerPage.value || 300
+    pagination.pageSize = itemsPerPage.value || 100
     
     // 然后加载基础数据
     await loadScripts()
@@ -1675,7 +1843,8 @@ onMounted(async () => {
       loadTypeStats(),
       loadContentTypeStats(),
       loadPlatformStats(),
-      loadCategoryOptions()
+      loadCategoryOptions(),
+      loadCategories() // 加载新分类系统数据
     ])
     
     console.log('所有数据加载完成')

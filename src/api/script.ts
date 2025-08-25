@@ -1,5 +1,20 @@
 import request from '@/api/request'
 
+// 分类数据类型定义 - 需要先定义，在Script接口中会用到
+export interface ScriptCategory {
+  id?: number
+  name: string
+  description?: string
+  parent_id?: number | null
+  is_system?: boolean
+  is_active?: boolean
+  sort_order?: number
+  created_at?: string
+  updated_at?: string
+  script_count?: number
+  children?: ScriptCategory[]
+}
+
 export interface Script {
   id?: number
   category?: string
@@ -13,6 +28,9 @@ export interface Script {
   is_pinned?: boolean
   is_favorited?: boolean
   created_at?: string
+  // 新分类系统字段
+  category_id?: number | null
+  category_info?: ScriptCategory  // 关联的分类信息
   // 新增字段 - 数据清洗后添加
   type?: 'grid_exam' | 'postgrad_consult' | 'sales_conversation' | 'social_media_reply'  // 话术类型
   source?: string       // 数据来源：话术库, 最新电网术库, 小红书回复话术, 考研话术库
@@ -34,6 +52,8 @@ export interface Script {
 export interface ScriptQuery {
   keyword?: string
   category?: string
+  // 新分类系统筛选参数
+  category_id?: number | null  // 新分类系统筛选
   type?: string          // 旧：话术类型筛选
   source?: string        // 旧：数据来源筛选  
   platform?: string      // 旧：平台筛选
@@ -174,4 +194,87 @@ export const getNewClassificationStats = (): Promise<{
   classification_version: string
 }> => {
   return request.get('/api/v1/scripts/new-classification-stats')
+}
+
+// ====== 新分类管理API ======
+
+export interface CategoryListResponse {
+  data: ScriptCategory[]
+  total: number
+  page: number
+  per_page: number
+}
+
+export interface CategoryResponse {
+  message: string
+  data: ScriptCategory
+}
+
+// 获取分类列表
+export const getScriptCategoriesNew = (params?: { 
+  page?: number; 
+  per_page?: number; 
+  include_inactive?: boolean;
+  parent_id?: number;
+}): Promise<CategoryListResponse> => {
+  return request.get('/api/v1/scripts/categories', { params })
+}
+
+// 获取分类管理视图（包含统计信息）
+export const getScriptCategoriesManage = (params?: {
+  include_stats?: boolean;
+  include_children?: boolean;
+}): Promise<{ data: ScriptCategory[] }> => {
+  return request.get('/api/v1/scripts/categories/manage', { params })
+}
+
+// 获取分类树状结构
+export const getScriptCategoriesTree = (): Promise<{ data: ScriptCategory[] }> => {
+  return request.get('/api/v1/scripts/categories/tree')
+}
+
+// 创建新分类
+export const createScriptCategory = (data: {
+  name: string;
+  description?: string;
+  parent_id?: number | null;
+  sort_order?: number;
+}): Promise<CategoryResponse> => {
+  return request.post('/api/v1/scripts/categories', data)
+}
+
+// 更新分类
+export const updateScriptCategory = (id: number, data: {
+  name?: string;
+  description?: string;
+  parent_id?: number | null;
+  is_active?: boolean;
+  sort_order?: number;
+}): Promise<CategoryResponse> => {
+  return request.put(`/api/v1/scripts/categories/${id}`, data)
+}
+
+// 删除分类
+export const deleteScriptCategory = (id: number): Promise<{ message: string }> => {
+  return request.delete(`/api/v1/scripts/categories/${id}`)
+}
+
+// 获取分类统计
+export const getScriptCategoriesStats = (): Promise<{
+  total_categories: number;
+  system_categories: number;
+  user_categories: number;
+  total_scripts_with_category: number;
+  categories_with_scripts: Array<{ id: number; name: string; script_count: number }>
+}> => {
+  return request.get('/api/v1/scripts/categories/stats')
+}
+
+// 初始化默认分类
+export const initDefaultScriptCategories = (): Promise<{ 
+  message: string; 
+  created_count: number; 
+  categories: ScriptCategory[] 
+}> => {
+  return request.post('/api/v1/scripts/categories/init-default')
 }

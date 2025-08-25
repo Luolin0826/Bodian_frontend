@@ -39,23 +39,44 @@
       </div>
       
       <div class="card-actions">
-        <a-dropdown :trigger="['click']">
-          <a-button type="text" size="small" @click.stop>
-            <more-outlined />
+        <template v-if="viewMode === 'list'">
+          <a-button type="primary" size="small" @click.stop="handleViewDetail">
+            <eye-outlined />
+            查看详情
           </a-button>
-          <template #overlay>
-            <a-menu>
-              <a-menu-item key="detail" @click="handleViewDetail">
-                <eye-outlined />
-                查看详情
-              </a-menu-item>
-              <a-menu-item key="export" @click="handleExport">
-                <export-outlined />
-                导出数据
-              </a-menu-item>
-            </a-menu>
-          </template>
-        </a-dropdown>
+          <a-dropdown :trigger="['click']">
+            <a-button type="text" size="small" @click.stop>
+              <more-outlined />
+            </a-button>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item key="export" @click="handleExport">
+                  <export-outlined />
+                  导出数据
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </template>
+        <template v-else>
+          <a-dropdown :trigger="['click']">
+            <a-button type="text" size="small" @click.stop>
+              <more-outlined />
+            </a-button>
+            <template #overlay>
+              <a-menu>
+                <a-menu-item key="detail" @click="handleViewDetail">
+                  <eye-outlined />
+                  查看详情
+                </a-menu-item>
+                <a-menu-item key="export" @click="handleExport">
+                  <export-outlined />
+                  导出数据
+                </a-menu-item>
+              </a-menu>
+            </template>
+          </a-dropdown>
+        </template>
       </div>
     </div>
 
@@ -198,8 +219,10 @@ const getRequirementLabel = (key: string) => {
 }
 
 const handleCardClick = () => {
-  // 在所有模式下都支持点击查看详情
-  handleViewDetail()
+  // 仅在卡片模式下支持点击查看详情，列表模式使用专门的按钮
+  if (props.viewMode === 'card') {
+    handleViewDetail()
+  }
 }
 
 
@@ -231,29 +254,56 @@ const handleExport = () => {
   &.view-list {
     display: flex;
     align-items: center;
-    padding: 16px;
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    cursor: default;
     
-    .card-header,
-    .card-content,
-    .card-footer {
-      border: none;
-      padding: 0;
+    &:hover {
+      transform: none;
+      box-shadow: 0 2px 8px rgba(24, 144, 255, 0.1);
     }
     
     .card-header {
+      border: none;
+      padding: 0;
+      margin: 0;
+      background: none;
       flex-shrink: 0;
       width: 200px;
-      margin-right: 20px;
+      margin-right: 16px;
+      
+      .region-title {
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
     }
     
     .card-content {
       flex: 1;
+      padding: 0;
+      
+      .content-section {
+        margin-bottom: 0;
+        display: inline-block;
+        margin-right: 16px;
+        
+        .section-header {
+          margin-bottom: 2px;
+          
+          .section-title {
+            font-size: 12px;
+          }
+        }
+      }
     }
     
-    .card-footer {
+    .card-actions {
       flex-shrink: 0;
       width: 120px;
-      margin-left: 20px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
     }
   }
   
@@ -507,23 +557,63 @@ const handleExport = () => {
 // 列表视图优化
 .view-list {
   .card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    
     .content-section {
-      margin-bottom: 8px;
+      margin-bottom: 0;
+      margin-right: 0;
+      
+      .section-header {
+        display: none; // 隐藏图标和标题，节省空间
+      }
     }
     
     .salary-grid {
-      grid-template-columns: repeat(4, 1fr);
-      gap: 4px;
+      display: flex;
+      gap: 8px;
       
       .salary-item {
-        padding: 4px;
+        padding: 2px 6px;
+        min-width: 70px;
         
         .salary-label {
-          font-size: 11px;
+          font-size: 10px;
+          margin-bottom: 1px;
         }
         
         .salary-value {
-          font-size: 12px;
+          font-size: 11px;
+        }
+      }
+    }
+    
+    .requirement-items {
+      display: flex;
+      gap: 12px;
+      
+      .requirement-item {
+        font-size: 10px;
+        flex-direction: row;
+        white-space: nowrap;
+        
+        .requirement-label {
+          min-width: 60px;
+          margin-right: 4px;
+        }
+      }
+    }
+    
+    .detail-preview {
+      .detail-item {
+        &.application-status {
+          padding: 2px 6px;
+          margin-bottom: 0;
+          
+          .detail-text {
+            font-size: 10px;
+          }
         }
       }
     }
