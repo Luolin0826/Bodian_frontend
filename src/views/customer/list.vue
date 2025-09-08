@@ -367,7 +367,7 @@
     >
       <div class="mobile-filter-content">
         <a-form layout="vertical">
-          <a-form-item label="客户状态">
+          <a-form-item label="客户状态" name="customer_status">
             <a-select
               v-model:value="searchParams.status"
               placeholder="选择状态"
@@ -381,7 +381,7 @@
             </a-select>
           </a-form-item>
           
-          <a-form-item label="获客渠道">
+          <a-form-item label="获客渠道" name="customer_channel">
             <a-select
               v-model:value="searchParams.channel"
               placeholder="选择渠道"

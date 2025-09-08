@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据查询页面响应式布局测试</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/ant-design-vue@4/dist/antd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ant-design-vue@4/dist/antd.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        .layout-container {
+            height: 100vh;
+            display: flex;
+        }
+        
+        .sidebar {
+            background: #001529;
+            color: white;
+            transition: width 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+        }
+        
+        .sidebar.expanded {
+            width: 240px;
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        
+        .sidebar-header {
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            margin-bottom: 16px;
+        }
+        
+        .sidebar-content {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+        
+        .main-layout {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            transition: margin-left 0.2s ease;
+        }
+        
+        .main-layout.with-sidebar-expanded {
+            margin-left: 240px;
+        }
+        
+        .main-layout.with-sidebar-collapsed {
+            margin-left: 80px;
+        }
+        
+        .header {
+            height: 64px;
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            box-shadow: 0 1px 4px rgba(0,21,41,0.08);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .toggle-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            transition: all 0.2s;
+        }
+        
+        .toggle-btn:hover {
+            background: #f0f0f0;
+            color: #1890ff;
+        }
+        
+        .content-area {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            background: #f5f5f5;
+        }
+        
+        /* 数据查询页面样式 */
+        .data-query-responsive {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            min-width: 0;
+            overflow-x: hidden;
+        }
+        
+        /* 等比例缩放 */
+        @media (max-width: 1600px) and (min-width: 1400px) {
+            .data-query-responsive {
+                zoom: 0.95;
+                transform-origin: top left;
+            }
+        }
+        
+        @media (max-width: 1399px) and (min-width: 1200px) {
+            .data-query-responsive {
+                zoom: 0.9;
+                transform-origin: top left;
+            }
+        }
+        
+        @media (max-width: 1199px) and (min-width: 1024px) {
+            .data-query-responsive {
+                zoom: 0.85;
+                transform-origin: top left;
+            }
+        }
+        
+        @media (max-width: 1023px) {
+            .data-query-responsive {
+                zoom: 1;
+                transform: none;
+            }
+            
+            .main-layout.with-sidebar-expanded,
+            .main-layout.with-sidebar-collapsed {
+                margin-left: 0 !important;
+            }
+            
+            .sidebar {
+                display: none;
+            }
+        }
+        
+        .responsive-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1.2fr 0.8fr;
+            min-height: 400px;
+        }
+        
+        @media (max-width: 1024px) {
+            .responsive-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+            }
+        }
+        
+        .demo-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        
+        .demo-card h3 {
+            margin-bottom: 16px;
+            color: #333;
+        }
+        
+        .size-info {
+            background: #e6f7ff;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 16px 0;
+        }
+        
+        .size-info p {
+            margin: 4px 0;
+            font-size: 14px;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 8px;
+            margin: 16px 0;
+            flex-wrap: wrap;
+        }
+        
+        /* 移动端样式 */
+        @media (max-width: 768px) {
+            .header {
+                padding: 0 16px;
+            }
+            
+            .content-area {
+                padding: 12px;
+            }
+            
+            .demo-card {
+                padding: 16px;
+            }
+            
+            .test-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="layout-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar" :class="sidebarCollapsed ? 'collapsed' : 'expanded'">
+            <div class="sidebar-header">
+                <div v-if="!sidebarCollapsed">数据查询系统</div>
+                <div v-else>DQ</div>
+            </div>
+            <div class="sidebar-content">
+                <div v-if="!sidebarCollapsed">
+                    <p>• 政策查询</p>
+                    <p>• 数据分析</p>
+                    <p>• 学校信息</p>
+                    <p>• 统计报表</p>
+                </div>
+                <div v-else>
+                    <p>📋</p>
+                    <p>📊</p>
+                    <p>🏫</p>
+                    <p>📈</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主布局 -->
+        <div class="main-layout" :class="mainLayoutClass">
+            <!-- 顶部导航 -->
+            <div class="header">
+                <div class="header-left">
+                    <button class="toggle-btn" @click="toggleSidebar">
+                        <span v-if="sidebarCollapsed">☰</span>
+                        <span v-else>✕</span>
+                    </button>
+                    <span>数据查询一点通 - 响应式布局测试</span>
+                </div>
+            </div>
+            
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <div class="data-query-responsive">
+                    <!-- 尺寸信息显示 -->
+                    <div class="size-info">
+                        <p><strong>窗口尺寸：</strong>{{ windowWidth }} x {{ windowHeight }}</p>
+                        <p><strong>设备类型：</strong>{{ deviceType }}</p>
+                        <p><strong>侧边栏状态：</strong>{{ sidebarCollapsed ? '收缩' : '展开' }}</p>
+                        <p><strong>主内容宽度：</strong>{{ mainContentWidth }}px</p>
+                        <p><strong>缩放比例：</strong>{{ zoomRatio }}</p>
+                    </div>
+                    
+                    <!-- 测试按钮 -->
+                    <div class="test-buttons">
+                        <a-button @click="simulateResize(1920, 1080)">1920x1080</a-button>
+                        <a-button @click="simulateResize(1600, 900)">1600x900</a-button>
+                        <a-button @click="simulateResize(1366, 768)">1366x768</a-button>
+                        <a-button @click="simulateResize(1024, 768)">1024x768</a-button>
+                        <a-button @click="simulateResize(768, 1024)">768x1024</a-button>
+                        <a-button type="primary" @click="toggleSidebar">切换侧边栏</a-button>
+                    </div>
+                    
+                    <!-- 响应式网格内容 -->
+                    <div class="responsive-grid">
+                        <div class="demo-card">
+                            <h3>左栏：政策查询区域</h3>
+                            <p>这里模拟政策查询面板和详细信息展示区域。</p>
+                            <p>在大屏幕下占据更多空间，小屏幕下会堆叠显示。</p>
+                            
+                            <!-- 模拟表格 -->
+                            <a-table 
+                                :columns="tableColumns" 
+                                :data-source="tableData" 
+                                :pagination="false"
+                                size="small"
+                                style="margin-top: 16px;"
+                            />
+                        </div>
+                        
+                        <div class="demo-card">
+                            <h3>右栏：数据分析区域</h3>
+                            <p>这里模拟数据分析图表和统计信息。</p>
+                            <p>在响应式布局中会自动调整大小和位置。</p>
+                            
+                            <!-- 模拟图表区域 -->
+                            <div style="height: 200px; background: #f8f9fa; border-radius: 4px; margin-top: 16px; display: flex; align-items: center; justify-content: center; color: #666;">
+                                📊 图表区域
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+        const { Button, Table } = antd;
+
+        const app = createApp({
+            components: {
+                'a-button': Button,
+                'a-table': Table
+            },
+            setup() {
+                const sidebarCollapsed = ref(false)
+                const windowWidth = ref(window.innerWidth)
+                const windowHeight = ref(window.innerHeight)
+                
+                const deviceType = computed(() => {
+                    if (windowWidth.value < 768) return '移动端'
+                    if (windowWidth.value < 1024) return '平板'
+                    return '桌面端'
+                })
+                
+                const mainLayoutClass = computed(() => {
+                    if (windowWidth.value < 768) return ''
+                    return sidebarCollapsed.value ? 'with-sidebar-collapsed' : 'with-sidebar-expanded'
+                })
+                
+                const mainContentWidth = computed(() => {
+                    if (windowWidth.value < 768) return windowWidth.value
+                    const sidebarWidth = sidebarCollapsed.value ? 80 : 240
+                    return windowWidth.value - sidebarWidth
+                })
+                
+                const zoomRatio = computed(() => {
+                    if (windowWidth.value >= 1600) return '1.0'
+                    if (windowWidth.value >= 1400) return '0.95'
+                    if (windowWidth.value >= 1200) return '0.9'
+                    if (windowWidth.value >= 1024) return '0.85'
+                    return '1.0'
+                })
+                
+                const toggleSidebar = () => {
+                    sidebarCollapsed.value = !sidebarCollapsed.value
+                }
+                
+                const simulateResize = (width, height) => {
+                    windowWidth.value = width
+                    windowHeight.value = height
+                    // 实际调整窗口大小（如果可能）
+                    if (window.resizeTo) {
+                        try {
+                            window.resizeTo(width, height)
+                        } catch (e) {
+                            console.log('无法调整窗口大小，仅更新显示值')
+                        }
+                    }
+                }
+                
+                const handleResize = () => {
+                    windowWidth.value = window.innerWidth
+                    windowHeight.value = window.innerHeight
+                }
+                
+                onMounted(() => {
+                    window.addEventListener('resize', handleResize)
+                })
+                
+                onUnmounted(() => {
+                    window.removeEventListener('resize', handleResize)
+                })
+                
+                // 模拟表格数据
+                const tableColumns = [
+                    { title: '城市', dataIndex: 'city', width: 100 },
+                    { title: '学历要求', dataIndex: 'education', width: 120 },
+                    { title: '薪资', dataIndex: 'salary', width: 80 },
+                    { title: '分数线', dataIndex: 'score', width: 80 }
+                ]
+                
+                const tableData = [
+                    { key: 1, city: '成都', education: '985', salary: '16-18万', score: '75分' },
+                    { key: 2, city: '绵阳', education: '985', salary: '14-17万', score: '65分' },
+                    { key: 3, city: '三州', education: '985', salary: '15万', score: '60分' }
+                ]
+                
+                return {
+                    sidebarCollapsed,
+                    windowWidth,
+                    windowHeight,
+                    deviceType,
+                    mainLayoutClass,
+                    mainContentWidth,
+                    zoomRatio,
+                    toggleSidebar,
+                    simulateResize,
+                    tableColumns,
+                    tableData
+                }
+            }
+        })
+        
+        app.use(antd)
+        app.mount('#app')
+    </script>
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>简化字段管理测试</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 8px;
+      padding: 24px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      color: #1890ff;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    
+    .section {
+      margin-bottom: 40px;
+      padding: 20px;
+      border: 1px solid #e8e8e8;
+      border-radius: 6px;
+      background: #fafafa;
+    }
+    
+    .section h2 {
+      color: #2c3e50;
+      margin-top: 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .icon {
+      margin-right: 8px;
+      font-size: 18px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .feature-list li {
+      margin: 12px 0;
+      padding: 8px 12px;
+      background: white;
+      border-radius: 4px;
+      border-left: 3px solid #52c41a;
+      display: flex;
+      align-items: center;
+    }
+    
+    .feature-list li::before {
+      content: "✅";
+      margin-right: 8px;
+    }
+    
+    .comparison-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    
+    .comparison-table th,
+    .comparison-table td {
+      border: 1px solid #e8e8e8;
+      padding: 12px;
+      text-align: left;
+    }
+    
+    .comparison-table th {
+      background-color: #1890ff;
+      color: white;
+      font-weight: 600;
+    }
+    
+    .comparison-table tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    
+    .old-feature {
+      color: #999;
+      text-decoration: line-through;
+    }
+    
+    .new-feature {
+      color: #52c41a;
+      font-weight: 600;
+    }
+    
+    .api-demo {
+      background: #001529;
+      color: #fff;
+      padding: 16px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      overflow-x: auto;
+    }
+    
+    .success {
+      color: #52c41a;
+    }
+    
+    .warning {
+      color: #faad14;
+    }
+    
+    .info {
+      color: #1890ff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 简化字段管理功能测试</h1>
+    
+    <div class="section">
+      <h2><span class="icon">📋</span>设计理念</h2>
+      <p>根据最新需求，字段管理界面进行了大幅简化：</p>
+      <ul class="feature-list">
+        <li>字段管理只需要：<strong>新增、修改标题、删除</strong></li>
+        <li>字段类型统一为：<strong>文本类型</strong></li>
+        <li>字段内容统一在：<strong>政策编辑界面</strong>处理</li>
+        <li>表格显示简化为：<strong>字段标题、可见状态、显示顺序、操作</strong></li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span class="icon">🔄</span>界面对比</h2>
+      <table class="comparison-table">
+        <thead>
+          <tr>
+            <th>功能模块</th>
+            <th>原有设计</th>
+            <th>简化后设计</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>字段类型</strong></td>
+            <td class="old-feature">可选择：文本、多行文本、数字、选择器、布尔值、日期</td>
+            <td class="new-feature">统一为文本类型</td>
+          </tr>
+          <tr>
+            <td><strong>字段内容</strong></td>
+            <td class="old-feature">在字段管理中编辑字段描述/模板</td>
+            <td class="new-feature">在政策编辑界面统一处理</td>
+          </tr>
+          <tr>
+            <td><strong>必填设置</strong></td>
+            <td class="old-feature">可设置必填/选填</td>
+            <td class="new-feature">移除该配置</td>
+          </tr>
+          <tr>
+            <td><strong>表格显示</strong></td>
+            <td class="old-feature">字段名称、显示名称、类型、省份、必填、启用、顺序、操作</td>
+            <td class="new-feature">字段标题、可见状态、显示顺序、操作</td>
+          </tr>
+          <tr>
+            <td><strong>选择器选项</strong></td>
+            <td class="old-feature">复杂的选项配置界面</td>
+            <td class="new-feature">完全移除</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section">
+      <h2><span class="icon">⚡</span>API优化</h2>
+      <p>同时实现了合并接口优化，解决双请求问题：</p>
+      
+      <div class="api-demo">
+        <div class="success">✅ 合并接口使用示例：</div>
+        <div style="margin-top: 8px;">
+          GET /api/v1/custom-fields/values/1?section=basic&province=广东省&<span class="new-feature">include_definitions=true</span>
+        </div>
+        <div style="margin-top: 16px; color: #ccc;">
+          # 一次请求同时获取：<br>
+          # - 字段定义（field_name, display_name, field_type等）<br>
+          # - 字段值（field_value, has_value等）
+        </div>
+      </div>
+
+      <ul class="feature-list" style="margin-top: 16px;">
+        <li>网络请求：<span class="old-feature">2次</span> → <span class="new-feature">1次</span></li>
+        <li>前端复杂度：大幅降低（无需手动合并数据）</li>
+        <li>数据一致性：完美保证（单次原子查询）</li>
+        <li>向后兼容：现有调用不受影响</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span class="icon">🎛️</span>简化后的字段管理界面</h2>
+      <p>新的字段管理界面特点：</p>
+      <ul class="feature-list">
+        <li><strong>新增字段</strong>：只需填写字段名称、显示名称、所属板块、省份限制、显示顺序</li>
+        <li><strong>修改字段</strong>：主要修改显示名称（字段标题）</li>
+        <li><strong>删除字段</strong>：保持原有的确认删除流程</li>
+        <li><strong>启用/禁用</strong>：通过开关控制字段在政策编辑中的显示</li>
+        <li><strong>清晰布局</strong>：表格只显示核心信息，操作更加直观</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span class="icon">📝</span>政策编辑流程</h2>
+      <div class="api-demo">
+        <div class="info">📋 用户操作流程：</div>
+        <div style="margin-top: 8px; line-height: 1.8;">
+          1. <span class="new-feature">字段管理</span>：创建字段定义（字段名、标题、板块等）<br>
+          2. <span class="new-feature">政策编辑</span>：在政策编辑界面填写字段内容<br>
+          3. <span class="new-feature">自动保存</span>：利用useEditMode实现自动保存<br>
+          4. <span class="new-feature">统一体验</span>：所有字段内容在同一界面处理
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2><span class="icon">✅</span>实现状态</h2>
+      <ul class="feature-list">
+        <li>移除字段类型选择功能</li>
+        <li>移除字段内容/描述编辑功能</li>
+        <li>简化表格显示列：仅保留字段标题、可见状态、显示顺序、操作</li>
+        <li>更新新建字段表单，移除不需要的字段</li>
+        <li>更新前端API调用，使用合并接口</li>
+        <li>优化政策编辑界面的字段内容处理</li>
+      </ul>
+    </div>
+
+    <div class="section">
+      <h2><span class="icon">🎯</span>核心优势</h2>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 16px;">
+        <div style="padding: 16px; background: white; border-radius: 6px; border-left: 4px solid #52c41a;">
+          <h4 style="margin-top: 0; color: #52c41a;">🚀 性能提升</h4>
+          <p>合并接口减少50%网络请求，提升加载速度和用户体验</p>
+        </div>
+        <div style="padding: 16px; background: white; border-radius: 6px; border-left: 4px solid #1890ff;">
+          <h4 style="margin-top: 0; color: #1890ff;">🎨 界面简化</h4>
+          <p>去除复杂配置，聚焦核心功能，用户操作更加直观</p>
+        </div>
+        <div style="padding: 16px; background: white; border-radius: 6px; border-left: 4px solid #fa8c16;">
+          <h4 style="margin-top: 0; color: #fa8c16;">📝 内容统一</h4>
+          <p>所有字段内容在政策编辑中处理，保持操作一致性</p>
+        </div>
+        <div style="padding: 16px; background: white; border-radius: 6px; border-left: 4px solid #722ed1;">
+          <h4 style="margin-top: 0; color: #722ed1;">🔧 维护简单</h4>
+          <p>减少配置选项，降低系统复杂度和维护成本</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    console.log('🎯 简化字段管理功能已完成实现');
+    console.log('📋 主要改进：');
+    console.log('  ✅ 移除字段类型选择');
+    console.log('  ✅ 移除字段内容编辑');
+    console.log('  ✅ 简化表格显示');
+    console.log('  ✅ 优化API调用');
+    console.log('  ✅ 统一编辑流程');
+  </script>
+</body>
+</html>

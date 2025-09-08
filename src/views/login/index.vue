@@ -18,14 +18,10 @@
             <div class="login-header">
               <div class="logo-container">
                 <div class="logo-icon">
-                  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L13.09 8.26L20 9L13.09 9.74L12 16L10.91 9.74L4 9L10.91 8.26L12 2Z" fill="currentColor"/>
-                    <path d="M19 15L19.91 18.26L23 19L19.91 19.74L19 23L18.09 19.74L15 19L18.09 18.26L19 15Z" fill="currentColor"/>
-                    <path d="M5 15L5.91 18.26L9 19L5.91 19.74L5 23L4.09 19.74L1 19L4.09 18.26L5 15Z" fill="currentColor"/>
-                  </svg>
+                  <img src="@/assets/icons/bodiansmall.png" alt="博电教育" />
                 </div>
               </div>
-              <h1 class="login-title">博电教育招生管理系统</h1>
+              <h1 class="login-title">博电教育信息查询系统</h1>
               <p class="login-subtitle">欢迎回来，请登录您的账号</p>
             </div>
     
@@ -89,7 +85,7 @@
     
             <!-- 底部信息 -->
             <div class="login-footer">
-              © 2025 博电教育招生管理系统
+              © 2025 博电教育信息查询系统
             </div>
           </div>
         </div>
@@ -358,18 +354,20 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 64px;
-      height: 64px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      width: 80px;
+      height: 80px;
+      background: white;
       border-radius: 20px;
       color: white;
       margin: 0 auto 16px;
       box-shadow: 0 10px 25px -5px rgba(102, 126, 234, 0.4);
       animation: logoFloat 3s ease-in-out infinite;
       
-      svg {
-        width: 32px;
-        height: 32px;
+      img {
+        width: 64px;
+        height: 64px;
+        object-fit: contain;
+        border-radius: 8px;
       }
     }
 
@@ -537,12 +535,12 @@
       }
       
       .logo-icon {
-        width: 56px;
-        height: 56px;
+        width: 68px;
+        height: 68px;
         
-        svg {
-          width: 28px;
-          height: 28px;
+        img {
+          width: 52px;
+          height: 52px;
         }
       }
     }

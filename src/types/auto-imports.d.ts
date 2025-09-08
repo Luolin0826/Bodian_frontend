@@ -69,14 +69,19 @@ declare global {
   const triggerRef: typeof import('vue')['triggerRef']
   const unref: typeof import('vue')['unref']
   const useAttrs: typeof import('vue')['useAttrs']
+  const useAutoSave: typeof import('../composables/useAutoSave')['useAutoSave']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
+  const useEditMode: typeof import('../composables/useEditMode')['useEditMode']
+  const useFieldEditor: typeof import('../composables/useEditMode')['useFieldEditor']
   const useId: typeof import('vue')['useId']
+  const useLayoutStore: typeof import('../stores/layout')['useLayoutStore']
   const useLink: typeof import('vue-router')['useLink']
   const useModel: typeof import('vue')['useModel']
   const useResponsive: typeof import('../composables/useResponsive')['useResponsive']
   const useRoute: typeof import('vue-router')['useRoute']
   const useRouter: typeof import('vue-router')['useRouter']
+  const useSimpleAutoSave: typeof import('../composables/useAutoSave')['useSimpleAutoSave']
   const useSlots: typeof import('vue')['useSlots']
   const useTemplateRef: typeof import('vue')['useTemplateRef']
   const useUserAvatar: typeof import('../composables/useUserAvatar')['useUserAvatar']
@@ -162,14 +167,19 @@ declare module 'vue' {
     readonly triggerRef: UnwrapRef<typeof import('vue')['triggerRef']>
     readonly unref: UnwrapRef<typeof import('vue')['unref']>
     readonly useAttrs: UnwrapRef<typeof import('vue')['useAttrs']>
+    readonly useAutoSave: UnwrapRef<typeof import('../composables/useAutoSave')['useAutoSave']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useEditMode: UnwrapRef<typeof import('../composables/useEditMode')['useEditMode']>
+    readonly useFieldEditor: UnwrapRef<typeof import('../composables/useEditMode')['useFieldEditor']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>
+    readonly useLayoutStore: UnwrapRef<typeof import('../stores/layout')['useLayoutStore']>
     readonly useLink: UnwrapRef<typeof import('vue-router')['useLink']>
     readonly useModel: UnwrapRef<typeof import('vue')['useModel']>
     readonly useResponsive: UnwrapRef<typeof import('../composables/useResponsive')['useResponsive']>
     readonly useRoute: UnwrapRef<typeof import('vue-router')['useRoute']>
     readonly useRouter: UnwrapRef<typeof import('vue-router')['useRouter']>
+    readonly useSimpleAutoSave: UnwrapRef<typeof import('../composables/useAutoSave')['useSimpleAutoSave']>
     readonly useSlots: UnwrapRef<typeof import('vue')['useSlots']>
     readonly useTemplateRef: UnwrapRef<typeof import('vue')['useTemplateRef']>
     readonly useUserAvatar: UnwrapRef<typeof import('../composables/useUserAvatar')['useUserAvatar']>

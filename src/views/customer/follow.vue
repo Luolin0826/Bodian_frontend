@@ -366,7 +366,7 @@
         <a-form layout="vertical" class="mt-4">
           <a-row :gutter="16">
             <a-col :span="12">
-              <a-form-item label="跟进方式">
+              <a-form-item label="跟进方式" name="follow_type">
                 <a-select v-model:value="quickFollowFormData.follow_up_type" placeholder="选择跟进方式">
                   <a-select-option value="phone">电话</a-select-option>
                   <a-select-option value="wechat">微信</a-select-option>
@@ -377,7 +377,7 @@
               </a-form-item>
             </a-col>
             <a-col :span="12">
-              <a-form-item label="跟进结果">
+              <a-form-item label="跟进结果" name="follow_result">
                 <a-select v-model:value="quickFollowFormData.result" placeholder="选择跟进结果" allow-clear>
                   <a-select-option value="interested">有意向</a-select-option>
                   <a-select-option value="not_interested">无意向</a-select-option>
@@ -392,7 +392,7 @@
           
           <a-row :gutter="16">
             <a-col :span="12">
-              <a-form-item label="更新状态">
+              <a-form-item label="更新状态" name="update_status">
                 <a-select v-model:value="quickFollowFormData.status_after" placeholder="选择新状态" allow-clear>
                   <a-select-option value="潜在">潜在</a-select-option>
                   <a-select-option value="跟进中">跟进中</a-select-option>
@@ -402,7 +402,7 @@
               </a-form-item>
             </a-col>
             <a-col :span="12">
-              <a-form-item label="下次跟进日期">
+              <a-form-item label="下次跟进日期" name="next_follow_date">
                 <a-input 
                   v-model:value="quickFollowFormData.next_follow_date" 
                   type="date" 
@@ -413,7 +413,7 @@
             </a-col>
           </a-row>
           
-          <a-form-item label="跟进内容">
+          <a-form-item label="跟进内容" name="follow_content">
             <a-textarea 
               v-model:value="quickFollowFormData.follow_up_content" 
               placeholder="请输入跟进内容..."

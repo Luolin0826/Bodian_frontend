@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>区域概览组件测试</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/ant-design-vue@4/dist/antd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ant-design-vue@4/dist/antd.css" />
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-title {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="test-container">
+        <h1 class="test-title">区域概览组件测试</h1>
+        
+        <!-- 组件测试区域 -->
+        <div v-if="testData">
+            <regional-overview 
+                :unit-id="5" 
+                :regional-data="testData"
+                :loading="loading"
+            />
+        </div>
+        
+        <div v-else>
+            <p>正在加载测试数据...</p>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+        const { Button, Table, Tag, Input, InputNumber, Select, Tooltip, Empty, Spin, Checkbox } = antd;
+
+        // 模拟的区域概览组件
+        const RegionalOverview = {
+            name: 'RegionalOverview',
+            props: {
+                unitId: Number,
+                regionalData: Object,
+                loading: Boolean
+            },
+            components: {
+                'a-button': Button,
+                'a-table': Table,
+                'a-tag': Tag,
+                'a-input': Input,
+                'a-input-number': InputNumber,
+                'a-select': Select,
+                'a-tooltip': Tooltip,
+                'a-empty': Empty,
+                'a-spin': Spin,
+                'a-checkbox': Checkbox,
+                'a-select-option': Select.Option
+            },
+            setup(props) {
+                const searchKeyword = ref('')
+                const selectedCity = ref(undefined)
+                const showBestValueOnly = ref(false)
+                
+                const paginationConfig = {
+                    current: 1,
+                    pageSize: 20,
+                    showSizeChanger: true,
+                    showQuickJumper: true,
+                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`
+                }
+
+                const tableColumns = [
+                    {
+                        title: '城市/区县',
+                        key: 'location',
+                        width: 200,
+                        fixed: 'left'
+                    },
+                    {
+                        title: '学历要求',
+                        children: [
+                            {
+                                title: '本科',
+                                key: 'bachelor_education',
+                                width: 120,
+                                align: 'center'
+                            },
+                            {
+                                title: '硕士',
+                                key: 'master_education',
+                                width: 120,
+                                align: 'center'
+                            }
+                        ]
+                    },
+                    {
+                        title: '薪资待遇',
+                        children: [
+                            {
+                                title: '本科',
+                                key: 'bachelor_salary',
+                                width: 100,
+                                align: 'center'
+                            },
+                            {
+                                title: '硕士',
+                                key: 'master_salary',
+                                width: 100,
+                                align: 'center'
+                            }
+                        ]
+                    },
+                    {
+                        title: '分数线',
+                        children: [
+                            {
+                                title: '本科综合',
+                                key: 'bachelor_comprehensive',
+                                width: 90,
+                                align: 'center'
+                            },
+                            {
+                                title: '本科面试',
+                                key: 'bachelor_interview',
+                                width: 90,
+                                align: 'center'
+                            },
+                            {
+                                title: '硕士面试',
+                                key: 'master_interview',
+                                width: 90,
+                                align: 'center'
+                            }
+                        ]
+                    }
+                ]
+
+                const cityOptions = Vue.computed(() => {
+                    if (!props.regionalData?.regional_breakdown) return []
+                    
+                    const cities = [...new Set(props.regionalData.regional_breakdown.map(item => item.city))]
+                    return cities.map(city => ({ label: city, value: city }))
+                })
+
+                const filteredData = Vue.computed(() => {
+                    if (!props.regionalData?.regional_breakdown) return []
+                    
+                    let data = props.regionalData.regional_breakdown.map((item, index) => ({
+                        ...item,
+                        index,
+                        key: `${item.city}-${item.county || 'all'}`
+                    }))
+                    
+                    // 关键词筛选
+                    if (searchKeyword.value) {
+                        data = data.filter(item => 
+                            item.city.includes(searchKeyword.value) ||
+                            (item.county && item.county.includes(searchKeyword.value))
+                        )
+                    }
+                    
+                    // 城市筛选
+                    if (selectedCity.value) {
+                        data = data.filter(item => item.city === selectedCity.value)
+                    }
+                    
+                    // 高性价比筛选
+                    if (showBestValueOnly.value) {
+                        data = data.filter(item => item.is_best_value_city || item.is_best_value_county)
+                    }
+                    
+                    return data
+                })
+
+                const customRender = ({ column, record }) => {
+                    if (column.key === 'location') {
+                        return Vue.h('div', { class: 'location-cell' }, [
+                            Vue.h('div', { class: 'location-main' }, [
+                                record.city,
+                                record.county ? Vue.h('span', { class: 'county-name' }, ` ${record.county}`) : null
+                            ]),
+                            Vue.h('div', { class: 'location-tags' }, [
+                                record.is_best_value_city ? Vue.h('a-tag', { color: 'green', size: 'small' }, '⭐ 高性价比城市') : null,
+                                record.is_best_value_county ? Vue.h('a-tag', { color: 'blue', size: 'small' }, '⭐ 高性价比区县') : null
+                            ])
+                        ])
+                    }
+                    
+                    if (column.key === 'bachelor_education') {
+                        return record.education_requirements?.bachelor || '985'
+                    }
+                    if (column.key === 'master_education') {
+                        return record.education_requirements?.master || '985硕士'
+                    }
+                    
+                    if (column.key === 'bachelor_salary') {
+                        const salary = record.salary?.bachelor
+                        return Vue.h('span', { 
+                            class: ['salary-value', 'bachelor', { 'no-data': !salary || salary === '0' }]
+                        }, salary && salary !== '0' ? salary + '万' : '待更新')
+                    }
+                    if (column.key === 'master_salary') {
+                        const salary = record.salary?.master
+                        return Vue.h('span', { 
+                            class: ['salary-value', 'master', { 'no-data': !salary || salary === '0' }]
+                        }, salary && salary !== '0' ? salary + '万' : '待更新')
+                    }
+                    
+                    if (column.key === 'bachelor_comprehensive') {
+                        const score = record.score_lines?.bachelor_comprehensive
+                        return Vue.h('span', { 
+                            class: ['score-value', 'bachelor', { 'no-data': !score || score === '0' }]
+                        }, score && score !== '0' ? score : '待更新')
+                    }
+                    if (column.key === 'bachelor_interview') {
+                        const score = record.score_lines?.bachelor_interview
+                        return Vue.h('span', { 
+                            class: ['score-value', 'bachelor', { 'no-data': !score || score === '0' }]
+                        }, score && score !== '0' ? score : '待更新')
+                    }
+                    if (column.key === 'master_interview') {
+                        const score = record.score_lines?.master_interview
+                        return Vue.h('span', { 
+                            class: ['score-value', 'master', { 'no-data': !score || score === '0' }]
+                        }, score && score !== '0' ? score : '待更新')
+                    }
+                }
+
+                return {
+                    searchKeyword,
+                    selectedCity,
+                    showBestValueOnly,
+                    paginationConfig,
+                    tableColumns,
+                    cityOptions,
+                    filteredData,
+                    customRender
+                }
+            },
+            template: `
+                <div class="regional-overview">
+                    <!-- 单位总体信息 -->
+                    <div v-if="regionalData" class="unit-overview-section">
+                        <div class="section-header">
+                            <h3 class="section-title">
+                                🏦 {{ regionalData.unit_overview?.county || '区域概览' }} - {{ regionalData.org_type }}
+                            </h3>
+                            <div class="overview-stats">
+                                <span class="stats-item">
+                                    👥 招聘{{ regionalData.unit_overview?.recruitment_count || 0 }}人
+                                </span>
+                                <span class="stats-item">
+                                    🏆 预估分数线：{{ regionalData.unit_overview?.estimated_score || '70-75分' }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- 总体要求 -->
+                        <div class="overview-cards">
+                            <!-- 学历要求 -->
+                            <div class="requirement-card">
+                                <div class="card-header">
+                                    📚 <span class="card-title">学历要求</span>
+                                </div>
+                                <div class="card-content">
+                                    <div class="requirement-item">
+                                        <label>本科：</label>
+                                        <span class="requirement-value">
+                                            {{ regionalData.unit_overview?.education_requirements?.bachelor?.summary || '本科及以上学历' }}
+                                        </span>
+                                    </div>
+                                    <div class="requirement-item">
+                                        <label>硕士：</label>
+                                        <span class="requirement-value">
+                                            {{ regionalData.unit_overview?.education_requirements?.master?.summary || '硕士研究生学历' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 薪资待遇 -->
+                            <div class="requirement-card">
+                                <div class="card-header">
+                                    💰 <span class="card-title">薪资待遇</span>
+                                </div>
+                                <div class="card-content">
+                                    <div class="salary-range">
+                                        {{ regionalData.unit_overview?.salary_range || '6-8' }}万
+                                    </div>
+                                    <div class="salary-desc">年薪范围</div>
+                                </div>
+                            </div>
+
+                            <!-- 申请状态 -->
+                            <div class="requirement-card">
+                                <div class="card-header">
+                                    🎯 <span class="card-title">申请状态</span>
+                                </div>
+                                <div class="card-content">
+                                    <div class="status-item">
+                                        {{ regionalData.unit_overview?.apply_status || '网申通过率中等，看重综合素质' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 筛选器 -->
+                    <div class="filter-section">
+                        <div class="filter-controls">
+                            <a-input
+                                v-model:value="searchKeyword"
+                                placeholder="搜索城市/区县..."
+                                class="search-input"
+                                style="width: 240px;"
+                            >
+                                <template #prefix>🔍</template>
+                            </a-input>
+                            <a-select
+                                v-model:value="selectedCity"
+                                placeholder="筛选城市"
+                                allow-clear
+                                class="city-filter"
+                                :options="cityOptions"
+                                style="width: 160px;"
+                            />
+                            <a-checkbox v-model:checked="showBestValueOnly">仅显示高性价比</a-checkbox>
+                        </div>
+                    </div>
+
+                    <!-- 区县详情表格 -->
+                    <div class="regional-table-section">
+                        <div class="section-header">
+                            <h4 class="section-subtitle">
+                                🌍 区县详情 ({{ filteredData.length }}个)
+                            </h4>
+                        </div>
+                        
+                        <div class="table-container">
+                            <a-table
+                                :columns="tableColumns"
+                                :data-source="filteredData"
+                                :pagination="paginationConfig"
+                                :loading="loading"
+                                size="middle"
+                                :scroll="{ x: 1200 }"
+                                class="regional-table"
+                                :customRender="customRender"
+                            />
+                        </div>
+                    </div>
+                </div>
+            `
+        }
+
+        const app = createApp({
+            components: {
+                'regional-overview': RegionalOverview
+            },
+            setup() {
+                const loading = ref(false)
+                const testData = ref(null)
+                
+                // 提供的测试数据
+                const mockData = {
+                    data: {
+                        org_type: "国网省公司",
+                        regional_breakdown: [
+                            {
+                                city: "三州",
+                                county: "凉山",
+                                education_requirements: {
+                                    bachelor: "985",
+                                    master: "985硕士"
+                                },
+                                is_best_value_city: false,
+                                is_best_value_county: false,
+                                salary: {
+                                    bachelor: "15",
+                                    master: "20"
+                                },
+                                score_lines: {
+                                    bachelor_comprehensive: "60",
+                                    bachelor_interview: "60",
+                                    master_interview: "60"
+                                }
+                            },
+                            {
+                                city: "三州",
+                                county: "理县",
+                                education_requirements: {
+                                    bachelor: "985",
+                                    master: "985硕士"
+                                },
+                                is_best_value_city: false,
+                                is_best_value_county: false,
+                                salary: {
+                                    bachelor: "0",
+                                    master: "0"
+                                },
+                                score_lines: {
+                                    bachelor_comprehensive: "0",
+                                    bachelor_interview: "0",
+                                    master_interview: "0"
+                                }
+                            },
+                            {
+                                city: "成都",
+                                county: "城区+直管县（金堂，青白江，东部新区，新都）",
+                                education_requirements: {
+                                    bachelor: "985",
+                                    master: "985硕士"
+                                },
+                                is_best_value_city: false,
+                                is_best_value_county: true,
+                                salary: {
+                                    bachelor: "16-18",
+                                    master: "16-18"
+                                },
+                                score_lines: {
+                                    bachelor_comprehensive: "78.00",
+                                    bachelor_interview: "75",
+                                    master_interview: "75.00"
+                                }
+                            },
+                            {
+                                city: "绵阳",
+                                county: "涪城区",
+                                education_requirements: {
+                                    bachelor: "985",
+                                    master: "985硕士"
+                                },
+                                is_best_value_city: true,
+                                is_best_value_county: false,
+                                salary: {
+                                    bachelor: "14-17",
+                                    master: "14-17"
+                                },
+                                score_lines: {
+                                    bachelor_comprehensive: "65.00",
+                                    bachelor_interview: "60（有些年份过线就要）",
+                                    master_interview: "63.00"
+                                }
+                            }
+                        ],
+                        total_count: 53,
+                        unit_overview: {
+                            apply_status: "网申通过率中等，看重综合素质",
+                            city: "四川",
+                            county: "西南",
+                            economic_level: "一般",
+                            education_requirements: {
+                                bachelor: {
+                                    details: {
+                                        additional_notes: "具体要求以招聘公告为准",
+                                        major_requirements: "相关专业优先",
+                                        school_requirements: "普通本科及以上"
+                                    },
+                                    summary: "本科及以上学历"
+                                },
+                                master: {
+                                    details: {
+                                        additional_notes: "具体要求以招聘公告为准",
+                                        major_requirements: "相关专业",
+                                        school_requirements: "硕士研究生及以上"
+                                    },
+                                    summary: "硕士研究生学历"
+                                }
+                            },
+                            estimated_score: "70-75分",
+                            is_key_city: "0",
+                            recruitment_count: "1456",
+                            salary_range: "6-8万",
+                            unit_id: 5
+                        }
+                    },
+                    success: true
+                }
+                
+                onMounted(() => {
+                    // 模拟加载过程
+                    loading.value = true
+                    setTimeout(() => {
+                        testData.value = mockData.data
+                        loading.value = false
+                    }, 1000)
+                })
+                
+                return {
+                    loading,
+                    testData
+                }
+            }
+        })
+        
+        app.use(antd)
+        app.mount('#app')
+    </script>
+
+    <style>
+        .regional-overview {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .unit-overview-section {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            padding: 20px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .overview-stats {
+            display: flex;
+            gap: 16px;
+        }
+
+        .stats-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .overview-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .requirement-card {
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            padding: 16px;
+            background: #fafafa;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .card-content .requirement-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .card-content label {
+            width: 48px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .requirement-value {
+            color: #333;
+            font-size: 14px;
+        }
+
+        .salary-range {
+            font-size: 20px;
+            font-weight: 600;
+            color: #52c41a;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+
+        .salary-desc {
+            text-align: center;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .status-item {
+            color: #333;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            padding: 16px;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .regional-table-section {
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #f0f0f0;
+            padding: 20px;
+        }
+
+        .section-subtitle {
+            margin: 0 0 16px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .location-cell .location-main {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .location-cell .county-name {
+            margin-left: 8px;
+            color: #666;
+            font-weight: normal;
+        }
+
+        .location-tags {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .salary-value.bachelor {
+            color: #52c41a;
+            font-weight: 600;
+        }
+
+        .salary-value.master {
+            color: #1890ff;
+            font-weight: 600;
+        }
+
+        .salary-value.no-data {
+            color: #d9d9d9;
+            font-style: italic;
+            font-weight: normal;
+        }
+
+        .score-value.bachelor {
+            color: #fa8c16;
+            font-weight: 600;
+        }
+
+        .score-value.master {
+            color: #722ed1;
+            font-weight: 600;
+        }
+
+        .score-value.no-data {
+            color: #d9d9d9;
+            font-style: italic;
+            font-weight: normal;
+        }
+    </style>
+</body>
+</html>

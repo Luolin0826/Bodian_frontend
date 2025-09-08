@@ -232,7 +232,7 @@
       />
       
       <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-        <a-form-item label="当前密码" required>
+        <a-form-item label="当前密码" name="current_password" required>
           <a-input-password 
             v-model:value="disablePassword"
             placeholder="请输入当前密码确认身份"

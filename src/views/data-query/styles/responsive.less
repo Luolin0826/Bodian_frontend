@@ -1,0 +1,315 @@
+// 数据查询页面专用的响应式样式
+// 处理浏览器窗口缩放和侧边栏适配
+
+// 全局变量定义
+:root {
+  --data-query-min-width: 1024px;
+  --data-query-max-width: 1920px;
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 80px;
+}
+
+// 数据查询页面的等比例缩放处理
+.data-query-responsive {
+  // 基础容器设置
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  
+  // 根据浏览器窗口大小动态缩放
+  @media (max-width: 1920px) and (min-width: 1600px) {
+    zoom: 1;
+  }
+  
+  @media (max-width: 1599px) and (min-width: 1400px) {
+    zoom: 0.95;
+    transform-origin: top left;
+  }
+  
+  @media (max-width: 1399px) and (min-width: 1200px) {
+    zoom: 0.9;
+    transform-origin: top left;
+  }
+  
+  @media (max-width: 1199px) and (min-width: 1024px) {
+    zoom: 0.85;
+    transform-origin: top left;
+  }
+  
+  // 平板和手机设备不使用缩放，使用正常响应式布局
+  @media (max-width: 1023px) {
+    zoom: 1;
+    transform: none;
+  }
+}
+
+// 侧边栏适配处理
+.layout-with-sidebar {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  // 侧边栏展开状态
+  &.sidebar-expanded {
+    margin-left: var(--sidebar-width);
+    width: calc(100% - var(--sidebar-width));
+  }
+  
+  // 侧边栏收缩状态
+  &.sidebar-collapsed {
+    margin-left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+  }
+  
+  // 移动端时，侧边栏不影响主内容宽度
+  @media (max-width: 768px) {
+    &.sidebar-expanded,
+    &.sidebar-collapsed {
+      margin-left: 0 !important;
+      width: 100% !important;
+    }
+  }
+}
+
+// 表格响应式处理
+.responsive-table {
+  .ant-table-wrapper {
+    // 确保表格不会超出容器
+    overflow-x: auto;
+    
+    .ant-table {
+      min-width: 800px; // 设置表格最小宽度
+      
+      // 小屏幕下调整字体大小和间距
+      @media (max-width: 1200px) {
+        font-size: 12px;
+        
+        .ant-table-thead > tr > th,
+        .ant-table-tbody > tr > td {
+          padding: 6px 8px;
+        }
+      }
+      
+      @media (max-width: 768px) {
+        font-size: 11px;
+        
+        .ant-table-thead > tr > th,
+        .ant-table-tbody > tr > td {
+          padding: 4px 6px;
+        }
+      }
+    }
+  }
+}
+
+// 卡片组件响应式处理
+.responsive-card {
+  .ant-card {
+    // 确保卡片不会超出容器
+    max-width: 100%;
+    box-sizing: border-box;
+    
+    .ant-card-body {
+      padding: 16px;
+      
+      @media (max-width: 768px) {
+        padding: 12px;
+      }
+    }
+  }
+}
+
+// 网格布局响应式处理
+.responsive-grid {
+  display: grid;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  
+  // 桌面端：两列布局
+  &.two-column {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  // 三列布局
+  &.three-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    
+    @media (max-width: 1200px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+  
+  // 特殊布局：左大右小
+  &.left-main {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    
+    @media (max-width: 1400px) {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+    
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+// 表单响应式处理
+.responsive-form {
+  .ant-form {
+    .ant-form-item {
+      margin-bottom: 16px;
+      
+      @media (max-width: 768px) {
+        margin-bottom: 12px;
+      }
+      
+      .ant-form-item-label {
+        @media (max-width: 768px) {
+          text-align: left;
+          padding-bottom: 4px;
+        }
+      }
+    }
+    
+    // 表单网格布局
+    &.form-grid {
+      .ant-row {
+        @media (max-width: 1024px) {
+          .ant-col {
+            flex: 0 0 100%;
+            max-width: 100%;
+          }
+        }
+      }
+    }
+  }
+}
+
+// 按钮组响应式处理
+.responsive-button-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  
+  @media (max-width: 768px) {
+    gap: 6px;
+    
+    .ant-btn {
+      font-size: 12px;
+      padding: 4px 8px;
+      height: auto;
+    }
+  }
+}
+
+// 搜索框响应式处理
+.responsive-search {
+  .ant-input-search {
+    @media (max-width: 768px) {
+      .ant-input {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+// 选择器响应式处理
+.responsive-select {
+  .ant-select {
+    @media (max-width: 768px) {
+      .ant-select-selector {
+        font-size: 14px;
+      }
+    }
+  }
+}
+
+// 标签响应式处理
+.responsive-tags {
+  .ant-tag {
+    @media (max-width: 768px) {
+      font-size: 11px;
+      padding: 2px 6px;
+    }
+  }
+}
+
+// 统计卡片响应式处理
+.responsive-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+    border-radius: 8px;
+    background: white;
+    border: 1px solid #f0f0f0;
+    
+    @media (max-width: 768px) {
+      padding: 12px;
+    }
+    
+    .stat-value {
+      font-size: 24px;
+      font-weight: bold;
+      
+      @media (max-width: 768px) {
+        font-size: 20px;
+      }
+    }
+    
+    .stat-label {
+      font-size: 14px;
+      color: #666;
+      
+      @media (max-width: 768px) {
+        font-size: 12px;
+      }
+    }
+  }
+}
+
+// 通用工具类
+.hide-on-mobile {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.show-on-mobile {
+  @media (min-width: 769px) {
+    display: none !important;
+  }
+}
+
+.hide-on-tablet {
+  @media (max-width: 1024px) and (min-width: 769px) {
+    display: none !important;
+  }
+}
+
+// 滚动优化
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+// 防止内容溢出
+.content-safe {
+  min-width: 0;
+  overflow: hidden;
+  word-wrap: break-word;
+  word-break: break-all;
+}

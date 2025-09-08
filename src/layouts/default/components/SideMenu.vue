@@ -81,14 +81,14 @@
       },
       {
         key: '/script',
-        title: '话术库',
+        title: '知识库',
         icon: FileTextOutlined
       },
-      {
-        key: '/knowledge',
-        title: '知识库',
-        icon: BookOutlined
-      },
+      // {
+      //   key: '/knowledge',
+      //   title: '知识库',
+      //   icon: BookOutlined
+      // },
       {
         key: '/data-query',
         title: '数查一点通',
@@ -115,6 +115,7 @@
           { key: '/system/user', title: '用户管理' },
           { key: '/system/department', title: '部门管理' },
           { key: '/system/role', title: '角色权限' },
+          { key: '/system/region', title: '区域管理' },
           { key: '/system/log', title: '操作日志' },
           { key: '/system/test-api', title: 'API测试' }
         ]

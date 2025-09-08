@@ -18,7 +18,7 @@
       >
         <a-row :gutter="24">
           <a-col :span="12">
-            <a-form-item label="用户名">
+            <a-form-item label="用户名" name="username">
               <a-input :value="userInfo?.username" disabled />
             </a-form-item>
 
@@ -46,11 +46,11 @@
               />
             </a-form-item>
 
-            <a-form-item label="角色">
+            <a-form-item label="角色" name="role">
               <a-input :value="userInfo?.role_display_name" disabled />
             </a-form-item>
 
-            <a-form-item label="部门">
+            <a-form-item label="部门" name="department">
               <a-input :value="userInfo?.department_name" disabled />
             </a-form-item>
           </a-col>
@@ -67,23 +67,23 @@
               </div>
             </a-form-item>
 
-            <a-form-item label="员工编号">
+            <a-form-item label="员工编号" name="employee_no">
               <a-input :value="userInfo?.employee_no" disabled />
             </a-form-item>
 
-            <a-form-item label="入职日期">
+            <a-form-item label="入职日期" name="hire_date">
               <a-input :value="userInfo?.hire_date" disabled />
             </a-form-item>
 
-            <a-form-item label="最后登录">
+            <a-form-item label="最后登录" name="last_login">
               <a-input :value="formatDateTime(userInfo?.last_login)" disabled />
             </a-form-item>
 
-            <a-form-item label="登录次数">
+            <a-form-item label="登录次数" name="login_count">
               <a-input :value="userInfo?.login_count" disabled />
             </a-form-item>
 
-            <a-form-item label="账户状态">
+            <a-form-item label="账户状态" name="account_status">
               <a-tag :color="userInfo?.is_active ? 'green' : 'red'">
                 {{ userInfo?.is_active ? '正常' : '禁用' }}
               </a-tag>

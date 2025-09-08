@@ -96,19 +96,30 @@ const authRoutes: RouteRecordRaw[] = [
         path: 'script',
         name: 'Script',
         component: () => import('@/views/script/index.vue'),
-        meta: { title: '话术库', icon: 'FileTextOutlined' }
+        meta: { title: '知识库', icon: 'FileTextOutlined' }
       },
-      {
-        path: 'knowledge',
-        name: 'Knowledge',
-        component: () => import('@/views/knowledge/index.vue'),
-        meta: { title: '知识库', icon: 'BookOutlined' }
-      },
+      // {
+      //   path: 'knowledge',
+      //   name: 'Knowledge',
+      //   component: () => import('@/views/knowledge/index.vue'),
+      //   meta: { title: '知识库', icon: 'BookOutlined' }
+      // },
       {
         path: 'data-query',
         name: 'DataQuery',
         component: () => import('@/views/data-query/index.vue'),
         meta: { title: '数查一点通', icon: 'SearchOutlined' }
+      },
+      {
+        path: 'policy-management',
+        name: 'PolicyManagement',
+        component: () => import('@/views/data-query/policy-management.vue'),
+        meta: { 
+          title: '三级政策管理', 
+          icon: 'SettingOutlined',
+          hideInMenu: true,
+          parent: 'DataQuery'
+        }
       },
       {
         path: 'user-center',
@@ -176,17 +187,17 @@ const authRoutes: RouteRecordRaw[] = [
             meta: { title: '角色权限' }
           },
           {
+            path: 'region',
+            name: 'SystemRegion',
+            component: () => import('@/views/system/region/index.vue'),
+            meta: { title: '区域管理' }
+          },
+          {
             path: 'log',
             name: 'SystemLog',
             component: () => import('@/views/system/log/index.vue'),
             meta: { title: '操作日志' }
           },
-          {
-            path: 'test-api',
-            name: 'TestAPI',
-            component: () => import('@/views/test-api.vue'),
-            meta: { title: 'API测试' }
-          }
         ]
       }
     ]

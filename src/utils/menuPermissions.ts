@@ -104,7 +104,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
   },
   {
     key: 'script',
-    title: '话术库',
+    title: '知识库',
     description: '销售话术管理和维护',
     icon: 'FileTextOutlined',
     level: 'low',
@@ -112,16 +112,16 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
     category: '工具辅助',
     path: '/script'
   },
-  {
-    key: 'knowledge',
-    title: '知识库',
-    description: '知识文档管理和查询',
-    icon: 'BookOutlined',
-    level: 'low',
-    risk: 'safe',
-    category: '工具辅助',
-    path: '/knowledge'
-  },
+  // {
+  //   key: 'knowledge',
+  //   title: '知识库',
+  //   description: '知识文档管理和查询',
+  //   icon: 'BookOutlined',
+  //   level: 'low',
+  //   risk: 'safe',
+  //   category: '工具辅助',
+  //   path: '/knowledge'
+  // },
   {
     key: 'data-query',
     title: '数查一点通',
@@ -227,6 +227,14 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'danger'
       },
       {
+        key: 'system-region',
+        title: '区域管理',
+        description: '地区和区域信息管理',
+        path: '/system/region',
+        level: 'high',
+        risk: 'warning'
+      },
+      {
         key: 'system-log',
         title: '操作日志',
         description: '系统操作日志查看',
@@ -244,32 +252,32 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: [
     'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders', 'customer-analytics',
-    'sales', 'sales-record', 'sales-stats', 'script', 'knowledge', 'data-query',
+    'sales', 'sales-record', 'sales-stats', 'script', 'data-query',
     'user-center', 'user-profile', 'user-preferences', 'user-notifications', 'user-security', 'user-login-logs', 'user-devices',
-    'system', 'system-user', 'system-department', 'system-role', 'system-log'
+    'system', 'system-user', 'system-department', 'system-role', 'system-region', 'system-log'
   ],
   admin: [
     'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders', 'customer-analytics',
-    'sales', 'sales-record', 'sales-stats', 'script', 'knowledge', 'data-query',
+    'sales', 'sales-record', 'sales-stats', 'script', 'data-query',
     'user-center', 'user-profile', 'user-preferences', 'user-notifications', 'user-security', 'user-login-logs', 'user-devices',
-    'system', 'system-user', 'system-department', 'system-role', 'system-log'
+    'system', 'system-user', 'system-department', 'system-role', 'system-region', 'system-log'
   ],
   manager: [
     'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders', 'customer-analytics',
-    'sales', 'sales-record', 'sales-stats', 'script', 'knowledge', 'data-query',
+    'sales', 'sales-record', 'sales-stats', 'script', 'data-query',
     'user-center', 'user-profile', 'user-preferences', 'user-notifications', 'user-security', 'user-login-logs'
   ],
   sales: [
     'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders',
-    'sales', 'sales-record', 'script', 'knowledge', 'data-query',
+    'sales', 'sales-record', 'script', 'data-query',
     'user-center', 'user-profile', 'user-preferences', 'user-notifications'
   ],
   teacher: [
-    'dashboard', 'customer', 'customer-list', 'script', 'knowledge', 'data-query',
+    'dashboard', 'customer', 'customer-list', 'script', 'data-query',
     'user-center', 'user-profile', 'user-preferences', 'user-notifications'
   ],
   viewer: [
-    'dashboard', 'script', 'knowledge', 'data-query',
+    'dashboard', 'script', 'data-query',
     'user-center', 'user-profile', 'user-preferences'
   ]
 }

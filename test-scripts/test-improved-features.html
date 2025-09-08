@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>功能改进验证 - 学校录取统计排序 & 学历要求</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+            color: white;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        .header p {
+            margin: 8px 0 0 0;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .feature-section {
+            margin-bottom: 32px;
+            border: 1px solid #f0f0f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #fafafa;
+            padding: 16px 20px;
+            border-bottom: 1px solid #f0f0f0;
+            font-weight: 600;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-icon {
+            width: 24px;
+            height: 24px;
+            background: #1890ff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+
+        .section-content {
+            padding: 20px;
+        }
+
+        .improvement-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .improvement-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .improvement-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-icon {
+            width: 20px;
+            height: 20px;
+            background: #52c41a;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .item-content h4 {
+            margin: 0 0 4px 0;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .item-content p {
+            margin: 0;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .code-example {
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 12px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #333;
+            overflow-x: auto;
+        }
+
+        .test-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .test-btn {
+            padding: 8px 16px;
+            background: #1890ff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.3s;
+        }
+
+        .test-btn:hover {
+            background: #40a9ff;
+        }
+
+        .demo-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+            border: 1px solid #f0f0f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .demo-table th,
+        .demo-table td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 13px;
+        }
+
+        .demo-table th {
+            background: #fafafa;
+            font-weight: 600;
+            color: #333;
+            position: relative;
+        }
+
+        .demo-table th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .demo-table th.sortable:hover {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .sort-arrow {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: #bfbfbf;
+        }
+
+        .sort-arrow.active {
+            color: #1890ff;
+        }
+
+        .level-tag {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 500;
+            color: white;
+        }
+
+        .level-985 { background: #ff4d4f; }
+        .level-211 { background: #fa8c16; }
+        .level-double { background: #fadb14; color: #333; }
+        .level-overseas { background: #1890ff; }
+        .level-key { background: #52c41a; }
+        .level-normal { background: #722ed1; }
+
+        .education-demo {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin: 16px 0;
+        }
+
+        .education-item {
+            background: #f0f9ff;
+            border: 1px solid #d6f4ff;
+            border-radius: 6px;
+            padding: 12px;
+        }
+
+        .education-title {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            color: #1890ff;
+            margin-bottom: 8px;
+        }
+
+        .education-summary {
+            font-size: 12px;
+            color: #333;
+            background: white;
+            padding: 6px 8px;
+            border-radius: 4px;
+            border-left: 3px solid #1890ff;
+            margin-bottom: 8px;
+        }
+
+        .education-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .education-tag {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 500;
+        }
+
+        .tag-green { background: #f6ffed; color: #389e0d; border: 1px solid #b7eb8f; }
+        .tag-orange { background: #fff7e6; color: #d46b08; border: 1px solid #ffd591; }
+        .tag-red { background: #fff2f0; color: #cf1322; border: 1px solid #ffccc7; }
+
+        @media (max-width: 768px) {
+            .education-demo {
+                grid-template-columns: 1fr;
+            }
+            
+            .test-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 功能改进验证</h1>
+            <p>学校录取统计排序功能 & 地市县学历要求显示</p>
+        </div>
+
+        <div class="content">
+            <!-- 功能1: DataAnalytics 排序改进 -->
+            <div class="feature-section">
+                <div class="section-header">
+                    <div class="section-icon">📊</div>
+                    <span>DataAnalytics组件 - 学校录取统计排序改进</span>
+                </div>
+                <div class="section-content">
+                    <ul class="improvement-list">
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>默认排序调整</h4>
+                                <p>学校录取统计表格现在默认按录取人数降序排序，突出显示录取人数最多的学校</p>
+                            </div>
+                        </li>
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>学校层次排序</h4>
+                                <p>学校层次列添加了排序箭头，点击可按学校等级优先级排序：985工程 > 211工程 > 双一流 > 海外高校 > 普通本科 > 独立学院 > 专科院校</p>
+                            </div>
+                        </li>
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>智能排序逻辑</h4>
+                                <p>实现了基于学校层次优先级的排序算法，确保高等级学校优先显示</p>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- 演示表格 -->
+                    <h4>学校录取统计表格演示</h4>
+                    <table class="demo-table">
+                        <thead>
+                            <tr>
+                                <th>学校名称</th>
+                                <th class="sortable" onclick="sortByLevel()">
+                                    学校层次
+                                    <span class="sort-arrow" id="levelArrow">↕</span>
+                                </th>
+                                <th class="sortable" onclick="sortByCount()">
+                                    录取人数
+                                    <span class="sort-arrow active" id="countArrow">↓</span>
+                                </th>
+                                <th>占比</th>
+                            </tr>
+                        </thead>
+                        <tbody id="schoolTable">
+                            <tr>
+                                <td>华北电力大学(北京)</td>
+                                <td><span class="level-tag level-211">211工程</span></td>
+                                <td><strong>156</strong></td>
+                                <td>12.5%</td>
+                            </tr>
+                            <tr>
+                                <td>清华大学</td>
+                                <td><span class="level-tag level-985">985工程</span></td>
+                                <td><strong>98</strong></td>
+                                <td>7.8%</td>
+                            </tr>
+                            <tr>
+                                <td>华东理工大学</td>
+                                <td><span class="level-tag level-211">211工程</span></td>
+                                <td><strong>87</strong></td>
+                                <td>7.0%</td>
+                            </tr>
+                            <tr>
+                                <td>东北电力大学</td>
+                                <td><span class="level-tag level-normal">普通本科</span></td>
+                                <td><strong>76</strong></td>
+                                <td>6.1%</td>
+                            </tr>
+                            <tr>
+                                <td>三峡大学</td>
+                                <td><span class="level-tag level-normal">普通本科</span></td>
+                                <td><strong>45</strong></td>
+                                <td>3.6%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <div class="test-buttons">
+                        <button class="test-btn" onclick="sortByCount()">按录取人数排序</button>
+                        <button class="test-btn" onclick="sortByLevel()">按学校层次排序</button>
+                        <button class="test-btn" onclick="resetSort()">重置排序</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 功能2: RegionalOverview 学历要求 -->
+            <div class="feature-section">
+                <div class="section-header">
+                    <div class="section-icon">🎓</div>
+                    <span>RegionalOverview组件 - 学历要求显示功能</span>
+                </div>
+                <div class="section-content">
+                    <ul class="improvement-list">
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>本科要求展示</h4>
+                                <p>显示不同学校层次本科学历的录取要求，包括985、211、双一流、普通本科等各个层次</p>
+                            </div>
+                        </li>
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>硕士要求展示</h4>
+                                <p>显示硕士学历录取要求，突出显示重点学校硕士毕业生的录取优势</p>
+                            </div>
+                        </li>
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>可视化标签</h4>
+                                <p>使用颜色编码标签系统：绿色表示可以报考，橙色表示部分可报考，红色表示不可报考</p>
+                            </div>
+                        </li>
+                        <li class="improvement-item">
+                            <div class="item-icon">✓</div>
+                            <div class="item-content">
+                                <h4>图标优化</h4>
+                                <p>为本科和硕士要求添加了专门的图标，提升用户界面体验</p>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <!-- 学历要求演示 -->
+                    <h4>学历要求显示演示</h4>
+                    <div class="education-demo">
+                        <div class="education-item">
+                            <div class="education-title">
+                                🎓 本科要求
+                            </div>
+                            <div class="education-summary">本科学历要求详情</div>
+                            <div class="education-tags">
+                                <span class="education-tag tag-green">985工程: 可以报考</span>
+                                <span class="education-tag tag-green">211工程: 可以报考</span>
+                                <span class="education-tag tag-green">双一流: 可以报考</span>
+                                <span class="education-tag tag-green">普通本科: 可以报考</span>
+                                <span class="education-tag tag-orange">独立学院: 部分岗位可报考</span>
+                                <span class="education-tag tag-red">专科院校: 不可报考</span>
+                            </div>
+                        </div>
+                        
+                        <div class="education-item">
+                            <div class="education-title">
+                                👑 硕士要求
+                            </div>
+                            <div class="education-summary">硕士学历要求详情</div>
+                            <div class="education-tags">
+                                <span class="education-tag tag-green">985工程: 优先录取</span>
+                                <span class="education-tag tag-green">211工程: 优先录取</span>
+                                <span class="education-tag tag-green">双一流: 优先录取</span>
+                                <span class="education-tag tag-green">普通本科: 可以报考</span>
+                                <span class="education-tag tag-green">独立学院: 可以报考</span>
+                                <span class="education-tag tag-orange">专科院校: 不适用</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 代码实现要点 -->
+            <div class="feature-section">
+                <div class="section-header">
+                    <div class="section-icon">💻</div>
+                    <span>关键实现要点</span>
+                </div>
+                <div class="section-content">
+                    <h4>1. 学校层次排序逻辑</h4>
+                    <div class="code-example">
+// 学校层次优先级映射
+const getSchoolLevelPriority = (level: string): number => {
+  const priorityMap: Record&lt;string, number&gt; = {
+    '985工程': 1,
+    '211工程': 2,
+    '双一流': 3,
+    '海外高校': 4,
+    '重点大学': 5,
+    '普通本科': 6,
+    '独立学院': 7,
+    '专科院校': 8,
+    '其他': 9
+  }
+  return priorityMap[level] || 10
+}
+
+// 表格排序配置
+sorter: (a, b) => getSchoolLevelPriority(a.school_level) - getSchoolLevelPriority(b.school_level)
+                    </div>
+
+                    <h4>2. 学历要求数据结构</h4>
+                    <div class="code-example">
+education_requirements: {
+  bachelor: {
+    summary: '本科学历要求详情',
+    details: {
+      '985工程': '可以报考',
+      '211工程': '可以报考',
+      '双一流': '可以报考',
+      '普通本科': '可以报考',
+      '独立学院': '部分岗位可报考',
+      '专科院校': '不可报考'
+    }
+  },
+  master: {
+    summary: '硕士学历要求详情',
+    details: {
+      '985工程': '优先录取',
+      '211工程': '优先录取',
+      ...
+    }
+  }
+}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSort = 'count';
+        let sortAsc = false;
+
+        const schoolData = [
+            { name: '华北电力大学(北京)', level: '211工程', count: 156, percentage: 12.5, priority: 2 },
+            { name: '清华大学', level: '985工程', count: 98, percentage: 7.8, priority: 1 },
+            { name: '华东理工大学', level: '211工程', count: 87, percentage: 7.0, priority: 2 },
+            { name: '东北电力大学', level: '普通本科', count: 76, percentage: 6.1, priority: 6 },
+            { name: '三峡大学', level: '普通本科', count: 45, percentage: 3.6, priority: 6 }
+        ];
+
+        function getLevelClass(level) {
+            const classMap = {
+                '985工程': 'level-985',
+                '211工程': 'level-211',
+                '双一流': 'level-double',
+                '海外高校': 'level-overseas',
+                '重点大学': 'level-key',
+                '普通本科': 'level-normal'
+            };
+            return classMap[level] || 'level-normal';
+        }
+
+        function renderTable(data) {
+            const tbody = document.getElementById('schoolTable');
+            tbody.innerHTML = data.map(school => `
+                <tr>
+                    <td>${school.name}</td>
+                    <td><span class="level-tag ${getLevelClass(school.level)}">${school.level}</span></td>
+                    <td><strong>${school.count}</strong></td>
+                    <td>${school.percentage}%</td>
+                </tr>
+            `).join('');
+        }
+
+        function sortByCount() {
+            const sorted = [...schoolData].sort((a, b) => {
+                return sortAsc ? a.count - b.count : b.count - a.count;
+            });
+            renderTable(sorted);
+            
+            // 更新排序指示器
+            document.getElementById('countArrow').textContent = sortAsc ? '↑' : '↓';
+            document.getElementById('countArrow').className = 'sort-arrow active';
+            document.getElementById('levelArrow').textContent = '↕';
+            document.getElementById('levelArrow').className = 'sort-arrow';
+            
+            currentSort = 'count';
+            sortAsc = !sortAsc;
+            
+            console.log('📊 按录取人数排序:', sortAsc ? '升序' : '降序');
+        }
+
+        function sortByLevel() {
+            const sorted = [...schoolData].sort((a, b) => {
+                return sortAsc ? b.priority - a.priority : a.priority - b.priority;
+            });
+            renderTable(sorted);
+            
+            // 更新排序指示器
+            document.getElementById('levelArrow').textContent = sortAsc ? '↑' : '↓';
+            document.getElementById('levelArrow').className = 'sort-arrow active';
+            document.getElementById('countArrow').textContent = '↕';
+            document.getElementById('countArrow').className = 'sort-arrow';
+            
+            currentSort = 'level';
+            sortAsc = !sortAsc;
+            
+            console.log('🎓 按学校层次排序:', sortAsc ? '低到高' : '高到低');
+        }
+
+        function resetSort() {
+            renderTable(schoolData);
+            document.getElementById('countArrow').textContent = '↓';
+            document.getElementById('countArrow').className = 'sort-arrow active';
+            document.getElementById('levelArrow').textContent = '↕';
+            document.getElementById('levelArrow').className = 'sort-arrow';
+            currentSort = 'count';
+            sortAsc = false;
+            console.log('🔄 重置为默认排序（录取人数降序）');
+        }
+
+        // 页面加载完成
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 功能改进验证页面加载完成');
+            console.log('✅ DataAnalytics组件排序功能已优化');
+            console.log('✅ RegionalOverview组件学历要求已完善');
+            
+            // 初始化表格（默认按录取人数降序）
+            renderTable([...schoolData].sort((a, b) => b.count - a.count));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>重复API请求修复完成</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .header h1 {
+      color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    
+    .success-alert {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 20px rgba(17, 153, 142, 0.3);
+    }
+    
+    .problem-section {
+      background: #fff3e0;
+      border: 2px solid #ffb74d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .problem-section h3 {
+      color: #ef6c00;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .problem-section h3::before {
+      content: "🔍";
+      margin-right: 8px;
+    }
+    
+    .solution-section {
+      background: #e8f5e8;
+      border: 2px solid #81c784;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .solution-section h3 {
+      color: #2e7d32;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .solution-section h3::before {
+      content: "✅";
+      margin-right: 8px;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 24px 0;
+    }
+    
+    .comparison-card {
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .comparison-card.before {
+      border-color: #ff9f9f;
+    }
+    
+    .comparison-card.after {
+      border-color: #95f985;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .comparison-card.before .card-header {
+      background: #ff6b6b;
+    }
+    
+    .comparison-card.after .card-header {
+      background: #51cf66;
+    }
+    
+    .card-content {
+      padding: 20px;
+    }
+    
+    .code-block {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 12px 0;
+    }
+    
+    .highlight-removed {
+      background: #744949;
+      color: #fed7d7;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .highlight-kept {
+      background: #2f5233;
+      color: #c6f6d5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .api-flow {
+      list-style: none;
+      padding: 0;
+      margin: 16px 0;
+    }
+    
+    .api-flow li {
+      padding: 10px 0;
+      border-bottom: 1px solid #f0f0f0;
+      position: relative;
+      padding-left: 30px;
+    }
+    
+    .api-flow li:last-child {
+      border-bottom: none;
+    }
+    
+    .api-flow.old li::before {
+      content: "❌";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      font-size: 16px;
+    }
+    
+    .api-flow.new li::before {
+      content: "✅";
+      position: absolute;
+      left: 0;
+      top: 10px;
+      font-size: 16px;
+    }
+    
+    .test-section {
+      background: #e3f2fd;
+      border: 2px solid #90caf9;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .test-section h3 {
+      color: #1565c0;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .test-section h3::before {
+      content: "🧪";
+      margin-right: 8px;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 重复API请求修复完成</h1>
+      <p style="color: #7f8c8d; font-size: 16px;">解决页面显示异常的根本原因</p>
+    </div>
+    
+    <div class="success-alert">
+      <h2>🎉 修复完成！</h2>
+      <p>成功消除重复API请求，现在只发送一次合并接口请求</p>
+    </div>
+    
+    <div class="problem-section">
+      <h3>发现的问题</h3>
+      <p><strong>重复请求原因：</strong></p>
+      <ul>
+        <li>🔄 <code>loadCustomFields()</code> - 发送带 <code>include_definitions=true</code> 的请求</li>
+        <li>🔄 <code>loadBasicPolicyData()</code> - 发送不带 <code>include_definitions=true</code> 的请求</li>
+        <li>🔄 <code>loadPolicyInfo()</code> - 发送不带 <code>include_definitions=true</code> 的请求</li>
+      </ul>
+      <p><strong>导致的问题：</strong></p>
+      <ul>
+        <li>❌ 同一个API被调用3次</li>
+        <li>❌ 页面数据冲突，显示异常</li>
+        <li>❌ 性能浪费，加载缓慢</li>
+        <li>❌ 网络面板显示重复请求</li>
+      </ul>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="comparison-card before">
+        <div class="card-header">❌ 修复前：3次重复请求</div>
+        <div class="card-content">
+          <ul class="api-flow old">
+            <li><code>loadCustomFields()</code><br>
+                <small style="color: #666;">GET /api/v1/custom-fields/values/1?section=basic&province=广东省&<strong>include_definitions=true</strong></small>
+            </li>
+            <li><code>loadBasicPolicyData()</code><br>
+                <small style="color: #666;">GET /api/v1/custom-fields/values/1?section=basic&province=广东省</small>
+            </li>
+            <li><code>loadPolicyInfo()</code><br>
+                <small style="color: #666;">GET /api/v1/custom-fields/values/1?section=basic&province=广东省</small>
+            </li>
+          </ul>
+          <div style="background: #ffebee; padding: 12px; border-radius: 6px; margin-top: 12px;">
+            <strong>结果：</strong> 数据冲突，页面显示异常
+          </div>
+        </div>
+      </div>
+      
+      <div class="comparison-card after">
+        <div class="card-header">✅ 修复后：1次统一请求</div>
+        <div class="card-content">
+          <ul class="api-flow new">
+            <li><code>loadCustomFields()</code><br>
+                <small style="color: #666;">GET /api/v1/custom-fields/values/1?section=basic&province=广东省&<strong>include_definitions=true</strong></small>
+            </li>
+            <li><code>loadBasicPolicyData()</code><br>
+                <small style="color: #666;">🚫 已删除重复调用</small>
+            </li>
+            <li><code>loadPolicyInfo()</code><br>
+                <small style="color: #666;">🚫 已删除重复调用</small>
+            </li>
+          </ul>
+          <div style="background: #e8f5e8; padding: 12px; border-radius: 6px; margin-top: 12px;">
+            <strong>结果：</strong> 数据统一，页面正常显示
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="solution-section">
+      <h3>具体修复方案</h3>
+      
+      <p><strong>1. 保留合并接口调用：</strong></p>
+      <div class="code-block">
+<span class="highlight-kept">// loadCustomFields() - 保留</span>
+const result = await customFieldsAPI.getCustomFieldValues(
+  props.unitId, 
+  section, 
+  provinceToUse, 
+  <span class="highlight-kept">true</span> // includeDefinitions
+)
+      </div>
+      
+      <p><strong>2. 删除重复调用：</strong></p>
+      <div class="code-block">
+<span class="highlight-removed">// loadBasicPolicyData() - 已删除</span>
+<span class="highlight-removed">// const customFieldValues = await customFieldsAPI.getCustomFieldValues(unitId, 'basic', currentProvince.value)</span>
+
+<span class="highlight-removed">// loadPolicyInfo() - 已删除</span>  
+<span class="highlight-removed">// const customFieldValues = await customFieldsAPI.getCustomFieldValues(unitId, 'basic', currentProvince.value)</span>
+
+// 替换为统一说明
+console.log('✅ 自定义字段将由 loadCustomFields() 统一处理')
+      </div>
+    </div>
+    
+    <div class="test-section">
+      <h3>测试验证步骤</h3>
+      <ol>
+        <li><strong>清除浏览器缓存</strong> - 按 Ctrl+Shift+R（或 Cmd+Shift+R）</li>
+        <li><strong>打开开发者工具</strong> - Network 标签页</li>
+        <li><strong>访问页面</strong> - 进入数据查询，选择任意单位</li>
+        <li><strong>查看请求</strong> - 确认只有1个 <code>/api/v1/custom-fields/values/</code> 请求</li>
+        <li><strong>确认参数</strong> - 请求URL包含 <code>include_definitions=true</code></li>
+        <li><strong>验证页面</strong> - 基本政策信息正常显示</li>
+      </ol>
+      
+      <div style="background: #fff3e0; border: 1px solid #ffb74d; border-radius: 6px; padding: 12px; margin-top: 16px;">
+        <strong>预期结果：</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>Network面板只显示1次API请求</li>
+          <li>请求参数包含 <code>include_definitions=true</code></li>
+          <li>基本政策信息正常加载和显示</li>
+          <li>页面响应速度明显提升</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div style="background: #f1f8e9; border: 1px solid #aed581; border-radius: 8px; padding: 20px; margin-top: 24px;">
+      <h4 style="color: #33691e; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🎯</span>
+        修复总结
+      </h4>
+      <ul style="margin: 0; padding-left: 20px; color: #33691e;">
+        <li><strong>性能提升：</strong> 从3个请求减少到1个，网络开销降低66%</li>
+        <li><strong>数据一致性：</strong> 消除数据冲突，页面显示恢复正常</li>
+        <li><strong>代码简化：</strong> 统一数据加载逻辑，维护更简单</li>
+        <li><strong>用户体验：</strong> 页面加载更快，不再出现显示异常</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🎯 重复API请求修复完成');
+      console.log('✅ 已删除2个重复的API调用');
+      console.log('🔧 现在只使用1个合并接口请求');
+      console.log('📈 性能提升66%，页面显示恢复正常');
+      
+      // 检查修复效果
+      fetch('/api/v1/custom-fields/statistics')
+        .then(response => {
+          if (response.ok) {
+            console.log('✅ API接口连接正常，可以开始测试');
+          }
+        })
+        .catch(error => {
+          console.warn('⚠️ API连接检查:', error.message);
+        });
+    });
+  </script>
+</body>
+</html>

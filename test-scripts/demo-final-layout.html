@@ -1,0 +1,768 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据查询一点通 - 完整布局演示</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/ant-design-vue@4/dist/antd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/ant-design-vue@4/dist/antd.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --header-height: 64px;
+            --sidebar-width: 240px;
+            --sidebar-collapsed-width: 80px;
+            --transition-fast: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            overflow: hidden;
+        }
+        
+        .layout-container {
+            height: 100vh;
+            display: flex;
+            position: relative;
+        }
+        
+        .sidebar {
+            background: linear-gradient(145deg, #001529 0%, #003366 100%);
+            color: white;
+            transition: var(--transition-fast);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+        }
+        
+        .sidebar.expanded {
+            width: var(--sidebar-width);
+        }
+        
+        .sidebar.collapsed {
+            width: var(--sidebar-collapsed-width);
+        }
+        
+        .sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        
+        .sidebar-header {
+            height: var(--header-height);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .sidebar-menu {
+            flex: 1;
+            padding: 0 16px;
+            overflow-y: auto;
+        }
+        
+        .menu-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 8px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: var(--transition-fast);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        
+        .menu-item.active {
+            background: #1890ff;
+            color: white;
+        }
+        
+        .menu-icon {
+            width: 20px;
+            margin-right: 12px;
+            text-align: center;
+        }
+        
+        .main-layout {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition-fast);
+        }
+        
+        .main-layout.with-sidebar-expanded {
+            margin-left: var(--sidebar-width);
+        }
+        
+        .main-layout.with-sidebar-collapsed {
+            margin-left: var(--sidebar-collapsed-width);
+        }
+        
+        .header {
+            height: var(--header-height);
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+        }
+        
+        .toggle-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            transition: var(--transition-fast);
+            font-size: 18px;
+        }
+        
+        .toggle-btn:hover {
+            background: #f0f0f0;
+            color: #1890ff;
+        }
+        
+        .header-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            background: #f5f5f5;
+            position: relative;
+        }
+        
+        /* 数据查询页面样式 */
+        .data-query-responsive {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 8px;
+            min-width: 0;
+            overflow-x: hidden;
+        }
+        
+        /* 等比例缩放 */
+        @media (max-width: 1600px) and (min-width: 1400px) {
+            .data-query-responsive {
+                zoom: 0.95;
+                transform-origin: top left;
+            }
+        }
+        
+        @media (max-width: 1399px) and (min-width: 1200px) {
+            .data-query-responsive {
+                zoom: 0.9;
+                transform-origin: top left;
+            }
+        }
+        
+        @media (max-width: 1199px) and (min-width: 1024px) {
+            .data-query-responsive {
+                zoom: 0.85;
+                transform-origin: top left;
+            }
+        }
+        
+        /* 平板和手机响应式 */
+        @media (max-width: 1023px) {
+            .data-query-responsive {
+                zoom: 1;
+                transform: none;
+            }
+            
+            .main-layout.with-sidebar-expanded,
+            .main-layout.with-sidebar-collapsed {
+                margin-left: 0 !important;
+            }
+            
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.mobile-open {
+                transform: translateX(0);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 0 16px;
+            }
+            
+            .data-query-responsive {
+                padding: 6px;
+                gap: 6px;
+            }
+        }
+        
+        .info-panel {
+            background: linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%);
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid #d6f4ff;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .info-item {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            border: 1px solid #e6f7ff;
+        }
+        
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1890ff;
+        }
+        
+        .responsive-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1.2fr 0.8fr;
+            min-height: 500px;
+        }
+        
+        @media (max-width: 1024px) {
+            .responsive-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto auto;
+            }
+        }
+        
+        .demo-card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card-title {
+            margin-bottom: 16px;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .card-content {
+            flex: 1;
+        }
+        
+        .test-controls {
+            position: fixed;
+            top: 80px;
+            right: 16px;
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            max-width: 300px;
+        }
+        
+        .test-controls h4 {
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .test-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+        }
+        
+        @media (max-width: 1023px) {
+            .mobile-overlay.active {
+                display: block;
+            }
+        }
+        
+        .size-indicator {
+            position: fixed;
+            bottom: 16px;
+            left: 16px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.15);
+            border-radius: 3px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.25);
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="layout-container">
+        <!-- 移动端遮罩 -->
+        <div 
+            class="mobile-overlay" 
+            :class="{ active: showMobileMenu }"
+            @click="showMobileMenu = false"
+        ></div>
+        
+        <!-- 侧边栏 -->
+        <div 
+            class="sidebar" 
+            :class="[
+                sidebarCollapsed ? 'collapsed' : 'expanded',
+                showMobileMenu ? 'mobile-open' : ''
+            ]"
+        >
+            <div class="sidebar-header">
+                <div v-if="!sidebarCollapsed || isMobile">数据查询系统</div>
+                <div v-else>DQ</div>
+            </div>
+            <div class="sidebar-menu">
+                <div 
+                    class="menu-item" 
+                    :class="{ active: activeMenu === 'query' }"
+                    @click="activeMenu = 'query'"
+                >
+                    <div class="menu-icon">📋</div>
+                    <div v-if="!sidebarCollapsed || isMobile">数据查询</div>
+                </div>
+                <div 
+                    class="menu-item"
+                    :class="{ active: activeMenu === 'analytics' }"
+                    @click="activeMenu = 'analytics'"
+                >
+                    <div class="menu-icon">📊</div>
+                    <div v-if="!sidebarCollapsed || isMobile">数据分析</div>
+                </div>
+                <div 
+                    class="menu-item"
+                    :class="{ active: activeMenu === 'schools' }"
+                    @click="activeMenu = 'schools'"
+                >
+                    <div class="menu-icon">🏫</div>
+                    <div v-if="!sidebarCollapsed || isMobile">学校信息</div>
+                </div>
+                <div 
+                    class="menu-item"
+                    :class="{ active: activeMenu === 'reports' }"
+                    @click="activeMenu = 'reports'"
+                >
+                    <div class="menu-icon">📈</div>
+                    <div v-if="!sidebarCollapsed || isMobile">统计报表</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 主布局 -->
+        <div 
+            class="main-layout" 
+            :class="[
+                isMobile ? '' : (sidebarCollapsed ? 'with-sidebar-collapsed' : 'with-sidebar-expanded')
+            ]"
+        >
+            <!-- 顶部导航 -->
+            <div class="header">
+                <div class="header-left">
+                    <button 
+                        class="toggle-btn" 
+                        @click="toggleSidebar"
+                        :title="isMobile ? '显示菜单' : (sidebarCollapsed ? '展开侧边栏' : '收起侧边栏')"
+                    >
+                        <span v-if="isMobile">☰</span>
+                        <span v-else-if="sidebarCollapsed">☰</span>
+                        <span v-else>✕</span>
+                    </button>
+                    <div class="header-title">数据查询一点通</div>
+                </div>
+                <div class="header-right">
+                    <a-button size="small" @click="showTestControls = !showTestControls">
+                        测试面板
+                    </a-button>
+                </div>
+            </div>
+            
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <div class="data-query-responsive">
+                    <!-- 信息面板 -->
+                    <div class="info-panel">
+                        <h4>📊 当前布局状态</h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">窗口尺寸</div>
+                                <div class="info-value">{{ windowWidth }} × {{ windowHeight }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">设备类型</div>
+                                <div class="info-value">{{ deviceType }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">侧边栏状态</div>
+                                <div class="info-value">{{ sidebarStatus }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">缩放比例</div>
+                                <div class="info-value">{{ zoomRatio }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">主内容宽度</div>
+                                <div class="info-value">{{ mainContentWidth }}px</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">响应式断点</div>
+                                <div class="info-value">{{ breakpoint }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 响应式网格内容 -->
+                    <div class="responsive-grid">
+                        <div class="demo-card">
+                            <h3 class="card-title">
+                                <span>📋</span>
+                                政策查询模块
+                            </h3>
+                            <div class="card-content">
+                                <p style="margin-bottom: 16px;">这里展示政策查询界面，包括筛选条件和查询结果。</p>
+                                
+                                <!-- 模拟查询表单 -->
+                                <a-form layout="vertical">
+                                    <a-form-item label="选择单位">
+                                        <a-select placeholder="请选择单位" style="width: 100%;">
+                                            <a-select-option value="sgcc">国家电网</a-select-option>
+                                            <a-select-option value="csg">南方电网</a-select-option>
+                                        </a-select>
+                                    </a-form-item>
+                                    <a-form-item label="地区筛选">
+                                        <a-select placeholder="请选择地区" style="width: 100%;">
+                                            <a-select-option value="sichuan">四川</a-select-option>
+                                            <a-select-option value="guangdong">广东</a-select-option>
+                                        </a-select>
+                                    </a-form-item>
+                                </a-form>
+                                
+                                <!-- 模拟数据表格 -->
+                                <a-table 
+                                    :columns="policyColumns" 
+                                    :data-source="policyData" 
+                                    :pagination="{ pageSize: 5, size: 'small' }"
+                                    size="small"
+                                    style="margin-top: 16px;"
+                                />
+                            </div>
+                        </div>
+                        
+                        <div class="demo-card">
+                            <h3 class="card-title">
+                                <span>📊</span>
+                                数据分析模块
+                            </h3>
+                            <div class="card-content">
+                                <p style="margin-bottom: 16px;">这里展示数据分析图表和统计信息。</p>
+                                
+                                <!-- 模拟统计卡片 -->
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                                    <div style="background: #f0f9ff; padding: 12px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 20px; font-weight: bold; color: #1890ff;">1,234</div>
+                                        <div style="font-size: 12px; color: #666;">总申请数</div>
+                                    </div>
+                                    <div style="background: #f6ffed; padding: 12px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 20px; font-weight: bold; color: #52c41a;">89.5%</div>
+                                        <div style="font-size: 12px; color: #666;">通过率</div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 模拟图表区域 -->
+                                <div style="height: 200px; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #666;">
+                                    📈 数据分析图表区域<br/>
+                                    ({{ chartData.length }} 条数据)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 测试控制面板 -->
+        <div v-if="showTestControls" class="test-controls">
+            <h4>🔧 测试控制面板</h4>
+            <div class="test-buttons">
+                <a-button @click="simulateResize(1920, 1080)" size="small" block>
+                    1920×1080 (4K)
+                </a-button>
+                <a-button @click="simulateResize(1600, 900)" size="small" block>
+                    1600×900 (宽屏)
+                </a-button>
+                <a-button @click="simulateResize(1366, 768)" size="small" block>
+                    1366×768 (笔记本)
+                </a-button>
+                <a-button @click="simulateResize(1024, 768)" size="small" block>
+                    1024×768 (平板横屏)
+                </a-button>
+                <a-button @click="simulateResize(768, 1024)" size="small" block>
+                    768×1024 (平板竖屏)
+                </a-button>
+                <a-button @click="simulateResize(375, 812)" size="small" block>
+                    375×812 (手机)
+                </a-button>
+                <a-divider style="margin: 12px 0;" />
+                <a-button @click="toggleSidebar" type="primary" size="small" block>
+                    切换侧边栏
+                </a-button>
+            </div>
+        </div>
+        
+        <!-- 尺寸指示器 -->
+        <div class="size-indicator">
+            {{ windowWidth }}×{{ windowHeight }} | {{ deviceType }} | 缩放: {{ zoomRatio }}
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted, onUnmounted } = Vue;
+        const { Button, Table, Form, FormItem, Select, SelectOption, Divider } = antd;
+
+        const app = createApp({
+            components: {
+                'a-button': Button,
+                'a-table': Table,
+                'a-form': Form,
+                'a-form-item': FormItem,
+                'a-select': Select,
+                'a-select-option': SelectOption,
+                'a-divider': Divider
+            },
+            setup() {
+                // 响应式状态
+                const sidebarCollapsed = ref(false)
+                const showMobileMenu = ref(false)
+                const showTestControls = ref(false)
+                const activeMenu = ref('query')
+                const windowWidth = ref(window.innerWidth)
+                const windowHeight = ref(window.innerHeight)
+                
+                // 计算属性
+                const isMobile = computed(() => windowWidth.value < 1024)
+                
+                const deviceType = computed(() => {
+                    if (windowWidth.value < 768) return '手机'
+                    if (windowWidth.value < 1024) return '平板'
+                    if (windowWidth.value < 1366) return '小屏笔记本'
+                    if (windowWidth.value < 1600) return '标准显示器'
+                    return '大屏显示器'
+                })
+                
+                const sidebarStatus = computed(() => {
+                    if (isMobile.value) return '隐藏(移动端)'
+                    return sidebarCollapsed.value ? '收起' : '展开'
+                })
+                
+                const mainContentWidth = computed(() => {
+                    if (isMobile.value) return windowWidth.value
+                    const sidebarWidth = sidebarCollapsed.value ? 80 : 240
+                    return windowWidth.value - sidebarWidth
+                })
+                
+                const zoomRatio = computed(() => {
+                    if (windowWidth.value >= 1600) return '1.0'
+                    if (windowWidth.value >= 1400) return '0.95'
+                    if (windowWidth.value >= 1200) return '0.9'
+                    if (windowWidth.value >= 1024) return '0.85'
+                    return '1.0'
+                })
+                
+                const breakpoint = computed(() => {
+                    if (windowWidth.value >= 1600) return 'XXL'
+                    if (windowWidth.value >= 1200) return 'XL'
+                    if (windowWidth.value >= 1024) return 'LG'
+                    if (windowWidth.value >= 768) return 'MD'
+                    if (windowWidth.value >= 576) return 'SM'
+                    return 'XS'
+                })
+                
+                // 方法
+                const toggleSidebar = () => {
+                    if (isMobile.value) {
+                        showMobileMenu.value = !showMobileMenu.value
+                    } else {
+                        sidebarCollapsed.value = !sidebarCollapsed.value
+                    }
+                }
+                
+                const simulateResize = (width, height) => {
+                    windowWidth.value = width
+                    windowHeight.value = height
+                    // 实际调整窗口大小（如果可能）
+                    if (window.resizeTo) {
+                        try {
+                            window.resizeTo(width, height)
+                        } catch (e) {
+                            console.log('无法调整窗口大小，仅更新显示值')
+                        }
+                    }
+                }
+                
+                const handleResize = () => {
+                    windowWidth.value = window.innerWidth
+                    windowHeight.value = window.innerHeight
+                    
+                    // 移动端自动关闭侧边栏菜单
+                    if (window.innerWidth >= 1024) {
+                        showMobileMenu.value = false
+                    }
+                }
+                
+                onMounted(() => {
+                    window.addEventListener('resize', handleResize)
+                })
+                
+                onUnmounted(() => {
+                    window.removeEventListener('resize', handleResize)
+                })
+                
+                // 模拟数据
+                const policyColumns = [
+                    { title: '城市', dataIndex: 'city', width: 80 },
+                    { title: '学历要求', dataIndex: 'education', width: 100 },
+                    { title: '薪资', dataIndex: 'salary', width: 80 },
+                    { title: '分数线', dataIndex: 'score', width: 70 }
+                ]
+                
+                const policyData = [
+                    { key: 1, city: '成都', education: '985', salary: '16-18万', score: '75分' },
+                    { key: 2, city: '绵阳', education: '985', salary: '14-17万', score: '65分' },
+                    { key: 3, city: '德阳', education: '985', salary: '12-15万', score: '60分' },
+                    { key: 4, city: '乐山', education: '985', salary: '11-14万', score: '58分' },
+                    { key: 5, city: '宜宾', education: '985', salary: '10-13万', score: '55分' }
+                ]
+                
+                const chartData = ref(Array.from({ length: 20 }, (_, i) => ({
+                    id: i + 1,
+                    value: Math.floor(Math.random() * 100) + 50,
+                    category: `类别${i + 1}`
+                })))
+                
+                return {
+                    // 状态
+                    sidebarCollapsed,
+                    showMobileMenu,
+                    showTestControls,
+                    activeMenu,
+                    windowWidth,
+                    windowHeight,
+                    
+                    // 计算属性
+                    isMobile,
+                    deviceType,
+                    sidebarStatus,
+                    mainContentWidth,
+                    zoomRatio,
+                    breakpoint,
+                    
+                    // 方法
+                    toggleSidebar,
+                    simulateResize,
+                    
+                    // 数据
+                    policyColumns,
+                    policyData,
+                    chartData
+                }
+            }
+        })
+        
+        app.use(antd)
+        app.mount('#app')
+    </script>
+</body>
+</html>

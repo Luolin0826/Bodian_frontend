@@ -250,6 +250,98 @@ export interface BestValueResponse {
   })[]
 }
 
+// 新增Analytics相关接口类型定义
+export interface SchoolsByBatchQuery {
+  unit_id?: number
+  batch_type?: string
+  sort_by?: 'admission_count' | 'school_level' | 'university_name' // 新增排序参数
+  sort_order?: 'asc' | 'desc' // 新增排序方向参数
+  page?: number
+  limit?: number
+}
+
+export interface SchoolsByBatchResponse {
+  success: boolean
+  data: {
+    schools: Array<{
+      university_id: number
+      university_name: string
+      university_type: string
+      university_category: string
+      batch: string
+      admission_count: number
+      male_count: number
+      female_count: number
+      unit_name: string
+      org_type: string
+    }>
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      total_pages: number
+    }
+    summary: {
+      total_schools: number
+      total_admissions: number
+    }
+  }
+}
+
+export interface AdmissionOverviewQuery {
+  unit_id?: number
+  batch_type?: string
+}
+
+export interface AdmissionOverviewResponse {
+  success: boolean
+  data: {
+    batch_distribution: Array<{
+      batch: string
+      school_count: number
+      total_admissions: number
+      percentage: number
+    }>
+    school_type_distribution: Array<{
+      school_type: string
+      school_count: number
+      admission_count: number
+      percentage: number
+    }>
+    gender_distribution: Array<{
+      gender: string
+      count: number
+      percentage: number
+    }>
+    top_schools: Array<{
+      university_id: number
+      university_name: string
+      university_type: string
+      admission_count: number
+      percentage: number
+    }>
+  }
+}
+
+export interface BatchComparisonQuery {
+  unit_id: number
+}
+
+export interface BatchComparisonResponse {
+  success: boolean
+  data: {
+    batch_comparison: Array<{
+      batch: string
+      school_count: number
+      total_admissions: number
+      male_count: number
+      female_count: number
+      male_percentage: number
+      female_percentage: number
+    }>
+  }
+}
+
 // API方法
 export const recruitmentAPI = {
   // 8字段筛选主接口 - 使用新的data-search接口
@@ -740,6 +832,102 @@ export const recruitmentAPI = {
     result_count: number
   }): Promise<void> {
     return request.post('/api/v1/recruitment/log', params)
+  },
+
+  // ===== 新增Analytics API方法 =====
+
+  // 按批次获取学校录取统计
+  async getSchoolsByBatch(params: SchoolsByBatchQuery): Promise<SchoolsByBatchResponse['data']> {
+    const response = await request.get('/api/v1/analytics/schools-by-batch', { params })
+    if (response.success) {
+      return response.data
+    }
+    throw new Error(response.message || '获取学校录取统计失败')
+  },
+
+  // 获取录取概览数据
+  async getAdmissionOverview(params: AdmissionOverviewQuery): Promise<AdmissionOverviewResponse['data']> {
+    const response = await request.get('/api/v1/analytics/admission-overview', { params })
+    if (response.success) {
+      return response.data
+    }
+    throw new Error(response.message || '获取录取概览失败')
+  },
+
+  // 获取批次对比数据
+  async getBatchComparison(params: BatchComparisonQuery): Promise<BatchComparisonResponse['data']> {
+    const response = await request.get('/api/v1/analytics/batch-comparison', { params })
+    if (response.success) {
+      return response.data
+    }
+    throw new Error(response.message || '获取批次对比失败')
+  },
+
+  // 搜索学校（Analytics版本）
+  async searchSchoolsForAnalytics(params: {
+    query: string
+    unit_id?: number
+    batch?: string
+    limit?: number
+  }): Promise<{
+    schools: Array<{
+      university_id: number
+      university_name: string
+      university_type: string
+      total_admissions: number
+      percentage: number
+    }>
+  }> {
+    const response = await request.get('/api/v1/analytics/schools/search', { params })
+    if (response.success) {
+      return response.data
+    }
+    throw new Error(response.message || '搜索学校失败')
+  },
+
+  // 导出数据
+  async exportAnalyticsData(params: {
+    unit_id?: number
+    batch_type?: string
+    format?: 'json' | 'csv' | 'excel'
+  }): Promise<any> {
+    const response = await request.get('/api/v1/analytics/export', { params })
+    if (response.success) {
+      return response.data
+    }
+    throw new Error(response.message || '导出数据失败')
+  },
+
+  // 获取Analytics健康状态
+  async getAnalyticsHealth(): Promise<any> {
+    return request.get('/api/v1/analytics/health')
+  },
+
+  // 检查特定学校在某单位某批次的录取情况
+  async checkSchoolAdmission(params: {
+    unit_id: number
+    batch_type?: string
+    school_name: string
+  }): Promise<{
+    success: boolean
+    data: {
+      matched_schools: Array<{
+        university_name: string
+        university_type: string
+        admission_count: number
+        admission_ratio: number
+        unit_name: string
+        batch: string
+      }>
+      total_matched: number
+      search_query: string
+    }
+  }> {
+    const response = await request.get('/api/v1/analytics/check-school-admission', { params })
+    if (response.success) {
+      return response
+    }
+    throw new Error(response.message || '检查学校录取情况失败')
   }
 }
 
@@ -761,5 +949,13 @@ export const {
   getSecondaryUnits,
   getLayeredQuery,
   getDetailedPolicy,
-  logUserQuery
+  logUserQuery,
+  // 新增Analytics方法
+  getSchoolsByBatch,
+  getAdmissionOverview,
+  getBatchComparison,
+  searchSchoolsForAnalytics,
+  exportAnalyticsData,
+  getAnalyticsHealth,
+  checkSchoolAdmission
 } = recruitmentAPI

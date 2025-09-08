@@ -260,7 +260,7 @@
       :confirm-loading="reporting"
     >
       <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-        <a-form-item label="举报原因">
+        <a-form-item label="举报原因" name="reason">
           <a-select v-model:value="reportForm.reason" placeholder="请选择举报原因">
             <a-select-option value="suspicious_ip">可疑IP地址</a-select-option>
             <a-select-option value="unusual_location">异常登录位置</a-select-option>
@@ -269,7 +269,7 @@
           </a-select>
         </a-form-item>
         
-        <a-form-item label="详细描述">
+        <a-form-item label="详细描述" name="description">
           <a-textarea 
             v-model:value="reportForm.description"
             placeholder="请详细描述可疑活动的情况"

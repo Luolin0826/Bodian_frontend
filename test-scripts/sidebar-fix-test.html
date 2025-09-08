@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>侧边栏布局修复测试</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f5f5;
+        }
+        
+        .layout-container {
+            height: 100vh;
+            display: flex;
+            position: relative;
+        }
+        
+        /* 侧边栏 */
+        .sidebar {
+            background: #001529;
+            color: white;
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 100;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .sidebar.expanded {
+            width: 240px;
+        }
+        
+        .sidebar.collapsed {
+            width: 80px;
+        }
+        
+        .sidebar-header {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        /* 主布局区域 */
+        .main-layout {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            transition: all 0.2s ease;
+        }
+        
+        /* 这模拟Ant Design Layout的行为 */
+        .main-layout.with-sidebar-expanded {
+            margin-left: 240px;
+        }
+        
+        .main-layout.with-sidebar-collapsed {
+            margin-left: 80px;
+        }
+        
+        /* 顶部栏 */
+        .header {
+            height: 64px;
+            background: white;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        
+        .toggle-btn {
+            padding: 8px 12px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 16px;
+        }
+        
+        .toggle-btn:hover {
+            background: #e0e0e0;
+        }
+        
+        /* 内容区域 */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            background: #f5f5f5;
+            padding: 0; /* 重要：不设置额外padding */
+        }
+        
+        /* 数据查询页面样式 - 修复后的版本 */
+        .data-query-page {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            padding: 8px; /* 只有基本的内边距 */
+            /* 不再有margin-left或width设置 */
+        }
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 4px 8px;
+            min-width: 0;
+            box-sizing: border-box;
+        }
+        
+        .two-column-layout {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: 1.2fr 0.8fr;
+            min-height: 500px;
+            width: 100%; /* 使用全宽 */
+        }
+        
+        @media (max-width: 1400px) {
+            .two-column-layout {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .two-column-layout {
+                grid-template-columns: 1fr;
+            }
+            
+            .main-layout.with-sidebar-expanded,
+            .main-layout.with-sidebar-collapsed {
+                margin-left: 0;
+            }
+            
+            .sidebar {
+                transform: translateX(-100%);
+            }
+        }
+        
+        .left-column {
+            background: #e6f7ff;
+            border: 2px solid #1890ff;
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .right-column {
+            background: #f6ffed;
+            border: 2px solid #52c41a;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        
+        .column-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 12px;
+        }
+        
+        .info-box {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+        
+        .status-info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+        
+        .highlight {
+            background: #fff2e8;
+            border: 2px dashed #ff7a45;
+            padding: 8px;
+            margin: 8px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="status-info" id="statusInfo">
+        侧边栏：<span id="sidebarStatus">展开</span> | 
+        窗口：<span id="windowSize"></span> | 
+        主内容宽度：<span id="contentWidth"></span>
+    </div>
+    
+    <div class="layout-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar expanded" id="sidebar">
+            <div class="sidebar-header" id="sidebarHeader">
+                数据查询系统
+            </div>
+            <div style="color: rgba(255,255,255,0.6); font-size: 12px;">
+                📊 数据查询<br>
+                📈 数据分析<br>
+                🏫 学校管理<br>
+                ⚙️ 系统设置
+            </div>
+        </div>
+        
+        <!-- 主布局 -->
+        <div class="main-layout with-sidebar-expanded" id="mainLayout">
+            <!-- 顶部导航 -->
+            <div class="header">
+                <button class="toggle-btn" onclick="toggleSidebar()">
+                    <span id="toggleIcon">◀</span> 切换侧边栏
+                </button>
+                <div style="flex: 1; text-align: center; font-weight: bold;">
+                    数据查询一点通 - 侧边栏布局修复测试
+                </div>
+            </div>
+            
+            <!-- 内容区域 -->
+            <div class="content-area">
+                <!-- 数据查询页面 -->
+                <div class="data-query-page">
+                    <div class="highlight">
+                        <strong>✅ 修复说明：</strong><br>
+                        • 移除了 <code>layoutStore.getMainContentStyle()</code> 的额外边距<br>
+                        • 移除了 <code>layout-with-sidebar</code> CSS类的应用<br>
+                        • 现在内容区域使用全宽，没有额外的左侧空白<br>
+                        • 侧边栏的边距由Ant Design Layout系统处理
+                    </div>
+                    
+                    <div class="main-content">
+                        <div class="two-column-layout">
+                            <!-- 左栏：网申政策查询 -->
+                            <div class="left-column">
+                                <div class="column-title">🔍 网申政策查询（左栏）</div>
+                                
+                                <div class="info-box">
+                                    <strong>筛选器面板</strong><br>
+                                    单位选择、地区筛选等控件
+                                </div>
+                                
+                                <div class="info-box">
+                                    <strong>基本政策信息</strong><br>
+                                    单位基本政策展示区域
+                                </div>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                                    <div class="info-box" style="margin: 0;">
+                                        <strong>提前批板块</strong><br>
+                                        提前批信息
+                                    </div>
+                                    <div class="info-box" style="margin: 0;">
+                                        <strong>农网板块</strong><br>
+                                        农网信息
+                                    </div>
+                                </div>
+                                
+                                <div class="info-box">
+                                    <strong>地市县概览</strong><br>
+                                    区域详情表格
+                                </div>
+                            </div>
+                            
+                            <!-- 右栏：数据概览 -->
+                            <div class="right-column">
+                                <div class="column-title">📊 数据概览（右栏）</div>
+                                <div class="info-box" style="min-height: 400px;">
+                                    <strong>学校录取情况</strong><br><br>
+                                    • 数据分析图表<br>
+                                    • 批次筛选器<br>
+                                    • 统计信息卡片<br>
+                                    • 学校详情表格<br>
+                                    • 钻取功能<br><br>
+                                    
+                                    <div style="background: #f0f9ff; padding: 8px; border-radius: 4px; margin-top: 16px;">
+                                        <strong>测试结果：</strong><br>
+                                        现在左栏紧贴内容区域边缘，<br>
+                                        没有额外的左侧空白！
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let sidebarExpanded = true;
+        
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const mainLayout = document.getElementById('mainLayout');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const sidebarHeader = document.getElementById('sidebarHeader');
+            
+            sidebarExpanded = !sidebarExpanded;
+            
+            if (sidebarExpanded) {
+                sidebar.className = 'sidebar expanded';
+                mainLayout.className = 'main-layout with-sidebar-expanded';
+                toggleIcon.textContent = '◀';
+                sidebarHeader.textContent = '数据查询系统';
+            } else {
+                sidebar.className = 'sidebar collapsed';
+                mainLayout.className = 'main-layout with-sidebar-collapsed';
+                toggleIcon.textContent = '▶';
+                sidebarHeader.textContent = 'DQ';
+            }
+            
+            updateStatus();
+        }
+        
+        function updateStatus() {
+            const sidebarStatus = document.getElementById('sidebarStatus');
+            const windowSize = document.getElementById('windowSize');
+            const contentWidth = document.getElementById('contentWidth');
+            const mainLayout = document.getElementById('mainLayout');
+            
+            sidebarStatus.textContent = sidebarExpanded ? '展开(240px)' : '收缩(80px)';
+            windowSize.textContent = `${window.innerWidth}×${window.innerHeight}`;
+            
+            const contentRect = mainLayout.getBoundingClientRect();
+            contentWidth.textContent = `${Math.round(contentRect.width)}px`;
+        }
+        
+        // 初始化和窗口大小变化监听
+        updateStatus();
+        window.addEventListener('resize', updateStatus);
+        
+        // 每秒更新一次状态信息
+        setInterval(updateStatus, 1000);
+    </script>
+</body>
+</html>

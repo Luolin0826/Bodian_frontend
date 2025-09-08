@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>编辑字段组件简化完成</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .header h1 {
+      color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    
+    .header .subtitle {
+      color: #7f8c8d;
+      font-size: 16px;
+    }
+    
+    .success-alert {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 20px rgba(17, 153, 142, 0.3);
+    }
+    
+    .success-alert h2 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+    }
+    
+    .success-alert p {
+      margin: 0;
+      opacity: 0.95;
+      font-size: 16px;
+    }
+    
+    .files-modified {
+      background: #fff3e0;
+      border: 2px solid #ffb74d;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 32px;
+    }
+    
+    .files-modified h3 {
+      color: #ef6c00;
+      margin: 0 0 16px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .files-modified h3::before {
+      content: "📁";
+      margin-right: 8px;
+    }
+    
+    .file-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .file-list li {
+      padding: 10px 0;
+      border-bottom: 1px solid #ffe0b2;
+      font-family: monospace;
+      background: #f5f5f5;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      color: #d84315;
+      font-weight: bold;
+    }
+    
+    .file-list li:last-child {
+      margin-bottom: 0;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+    
+    .comparison-card {
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    
+    .comparison-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .comparison-card.before {
+      border-color: #ff5722;
+    }
+    
+    .comparison-card.after {
+      border-color: #4caf50;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      font-weight: bold;
+      color: white;
+      font-size: 16px;
+    }
+    
+    .comparison-card.before .card-header {
+      background: linear-gradient(135deg, #ff5722, #f44336);
+    }
+    
+    .comparison-card.after .card-header {
+      background: linear-gradient(135deg, #4caf50, #8bc34a);
+    }
+    
+    .card-content {
+      padding: 20px;
+    }
+    
+    .feature-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .feature-list li {
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f3f4;
+      font-size: 14px;
+      position: relative;
+      padding-left: 32px;
+    }
+    
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+    
+    .feature-list.removed li::before {
+      content: "❌";
+      position: absolute;
+      left: 0;
+      top: 12px;
+      font-size: 16px;
+    }
+    
+    .feature-list.kept li::before {
+      content: "✅";
+      position: absolute;
+      left: 0;
+      top: 12px;
+      font-size: 16px;
+    }
+    
+    .code-changes {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    
+    .code-changes h3 {
+      margin: 0 0 16px 0;
+      color: #495057;
+      display: flex;
+      align-items: center;
+    }
+    
+    .code-changes h3::before {
+      content: "💻";
+      margin-right: 8px;
+    }
+    
+    .code-block {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 20px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+    
+    .removed-code {
+      background: #4a2c2a;
+      border-left: 4px solid #f56565;
+    }
+    
+    .added-code {
+      background: #2d4a2d;
+      border-left: 4px solid #48bb78;
+    }
+    
+    .highlight-removed {
+      background: #744949;
+      color: #fed7d7;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .highlight-added {
+      background: #2f5233;
+      color: #c6f6d5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .verification-panel {
+      background: #e8f5e8;
+      border: 2px solid #81c784;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 24px 0;
+    }
+    
+    .verification-panel h3 {
+      color: #2e7d32;
+      margin: 0 0 16px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .verification-panel h3::before {
+      content: "🔍";
+      margin-right: 8px;
+    }
+    
+    .verification-steps {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .verification-steps li {
+      padding: 12px 0;
+      font-size: 14px;
+      position: relative;
+      padding-left: 40px;
+      border-bottom: 1px solid #c8e6c9;
+    }
+    
+    .verification-steps li:last-child {
+      border-bottom: none;
+    }
+    
+    .verification-steps li::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 0;
+      top: 12px;
+      background: #4caf50;
+      color: white;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    
+    .expected-changes {
+      background: #fff8e1;
+      border: 2px solid #ffb74d;
+      border-radius: 8px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    
+    .expected-changes h4 {
+      color: #ff8f00;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .expected-changes h4::before {
+      content: "🎯";
+      margin-right: 8px;
+    }
+    
+    .expected-changes ul {
+      margin: 0;
+      padding-left: 20px;
+      color: #ff8f00;
+    }
+    
+    .expected-changes li {
+      margin-bottom: 8px;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✅ 编辑字段页面简化完成</h1>
+      <p class="subtitle">不再设置字段类型和字段内容</p>
+    </div>
+    
+    <div class="success-alert">
+      <h2>🎉 FieldEditDialog 组件简化完成！</h2>
+      <p>编辑字段时现在只需要设置字段标题和显示顺序</p>
+    </div>
+    
+    <div class="files-modified">
+      <h3>修改的文件</h3>
+      <ul class="file-list">
+        <li>src/views/data-query/components/FieldEditDialog.vue</li>
+        <li>src/views/data-query/components/FieldManagerDialog.vue</li>
+      </ul>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="comparison-card before">
+        <div class="card-header">❌ 修改前的复杂编辑表单</div>
+        <div class="card-content">
+          <ul class="feature-list removed">
+            <li><strong>字段标识</strong>：显示但禁用编辑</li>
+            <li><strong>显示名称</strong>：可编辑</li>
+            <li><strong>字段内容</strong>：大文本区域编辑</li>
+            <li><strong>字段类型</strong>：下拉选择（文本/多行文本/选择/是否/数字/日期）</li>
+            <li><strong>显示顺序</strong>：数字输入</li>
+            <li><strong>必填字段</strong>：复选框设置</li>
+            <li><strong>选择项配置</strong>：动态显示的文本区域</li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="comparison-card after">
+        <div class="card-header">✅ 修改后的简化编辑表单</div>
+        <div class="card-content">
+          <ul class="feature-list kept">
+            <li><strong>字段标识</strong>：显示但禁用编辑</li>
+            <li><strong>显示名称</strong>：可编辑</li>
+            <li><strong>显示顺序</strong>：数字输入</li>
+          </ul>
+          <div style="margin-top: 16px; padding: 12px; background: #e8f5e8; border-radius: 6px; font-size: 13px; color: #2e7d32;">
+            <strong>✨ 简化效果：</strong><br>
+            • 表单字段从7个减少到3个<br>
+            • 移除所有复杂配置选项<br>
+            • 聚焦核心编辑功能
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="code-changes">
+      <h3>关键代码变化</h3>
+      
+      <div style="margin-bottom: 16px;">
+        <strong>移除的表单字段：</strong>
+        <div class="code-block removed-code">
+<span class="highlight-removed">// 移除的字段内容编辑</span>
+&lt;a-form-item label="字段内容" name="field_content"&gt;
+  &lt;a-textarea v-model:value="editForm.field_content" .../&gt;
+&lt;/a-form-item&gt;
+
+<span class="highlight-removed">// 移除的字段类型选择</span>
+&lt;a-form-item label="字段类型" name="field_type" required&gt;
+  &lt;a-select v-model:value="editForm.field_type"&gt;
+    &lt;a-select-option value="text"&gt;文本&lt;/a-select-option&gt;
+    &lt;a-select-option value="textarea"&gt;多行文本&lt;/a-select-option&gt;
+    ...
+  &lt;/a-select&gt;
+&lt;/a-form-item&gt;
+
+<span class="highlight-removed">// 移除的必填字段设置和选择项配置</span>
+&lt;a-form-item name="is_required"&gt;...&lt;/a-form-item&gt;
+&lt;a-form-item v-if="editForm.field_type === 'select'"&gt;...&lt;/a-form-item&gt;
+        </div>
+      </div>
+      
+      <div style="margin-bottom: 16px;">
+        <strong>简化后的表单数据：</strong>
+        <div class="code-block added-code">
+<span class="highlight-added">// 简化后的表单数据结构</span>
+const editForm = reactive({
+  <span class="highlight-added">field_name: '',</span>      <span style="color: #81c784;">// 显示但不可编辑</span>
+  <span class="highlight-added">display_name: '',</span>   <span style="color: #81c784;">// 核心编辑字段</span>
+  <span class="highlight-added">display_order: 1</span>    <span style="color: #81c784;">// 显示顺序</span>
+})
+
+<span class="highlight-added">// 简化后的验证规则</span>
+const formRules = {
+  display_name: [
+    { required: true, message: '请输入显示名称', trigger: 'blur' }
+  ]  <span style="color: #81c784;">// 只保留必要验证</span>
+}
+
+<span class="highlight-added">// 简化后的提交数据</span>
+const updateData = {
+  <span class="highlight-added">display_name: editForm.display_name,</span>
+  <span class="highlight-added">display_order: editForm.display_order</span>
+}  <span style="color: #81c784;">// 只提交核心字段</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="verification-panel">
+      <h3>验证修改效果</h3>
+      <ol class="verification-steps">
+        <li data-step="1">在浏览器中访问：http://localhost:3011</li>
+        <li data-step="2">进入数据查询或政策管理页面</li>
+        <li data-step="3">找到"基本政策信息"模块</li>
+        <li data-step="4">点击"编辑政策"打开字段管理对话框</li>
+        <li data-step="5">点击任意字段的"编辑"按钮</li>
+        <li data-step="6">确认编辑对话框标题为"编辑字段标题"</li>
+        <li data-step="7">确认只显示：字段标识、显示名称、显示顺序</li>
+      </ol>
+      
+      <div class="expected-changes">
+        <h4>预期看到的变化</h4>
+        <ul>
+          <li>编辑对话框标题：从"编辑字段" → "编辑字段标题"</li>
+          <li>表单字段数量：从7个 → 3个</li>
+          <li>没有字段内容的大文本框</li>
+          <li>没有字段类型的下拉选择</li>
+          <li>没有必填字段复选框</li>
+          <li>没有选择项配置区域</li>
+          <li>只保留核心编辑功能</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('✅ FieldEditDialog 组件简化完成');
+      console.log('📂 主要修改的文件:');
+      console.log('  - src/views/data-query/components/FieldEditDialog.vue');
+      console.log('  - src/views/data-query/components/FieldManagerDialog.vue');
+      console.log('🎯 主要简化:');
+      console.log('  - 移除字段内容编辑（大文本框）');
+      console.log('  - 移除字段类型选择（下拉框）');
+      console.log('  - 移除必填字段设置');
+      console.log('  - 移除选择项配置');
+      console.log('  - 简化表单数据结构和验证规则');
+      console.log('  - 简化API更新调用');
+      console.log('🎉 现在编辑字段时只需要设置字段标题和显示顺序');
+      
+      // 检查Vue开发服务器状态
+      fetch('http://localhost:3011')
+        .then(response => {
+          if (response.ok) {
+            console.log('✅ Vue开发服务器运行正常，可以在基本政策信息的编辑功能中验证效果');
+          }
+        })
+        .catch(error => {
+          console.warn('⚠️ 无法连接到Vue开发服务器');
+        });
+    });
+  </script>
+</body>
+</html>

@@ -97,7 +97,7 @@
       @cancel="resetCreateForm"
     >
       <a-form :model="createForm" layout="vertical">
-        <a-form-item label="分类名称" required>
+        <a-form-item label="分类名称" name="name" required>
           <a-input 
             v-model:value="createForm.name" 
             placeholder="请输入分类名称"
@@ -105,7 +105,7 @@
           />
         </a-form-item>
         
-        <a-form-item label="分类描述">
+        <a-form-item label="分类描述" name="description">
           <a-textarea 
             v-model:value="createForm.description" 
             placeholder="请输入分类描述（可选）"
@@ -113,7 +113,7 @@
           />
         </a-form-item>
         
-        <a-form-item label="父分类">
+        <a-form-item label="父分类" name="parent_id">
           <CategorySelector
             v-model="createForm.parent_id"
             placeholder="选择父分类（可选）"

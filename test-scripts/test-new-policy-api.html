@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>测试新统一政策API</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .test-result { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background: #f6ffed; border: 1px solid #b7eb8f; color: #389e0d; }
+        .error { background: #fff2f0; border: 1px solid #ffccc7; color: #cf1322; }
+        .info { background: #f0f9ff; border: 1px solid #91d5ff; color: #1890ff; }
+        button { padding: 8px 16px; margin-right: 10px; margin-bottom: 10px; border: none; border-radius: 4px; cursor: pointer; background: #1890ff; color: white; }
+        button:hover { background: #40a9ff; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>新统一政策板块API测试</h1>
+        
+        <div class="test-section">
+            <h2>🔗 API健康检查</h2>
+            <button onclick="testHealthCheck()">测试健康检查</button>
+            <div id="health-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>📋 基本政策信息</h2>
+            <button onclick="testGetBasicPolicy()">获取基本政策</button>
+            <button onclick="testUpdateBasicPolicy()">更新基本政策</button>
+            <div id="basic-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⏰ 提前批政策信息</h2>
+            <button onclick="testGetEarlyBatch()">获取提前批政策</button>
+            <button onclick="testUpdateEarlyBatch()">更新提前批政策</button>
+            <div id="early-batch-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>⚡ 农网政策信息</h2>
+            <button onclick="testGetRuralGrid()">获取农网政策</button>
+            <button onclick="testUpdateRuralGrid()">更新农网政策</button>
+            <div id="rural-grid-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h2>🌍 所有板块信息</h2>
+            <button onclick="testGetAllSections()">获取所有板块</button>
+            <div id="all-sections-result"></div>
+        </div>
+    </div>
+
+    <script>
+        const BASE_URL = 'http://localhost:8088';
+        const TEST_UNIT_ID = 44; // 测试用的单位ID
+
+        function showResult(containerId, type, message, data = null) {
+            const container = document.getElementById(containerId);
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = `<strong>${type.toUpperCase()}:</strong> ${message}`;
+            if (data) {
+                div.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            container.appendChild(div);
+        }
+
+        async function testHealthCheck() {
+            const container = document.getElementById('health-result');
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('health-result', 'success', '健康检查通过', data);
+                } else {
+                    showResult('health-result', 'error', '健康检查失败', data);
+                }
+            } catch (error) {
+                showResult('health-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testGetBasicPolicy() {
+            const container = document.getElementById('basic-result');
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/basic`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('basic-result', 'success', '基本政策获取成功', data);
+                } else {
+                    showResult('basic-result', 'error', '基本政策获取失败', data);
+                }
+            } catch (error) {
+                showResult('basic-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testUpdateBasicPolicy() {
+            const container = document.getElementById('basic-result');
+            
+            const testData = {
+                recruitment_count: '测试更新_' + Date.now(),
+                admission_ratio: '5:1',
+                comprehensive_score_line: '75分'
+            };
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/basic`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('basic-result', 'success', '基本政策更新成功', data);
+                } else {
+                    showResult('basic-result', 'error', '基本政策更新失败', data);
+                }
+            } catch (error) {
+                showResult('basic-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testGetEarlyBatch() {
+            const container = document.getElementById('early-batch-result');
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/early-batch`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('early-batch-result', 'success', '提前批政策获取成功', data);
+                } else {
+                    showResult('early-batch-result', 'error', '提前批政策获取失败', data);
+                }
+            } catch (error) {
+                showResult('early-batch-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testUpdateEarlyBatch() {
+            const container = document.getElementById('early-batch-result');
+            
+            const testData = {
+                schedule_arrangement: '测试提前批安排_' + Date.now(),
+                interview_process: '三轮面试',
+                selection_criteria: '综合评估'
+            };
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/early-batch`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('early-batch-result', 'success', '提前批政策更新成功', data);
+                } else {
+                    showResult('early-batch-result', 'error', '提前批政策更新失败', data);
+                }
+            } catch (error) {
+                showResult('early-batch-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testGetRuralGrid() {
+            const container = document.getElementById('rural-grid-result');
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/rural-grid`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('rural-grid-result', 'success', '农网政策获取成功', data);
+                } else {
+                    showResult('rural-grid-result', 'error', '农网政策获取失败', data);
+                }
+            } catch (error) {
+                showResult('rural-grid-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testUpdateRuralGrid() {
+            const container = document.getElementById('rural-grid-result');
+            
+            const testData = {
+                work_environment: '测试农网环境_' + Date.now(),
+                salary_structure: '基本工资+绩效',
+                career_development: '技术+管理双通道'
+            };
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/rural-grid`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('rural-grid-result', 'success', '农网政策更新成功', data);
+                } else {
+                    showResult('rural-grid-result', 'error', '农网政策更新失败', data);
+                }
+            } catch (error) {
+                showResult('rural-grid-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        async function testGetAllSections() {
+            const container = document.getElementById('all-sections-result');
+            container.innerHTML = '';
+            
+            try {
+                const response = await fetch(`${BASE_URL}/api/v1/policy-sections/${TEST_UNIT_ID}/all`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResult('all-sections-result', 'success', '所有板块信息获取成功', data);
+                } else {
+                    showResult('all-sections-result', 'error', '所有板块信息获取失败', data);
+                }
+            } catch (error) {
+                showResult('all-sections-result', 'error', `请求失败: ${error.message}`);
+            }
+        }
+
+        // 页面加载完成后自动执行健康检查
+        window.onload = function() {
+            showResult('health-result', 'info', '准备进行API测试...');
+            setTimeout(testHealthCheck, 1000);
+        };
+    </script>
+</body>
+</html>

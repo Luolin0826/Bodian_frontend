@@ -9,7 +9,6 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AAlert: typeof import('ant-design-vue/es')['Alert']
-    AAutoComplete: typeof import('ant-design-vue/es')['AutoComplete']
     AAvatar: typeof import('ant-design-vue/es')['Avatar']
     ABadge: typeof import('ant-design-vue/es')['Badge']
     ABreadcrumb: typeof import('ant-design-vue/es')['Breadcrumb']
@@ -77,6 +76,7 @@ declare module 'vue' {
     ATreeSelect: typeof import('ant-design-vue/es')['TreeSelect']
     ATypographyText: typeof import('ant-design-vue/es')['TypographyText']
     AUpload: typeof import('ant-design-vue/es')['Upload']
+    AUploadDragger: typeof import('ant-design-vue/es')['UploadDragger']
     AvatarSelector: typeof import('./../components/AvatarSelector.vue')['default']
     CategoryFilter: typeof import('./../components/script/CategoryFilter.vue')['default']
     CategoryManager: typeof import('./../components/script/CategoryManager.vue')['default']

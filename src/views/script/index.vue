@@ -8,7 +8,12 @@
           <span class="stat-label">总话术数</span>
         </div>
         <div class="stat-item">
-          <span class="stat-number">{{ scriptStats.popular }}</span>
+          <span class="stat-number">
+            {{ scriptStats.popular }}
+            <a-tooltip title="复制10次以上可成为热门话术">
+              <question-circle-outlined class="help-icon-corner" />
+            </a-tooltip>
+          </span>
           <span class="stat-label">热门话术</span>
         </div>
         <div class="stat-item">
@@ -27,7 +32,7 @@
           <div class="search-inputs">
             <a-input-search
               v-model:value="searchKeyword"
-              placeholder="搜索话术标题、问题、答案或关键词"
+              placeholder="搜索问题场景、话术内容或关键词"
               class="search-input"
               @search="handleSearch"
               allow-clear
@@ -96,10 +101,10 @@
                     按创建日期
                   </span>
                 </a-select-option>
-                <a-select-option value="title">
+                <a-select-option value="updated">
                   <span class="option-text">
-                    <sort-ascending-outlined class="option-icon" />
-                    按标题排序
+                    <clock-circle-outlined class="option-icon" />
+                    按更新时间排序
                   </span>
                 </a-select-option>
               </a-select>
@@ -277,7 +282,9 @@
                 >
                   <copy-outlined />
                 </a-button>
+                <!-- 删除按钮：仅超级管理员可见 -->
                 <a-button 
+                  v-if="canDeleteScript"
                   type="text" 
                   size="small" 
                   @click.stop="handleDelete(script)"
@@ -333,7 +340,7 @@
       <div class="mobile-filter-content">
         <a-form layout="vertical">
           <!-- v2.0新分类体系筛选器 - 级联选择器 -->
-          <a-form-item label="话术分类">
+          <a-form-item label="话术分类" name="category">
             <a-cascader
               v-model:value="selectedCascaderValue"
               :options="cascaderOptions"
@@ -349,7 +356,7 @@
             />
           </a-form-item>
 
-          <a-form-item label="适用平台">
+          <a-form-item label="适用平台" name="platform">
             <a-select
               v-model:value="selectedPlatform"
               placeholder="选择平台"
@@ -367,7 +374,7 @@
           </a-form-item>
           
           
-          <a-form-item label="排序方式">
+          <a-form-item label="排序方式" name="sort_by">
             <a-select
               v-model:value="sortBy"
               placeholder="选择排序"
@@ -375,7 +382,7 @@
             >
               <a-select-option value="usage">按使用次数</a-select-option>
               <a-select-option value="date">按创建日期</a-select-option>
-              <a-select-option value="title">按标题排序</a-select-option>
+              <a-select-option value="updated">按更新时间排序</a-select-option>
             </a-select>
           </a-form-item>
         </a-form>
@@ -445,8 +452,25 @@
             使用次数
           </div>
           <div class="row-content stats-content">
-            <span class="usage-number">{{ currentScript.usage_count || 0 }}</span>
-            <span class="create-time">{{ formatDate(currentScript.created_at) }}</span>
+            <span class="usage-number">{{ currentScript.usage_count || 0 }} 次</span>
+          </div>
+        </div>
+        
+        <!-- 时间信息 -->
+        <div class="detail-row time-row">
+          <div class="row-label">
+            <clock-circle-outlined />
+            时间信息
+          </div>
+          <div class="row-content time-content">
+            <div class="time-item">
+              <span class="time-label">创建时间：</span>
+              <span class="time-value">{{ formatDate(currentScript.created_at) }}</span>
+            </div>
+            <div v-if="currentScript.updated_at && currentScript.updated_at !== currentScript.created_at" class="time-item">
+              <span class="time-label">更新时间：</span>
+              <span class="time-value">{{ formatDate(currentScript.updated_at) }}</span>
+            </div>
           </div>
         </div>
 
@@ -531,29 +555,15 @@
           </a-col>
         </a-row>
         
-        <!-- 第二行：标题和问题 -->
-        <a-row :gutter="12">
-          <a-col :span="12">
-            <a-form-item label="标题" name="title">
-              <a-input 
-                v-model:value="formData.title" 
-                placeholder="请输入话术标题"
-                show-count
-                :maxlength="100"
-              />
-            </a-form-item>
-          </a-col>
-          <a-col :span="12">
-            <a-form-item label="问题" name="question">
-              <a-input 
-                v-model:value="formData.question" 
-                placeholder="请输入客户可能提出的问题（可选）"
-                show-count
-                :maxlength="200"
-              />
-            </a-form-item>
-          </a-col>
-        </a-row>
+        <!-- 第二行：问题场景 -->
+        <a-form-item label="问题场景" name="question">
+          <a-input 
+            v-model:value="formData.question" 
+            placeholder="请输入客户问题或使用场景"
+            show-count
+            :maxlength="200"
+          />
+        </a-form-item>
         
         <a-form-item label="话术内容" name="answer">
           <a-textarea 
@@ -624,7 +634,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, computed, watch } from 'vue'
+import { ref, reactive, onMounted, computed, watch, nextTick } from 'vue'
 import { message, Modal } from 'ant-design-vue'
 import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
@@ -696,6 +706,11 @@ const canManagePin = computed(() => {
   return userStore.userInfo?.role === 'super_admin' || userStore.userInfo?.role === 'admin'
 })
 
+const canDeleteScript = computed(() => {
+  // 只有超级管理员可以删除话术
+  return userStore.userInfo?.role === 'super_admin'
+})
+
 // 响应式数据
 const loading = ref(false)
 const submitLoading = ref(false)
@@ -710,7 +725,7 @@ const formRef = ref()
 const categorySelectorRef = ref()
 const categorySelectorKey = ref(0) // 用于强制刷新CategorySelector
 const viewType = ref<'grid' | 'list'>('list')
-const sortBy = ref<string>('date')
+const sortBy = ref<string>('updated')
 
 // 搜索参数
 const searchKeyword = ref('')
@@ -857,14 +872,14 @@ const formData = reactive<Script>({
 
 // 表单验证规则
 const rules = {
-  title: [
-    { required: true, message: '请输入话术标题', trigger: 'blur' }
+  question: [
+    { required: true, message: '请输入问题场景', trigger: 'blur' }
   ],
   answer: [
     { required: true, message: '请输入话术内容', trigger: 'blur' }
   ],
-  primary_category: [
-    { required: true, message: '请选择主分类', trigger: 'change' }
+  category_id: [
+    { required: true, message: '请选择话术分类', trigger: 'change' }
   ]
 } as any
 
@@ -1031,7 +1046,7 @@ const getSubCategoryIconColor = (subcategoryValue: string) => {
 
 // 格式化日期
 const formatDate = (dateStr?: string) => {
-  return dateStr ? dayjs(dateStr).format('MM-DD') : ''
+  return dateStr ? dayjs(dateStr).format('YYYY-MM-DD HH:mm') : ''
 }
 
 // 切换展示模式
@@ -1051,7 +1066,9 @@ const loadScripts = async () => {
   try {
     const params: ScriptQuery = {
       page: pagination.current,
-      per_page: pagination.pageSize
+      per_page: pagination.pageSize,
+      sort_by: sortBy.value, // 添加排序参数
+      sort_order: 'desc' // 降序排列，最新的在前面
     }
     
     if (searchKeyword.value.trim()) {
@@ -1097,10 +1114,11 @@ const loadScripts = async () => {
     const response = await searchScripts(params)
     console.log('收到搜索响应:', response)
     
-    // 根据优先级和排序方式处理数据
+    // 只处理优先级排序，具体的时间/使用次数排序由后端完成
     let sortedData = [...(response.data || [])]
     
-    // 先按优先级排序：置顶 > 收藏 > 普通
+    // 前端只负责优先级排序：置顶 > 收藏 > 普通
+    // 在相同优先级内保持后端返回的排序（已按sort_by参数排序）
     sortedData.sort((a, b) => {
       // 置顶的优先级最高
       if (a.is_pinned && !b.is_pinned) return -1
@@ -1112,17 +1130,8 @@ const loadScripts = async () => {
         if (!a.is_favorited && b.is_favorited) return 1
       }
       
-      // 优先级相同时，按选择的排序方式排序
-      switch (sortBy.value) {
-        case 'usage':
-          return (b.usage_count || 0) - (a.usage_count || 0)
-        case 'date':
-          return dayjs(b.created_at || '').diff(dayjs(a.created_at || ''))
-        case 'title':
-          return (a.title || '').localeCompare(b.title || '')
-        default:
-          return 0
-      }
+      // 相同优先级内保持后端排序，不再进行额外排序
+      return 0
     })
     
     scriptList.value = sortedData
@@ -1453,8 +1462,40 @@ const handleCategoryDelete = (categoryId: number) => {
 
 const handleCategoryChange = (categoryId: number | null, category?: ScriptCategory) => {
   formData.category_id = categoryId
+  
   if (category) {
     console.log('选择分类:', category.name)
+    
+    // 根据分类信息设置对应的主分类和子分类
+    // 这里需要建立分类ID和主/子分类的映射关系
+    // 暂时根据分类名称进行映射
+    const categoryMappings: Record<string, { primary: string; secondary?: string }> = {
+      '项目分类': { primary: 'project_category' },
+      '电网': { primary: 'project_category', secondary: 'power_grid' },
+      '电气考研': { primary: 'project_category', secondary: 'electrical_exam' },
+      '产品介绍': { primary: 'product_intro' },
+      '营销话术': { primary: 'marketing' },
+      '常见问题': { primary: 'faq' },
+      '学习指导': { primary: 'learning_guidance' },
+      '网申': { primary: 'learning_guidance', secondary: 'application_guide' },
+      '复习规划': { primary: 'learning_guidance', secondary: 'review_planning' },
+      '报考咨询': { primary: 'learning_guidance', secondary: 'consultation' },
+      '学习规划': { primary: 'study_planning' }
+    }
+    
+    const mapping = categoryMappings[category.name]
+    if (mapping) {
+      formData.primary_category = mapping.primary
+      formData.secondary_category = mapping.secondary
+    } else {
+      // 如果没有匹配到，设置为默认值
+      formData.primary_category = 'other'
+      formData.secondary_category = undefined
+    }
+  } else {
+    // 清空分类时，同时清空主/子分类
+    formData.primary_category = undefined
+    formData.secondary_category = undefined
   }
 }
 
@@ -1563,7 +1604,6 @@ const showCreateModal = () => {
 const handleEdit = (script: Script) => {
   editingScript.value = script
   Object.assign(formData, {
-    title: script.title,
     question: script.question,
     answer: script.answer,
     keywords: script.keywords,
@@ -1589,9 +1629,15 @@ const handleEdit = (script: Script) => {
 
 // 删除话术
 const handleDelete = (script: Script) => {
+  // 权限验证
+  if (!canDeleteScript.value) {
+    message.warning('您没有权限执行此操作')
+    return
+  }
+  
   (Modal as any).confirm({
     title: '确认删除',
-    content: `确定要删除话术「${script.title}」吗？此操作不可恢复。`,
+    content: `确定要删除话术「${script.question || script.title || '此话术'}」吗？此操作不可恢复。`,
     okText: '删除',
     okType: 'danger',
     cancelText: '取消',
@@ -1666,33 +1712,71 @@ const handleSubmit = async () => {
     submitLoading.value = true
     
     // 准备提交数据，确保格式正确
+    const now = new Date().toISOString()
     const submitData = {
-      title: formData.title,
+      title: formData.question || '', // 使用问题场景作为标题
       question: formData.question || '',
       answer: formData.answer,
       keywords: formData.keywords || '',
+      // 分类字段
+      category_id: formData.category_id || null,
       // v2.0新分类体系字段
-      primary_category: formData.primary_category, // 必填字段
+      primary_category: formData.primary_category,
       secondary_category: formData.secondary_category || undefined,
       // 兼容旧分类字段
       script_type_new: formData.script_type_new || undefined,
       content_type_new: formData.content_type_new || undefined,
       platform_new: formData.platform_new || undefined,
-      customer_info: formData.customer_info || undefined
+      customer_info: formData.customer_info || undefined,
+      // 时间字段
+      ...(editingScript.value ? {
+        // 编辑时只更新updated_at
+        updated_at: now
+      } : {
+        // 新建时设置created_at和updated_at
+        created_at: now,
+        updated_at: now
+      })
     }
     
     console.log('提交数据:', submitData)
     
+    let createdScript = null
     if (editingScript.value) {
       await updateScript(editingScript.value.id!, submitData)
       message.success('更新话术成功')
     } else {
-      await createScript(submitData)
+      createdScript = await createScript(submitData)
       message.success('创建话术成功')
     }
     
     modalVisible.value = false
-    loadScripts()
+    
+    if (createdScript && !editingScript.value) {
+      // 新建话术：询问用户是否要查看新话术
+      (Modal as any).confirm({
+        title: '话术创建成功',
+        content: '新话术已创建。是否跳转到第一页查看最新话术？',
+        okText: '查看新话术',
+        cancelText: '留在当前页',
+        onOk: async () => {
+          pagination.current = 1
+          await loadScripts()
+          message.success('已跳转到第一页显示新话术')
+        },
+        onCancel: async () => {
+          // 保持在当前页刷新
+          await loadScripts()
+        }
+      })
+    } else if (editingScript.value) {
+      // 编辑现有话术：保持在当前页刷新
+      await loadScripts()
+      message.info('话术已更新，当前页面已刷新')
+    } else {
+      // 其他情况：保持在当前页刷新
+      await loadScripts()
+    }
   } catch (error) {
     console.error('提交失败:', error)
     if (error?.errorFields) return // 表单验证错误
@@ -1711,7 +1795,6 @@ const handleCancel = () => {
 // 重置表单
 const resetForm = () => {
   Object.assign(formData, {
-    title: '',
     question: '',
     answer: '',
     keywords: '',
@@ -1811,7 +1894,7 @@ const resetFilters = () => {
   selectedPlatform.value = undefined
   selectedCategories.value = []
   selectedCascaderValue.value = []
-  sortBy.value = 'usage'
+  sortBy.value = 'updated'
   searchKeyword.value = ''
   handleSearch()
 }
@@ -1887,6 +1970,7 @@ onMounted(async () => {
     
     .stat-item {
       text-align: center;
+      position: relative;
       
       .stat-number {
         display: block;
@@ -1908,6 +1992,30 @@ onMounted(async () => {
         
         @media (max-width: 768px) {
           font-size: 11px;
+        }
+      }
+      
+      .help-icon {
+        margin-left: 4px;
+        color: #999;
+        font-size: 10px;
+        cursor: help;
+        
+        &:hover {
+          color: #1890ff;
+         }
+      }
+      
+      .help-icon-corner {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        color: #999;
+        font-size: 10px;
+        cursor: help;
+        
+        &:hover {
+          color: #1890ff;
         }
       }
     }
@@ -2915,10 +3023,29 @@ onMounted(async () => {
           font-weight: 600;
           color: #fa8c16;
         }
+      }
+    }
+    
+    &.time-row {
+      .time-content {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
         
-        .create-time {
-          font-size: 12px;
-          color: #999;
+        .time-item {
+          display: flex;
+          align-items: center;
+          font-size: 13px;
+          
+          .time-label {
+            color: #666;
+            min-width: 70px;
+          }
+          
+          .time-value {
+            color: #333;
+            font-family: monospace;
+          }
         }
       }
     }

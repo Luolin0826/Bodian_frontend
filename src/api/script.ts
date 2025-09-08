@@ -64,8 +64,12 @@ export interface ScriptQuery {
   script_type_new?: string // 话术类型筛选
   content_type_new?: string // 内容类型筛选
   platform_new?: string    // 平台筛选
+  // 分页参数
   page?: number
   per_page?: number
+  // 排序参数
+  sort_by?: string    // 排序字段: usage, date, updated
+  sort_order?: string // 排序方向: asc, desc
 }
 
 export interface ScriptListResponse {

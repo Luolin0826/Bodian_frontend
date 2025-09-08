@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>省份字段隔离问题修复</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .header h1 {
+      color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    
+    .critical-alert {
+      background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 20px rgba(238, 90, 82, 0.3);
+    }
+    
+    .critical-alert h2 {
+      margin: 0 0 8px 0;
+      font-size: 24px;
+    }
+    
+    .problem-section {
+      background: #fff3e0;
+      border: 2px solid #ffb74d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .problem-section h3 {
+      color: #ef6c00;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .problem-section h3::before {
+      content: "🐛";
+      margin-right: 8px;
+    }
+    
+    .timeline {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    
+    .timeline h4 {
+      margin: 0 0 16px 0;
+      color: #495057;
+    }
+    
+    .timeline-item {
+      display: flex;
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+    
+    .timeline-step {
+      background: #007bff;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      min-width: 60px;
+      text-align: center;
+      margin-right: 12px;
+      margin-top: 2px;
+    }
+    
+    .timeline-step.problem {
+      background: #dc3545;
+    }
+    
+    .timeline-content {
+      flex: 1;
+      font-size: 14px;
+    }
+    
+    .code-block {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 12px 0;
+      overflow-x: auto;
+    }
+    
+    .highlight-problem {
+      background: #744949;
+      color: #fed7d7;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .highlight-solution {
+      background: #2f5233;
+      color: #c6f6d5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .solution-section {
+      background: #e8f5e8;
+      border: 2px solid #81c784;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .solution-section h3 {
+      color: #2e7d32;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .solution-section h3::before {
+      content: "🔧";
+      margin-right: 8px;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 24px 0;
+    }
+    
+    .comparison-card {
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .comparison-card.before {
+      border-color: #ff9f9f;
+    }
+    
+    .comparison-card.after {
+      border-color: #95f985;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .comparison-card.before .card-header {
+      background: #ff6b6b;
+    }
+    
+    .comparison-card.after .card-header {
+      background: #51cf66;
+    }
+    
+    .card-content {
+      padding: 20px;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚨 省份字段隔离问题修复</h1>
+      <p style="color: #7f8c8d; font-size: 16px;">严重的数据隔离缺陷修复</p>
+    </div>
+    
+    <div class="critical-alert">
+      <h2>🚨 严重问题已修复！</h2>
+      <p>自定义字段现在能正确按省份隔离显示</p>
+    </div>
+    
+    <div class="problem-section">
+      <h3>问题描述</h3>
+      <p><strong>严重的数据隔离问题：</strong></p>
+      <ul>
+        <li>❌ 在广州（广东省）创建的自定义字段</li>
+        <li>❌ 切换到四川省后仍然显示</li>
+        <li>❌ 不同省份的字段混合显示</li>
+        <li>❌ 违反了数据隔离的基本原则</li>
+      </ul>
+      
+      <div class="timeline">
+        <h4>问题执行流程：</h4>
+        <div class="timeline-item">
+          <div class="timeline-step">用户A</div>
+          <div class="timeline-content">
+            在广州单位添加自定义字段"发展前景如何"<br>
+            <small>✅ 字段保存到数据库，province="广东省"</small>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-step problem">切换</div>
+          <div class="timeline-content">
+            用户切换到四川省的某个单位<br>
+            <small>❌ 旧字段没有清除，继续显示广东省的字段</small>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-step problem">显示</div>
+          <div class="timeline-content">
+            四川省页面错误显示广东省的字段<br>
+            <small>❌ 用户困惑：为什么四川有广东的字段？</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="comparison-card before">
+        <div class="card-header">❌ 修复前：数据泄露</div>
+        <div class="card-content">
+          <h4>缺失的监听逻辑</h4>
+          <div class="code-block">
+<span class="highlight-problem">// 只监听 unitId 变化</span>
+watch(() => props.unitId, (newUnitId) => {
+  if (newUnitId) {
+    loadPolicyInfo(newUnitId)
+    <span class="highlight-problem">// 但没有清除旧的自定义字段</span>
+    <span class="highlight-problem">// 没有重新加载新省份的字段</span>
+  }
+})
+
+<span class="highlight-problem">// 缺失：没有监听省份变化</span>
+<span class="highlight-problem">// 结果：广东省字段在四川省显示</span>
+          </div>
+          <div style="background: #ffebee; padding: 12px; border-radius: 6px;">
+            <strong>问题：</strong> allFields 中保留旧省份字段定义
+          </div>
+        </div>
+      </div>
+      
+      <div class="comparison-card after">
+        <div class="card-header">✅ 修复后：严格隔离</div>
+        <div class="card-content">
+          <h4>完整的省份监听</h4>
+          <div class="code-block">
+<span class="highlight-solution">// 监听省份变化</span>
+watch(() => currentProvince.value, async (newProvince, oldProvince) => {
+  if (newProvince !== oldProvince && newProvince && props.unitId) {
+    console.log('🔄 省份变化，清除旧数据')
+    
+    <span class="highlight-solution">// 1. 清除旧的自定义字段定义</span>
+    Object.keys(allFields).forEach(fieldName => {
+      if (allFields[fieldName].is_custom) {
+        delete allFields[fieldName]
+      }
+    })
+    
+    <span class="highlight-solution">// 2. 清除旧的字段值</span>
+    if (policyInfo.value) {
+      Object.keys(policyInfo.value).forEach(fieldName => {
+        if (policyInfo.value[fieldName].data_source === 'custom_fields') {
+          delete policyInfo.value[fieldName]
+        }
+      })
+    }
+    
+    <span class="highlight-solution">// 3. 重新加载新省份的字段</span>
+    await loadCustomFields()
+  }
+})
+          </div>
+          <div style="background: #e8f5e8; padding: 12px; border-radius: 6px;">
+            <strong>结果：</strong> 每个省份只显示自己的字段
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="solution-section">
+      <h3>修复方案详解</h3>
+      
+      <p><strong>核心修复逻辑：</strong></p>
+      <ol>
+        <li><strong>监听省份变化</strong> - 使用 <code>watch(() => currentProvince.value)</code></li>
+        <li><strong>清除旧字段定义</strong> - 删除 <code>allFields</code> 中的自定义字段</li>
+        <li><strong>清除旧字段值</strong> - 删除 <code>policyInfo.value</code> 中的自定义字段</li>
+        <li><strong>重新加载新字段</strong> - 调用 <code>loadCustomFields()</code> 获取新省份字段</li>
+      </ol>
+      
+      <p><strong>安全保障：</strong></p>
+      <ul>
+        <li>🛡️ 只清除标记为 <code>is_custom: true</code> 的字段</li>
+        <li>🛡️ 只清除 <code>data_source: 'custom_fields'</code> 的值</li>
+        <li>🛡️ 保留系统内置字段不受影响</li>
+        <li>🛡️ 异步加载确保数据一致性</li>
+      </ul>
+    </div>
+    
+    <div style="background: #e3f2fd; border: 2px solid #90caf9; border-radius: 12px; padding: 20px; margin: 24px 0;">
+      <h3 style="color: #1565c0; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🧪</span>
+        测试验证步骤
+      </h3>
+      <ol>
+        <li><strong>清除缓存</strong> - 按 Ctrl+Shift+R 确保使用最新代码</li>
+        <li><strong>测试广东省</strong> - 选择广州单位，添加自定义字段"测试字段A"</li>
+        <li><strong>切换四川省</strong> - 选择成都单位，确认不显示"测试字段A"</li>
+        <li><strong>添加四川字段</strong> - 在成都添加自定义字段"测试字段B"</li>
+        <li><strong>切回广东</strong> - 确认只显示"测试字段A"，不显示"测试字段B"</li>
+        <li><strong>查看日志</strong> - 控制台应显示省份切换日志</li>
+      </ol>
+      
+      <div style="background: #fff3e0; border: 1px solid #ffb74d; border-radius: 6px; padding: 12px; margin-top: 16px;">
+        <strong>预期控制台日志：</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>🔄 <code>省份变化，清除旧数据并重新加载: {oldProvince: "广东省", newProvince: "四川省"}</code></li>
+          <li>✅ <code>省份切换完成，已加载新省份的自定义字段</code></li>
+        </ul>
+      </div>
+    </div>
+    
+    <div style="background: #f1f8e9; border: 1px solid #aed581; border-radius: 8px; padding: 20px; margin-top: 24px;">
+      <h4 style="color: #33691e; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">✅</span>
+        修复总结
+      </h4>
+      <ul style="margin: 0; padding-left: 20px; color: #33691e;">
+        <li><strong>问题性质：</strong> 严重的数据隔离缺陷</li>
+        <li><strong>影响范围：</strong> 所有省份的自定义字段混合显示</li>
+        <li><strong>修复方法：</strong> 添加省份变化监听和数据清理</li>
+        <li><strong>安全性：</strong> 只清理自定义字段，保护系统字段</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🚨 省份字段隔离问题修复完成');
+      console.log('✅ 添加了省份变化监听');
+      console.log('🧹 省份切换时会清除旧字段并重新加载');
+      console.log('🛡️ 确保数据严格按省份隔离');
+      console.log('📋 请测试省份切换功能');
+    });
+  </script>
+</body>
+</html>

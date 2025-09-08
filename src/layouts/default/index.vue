@@ -9,6 +9,7 @@
           :collapsed-width="80"
           collapsible
           class="layout-sider"
+          @collapse="handleSiderCollapse"
         >
           <div class="logo" :class="{ 'logo-collapsed': collapsed }">
             <transition name="fade" mode="out-in">
@@ -31,7 +32,7 @@
           <SideMenu :collapsed="collapsed" />
         </a-layout-sider>
     
-        <a-layout class="layout-main">
+        <a-layout class="layout-main" :class="{ 'main-collapsed': collapsed }">
           <!-- 顶部导航栏 -->
           <a-layout-header class="layout-header" :class="{ 'layout-header-mobile': isMobile }">
             <div class="header-left">
@@ -39,7 +40,7 @@
               <button
                 v-if="isMobile"
                 class="header-menu-btn"
-                @click="showDrawer = true"
+                @click="layoutStore.setMobileDrawer(true)"
                 :aria-label="'打开菜单'"
               >
                 <menu-outlined />
@@ -49,7 +50,7 @@
               <button
                 v-else
                 class="header-collapse-btn"
-                @click="collapsed = !collapsed"
+                @click="layoutStore.toggleSidebar()"
                 :aria-label="collapsed ? '展开侧边栏' : '收起侧边栏'"
               >
                 <menu-fold-outlined v-if="!collapsed" />
@@ -98,7 +99,7 @@
                 class="drawer-logo-image"
               />
             </div>
-            <button class="drawer-close" @click="showDrawer = false" aria-label="关闭菜单">
+            <button class="drawer-close" @click="layoutStore.setMobileDrawer(false)" aria-label="关闭菜单">
               <close-outlined />
             </button>
           </div>
@@ -108,7 +109,7 @@
     </template>
     
     <script setup lang="ts">
-    import { ref, computed } from 'vue'
+    import { ref, computed, onMounted, onUnmounted } from 'vue'
     import { useRoute } from 'vue-router'
     import {
       MenuFoldOutlined,
@@ -117,15 +118,49 @@
       CloseOutlined
     } from '@ant-design/icons-vue'
     import { useResponsive } from '@/composables/useResponsive'
+    import { useLayoutStore } from '@/stores/layout'
     import SideMenu from './components/SideMenu.vue'
     import Breadcrumb from './components/Breadcrumb.vue'
     import UserMenu from '@/components/common/UserMenu.vue'
     
     const route = useRoute()
     const { isMobile } = useResponsive()
+    const layoutStore = useLayoutStore()
     
-    const collapsed = ref(false)
-    const showDrawer = ref(false)
+    // 使用全局状态
+    const collapsed = computed({
+      get: () => layoutStore.sidebarCollapsed,
+      set: (value) => layoutStore.setSidebarCollapsed(value)
+    })
+    
+    const showDrawer = computed({
+      get: () => layoutStore.showMobileDrawer,
+      set: (value) => layoutStore.setMobileDrawer(value)
+    })
+    
+    // 处理侧边栏收缩
+    const handleSiderCollapse = (collapsed: boolean, type: string) => {
+      console.log('侧边栏状态变化:', { collapsed, type })
+      layoutStore.setSidebarCollapsed(collapsed)
+    }
+    
+    // 监听窗口大小变化
+    const handleResize = () => {
+      layoutStore.updateWindowSize(window.innerWidth, window.innerHeight)
+    }
+    
+    onMounted(() => {
+      if (typeof window !== 'undefined') {
+        window.addEventListener('resize', handleResize)
+        handleResize() // 初始化尺寸
+      }
+    })
+    
+    onUnmounted(() => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('resize', handleResize)
+      }
+    })
     
     // 当前页面标题（移动端显示）
     const currentPageTitle = computed(() => {
@@ -152,7 +187,7 @@
     
     
     const handleMobileMenuSelect = () => {
-      showDrawer.value = false
+      layoutStore.setMobileDrawer(false)
     }
     </script>
     
@@ -178,11 +213,14 @@
     }
     
     .layout-main {
-      margin-left: var(--sidebar-width);
-      transition: var(--transition-base);
+      margin-left: 240px;
+      transition: margin-left 0.2s ease;
+      width: calc(100% - 240px);
       
-      .layout-sider:global(.ant-layout-sider-collapsed) + & {
-        margin-left: var(--sidebar-width-collapsed);
+      // 当侧边栏收缩时的样式
+      &.main-collapsed {
+        margin-left: 80px;
+        width: calc(100% - 80px);
       }
     }
     
@@ -301,7 +339,13 @@
     // 移动端时调整主布局
     @media (max-width: 768px) {
       .layout-main {
-        margin-left: 0;
+        margin-left: 0 !important;
+        width: 100% !important;
+        
+        &.main-collapsed {
+          margin-left: 0 !important;
+          width: 100% !important;
+        }
       }
     }
     

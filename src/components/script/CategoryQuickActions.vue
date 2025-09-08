@@ -68,7 +68,7 @@
       @cancel="cancelRename"
     >
       <a-form>
-        <a-form-item label="分类名称">
+        <a-form-item label="分类名称" name="name">
           <a-input 
             ref="renameInput"
             v-model:value="renameForm.name"
@@ -88,14 +88,14 @@
       @cancel="cancelEdit"
     >
       <a-form :model="editForm" layout="vertical">
-        <a-form-item label="分类名称" required>
+        <a-form-item label="分类名称" name="name" required>
           <a-input 
             v-model:value="editForm.name"
             placeholder="请输入分类名称"
           />
         </a-form-item>
         
-        <a-form-item label="分类描述">
+        <a-form-item label="分类描述" name="description">
           <a-textarea 
             v-model:value="editForm.description"
             placeholder="请输入分类描述（可选）"
@@ -103,7 +103,7 @@
           />
         </a-form-item>
         
-        <a-form-item label="父分类">
+        <a-form-item label="父分类" name="parent_id">
           <CategorySelector
             v-model="editForm.parent_id"
             placeholder="选择父分类（可选）"
@@ -112,7 +112,7 @@
           />
         </a-form-item>
         
-        <a-form-item label="排序权重">
+        <a-form-item label="排序权重" name="sort_order">
           <a-input-number 
             v-model:value="editForm.sort_order"
             placeholder="数值越小越靠前"
@@ -139,18 +139,18 @@
       @cancel="cancelCreateChild"
     >
       <a-form :model="createChildForm" layout="vertical">
-        <a-form-item label="父分类" required>
+        <a-form-item label="父分类" name="parent_id" required>
           <a-input :value="category.name" disabled />
         </a-form-item>
         
-        <a-form-item label="分类名称" required>
+        <a-form-item label="分类名称" name="name" required>
           <a-input 
             v-model:value="createChildForm.name"
             placeholder="请输入分类名称"
           />
         </a-form-item>
         
-        <a-form-item label="分类描述">
+        <a-form-item label="分类描述" name="description">
           <a-textarea 
             v-model:value="createChildForm.description"
             placeholder="请输入分类描述（可选）"

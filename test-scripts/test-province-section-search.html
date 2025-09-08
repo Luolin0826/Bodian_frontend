@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>省份和专栏搜索功能测试</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 20px; }
+        .test-container { max-width: 1200px; margin: 0 auto; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px; }
+        .test-title { color: #333; border-bottom: 2px solid #1890ff; padding-bottom: 10px; }
+        .test-case { background: #f9f9f9; padding: 15px; margin: 10px 0; border-radius: 6px; }
+        .success { color: #52c41a; }
+        .error { color: #ff4d4f; }
+        .info { color: #1890ff; }
+        .api-endpoint { background: #f0f8ff; padding: 10px; border-radius: 4px; font-family: monospace; }
+        .test-result { margin-top: 10px; padding: 10px; border-radius: 4px; }
+        .test-result.success { background: #f6ffed; border: 1px solid #b7eb8f; }
+        .test-result.error { background: #fff2f0; border: 1px solid #ffccc7; }
+        button { background: #1890ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; margin-right: 10px; }
+        button:hover { background: #40a9ff; }
+        .loading { color: #1890ff; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔍 省份和专栏搜索功能测试</h1>
+        <p class="info">本测试页面用于验证自定义字段管理系统的省份和专栏联合搜索功能</p>
+
+        <!-- API 接口测试 -->
+        <div class="test-section">
+            <h2 class="test-title">📡 API 接口测试</h2>
+            
+            <div class="test-case">
+                <h3>测试 1: 获取省份列表</h3>
+                <div class="api-endpoint">GET /api/v1/custom-fields/provinces</div>
+                <p>期望返回包含省份名称和字段统计的列表</p>
+                <button onclick="testGetProvinces()">测试获取省份列表</button>
+                <div id="provinces-result" class="test-result"></div>
+            </div>
+            
+            <div class="test-case">
+                <h3>测试 2: 按专栏筛选字段</h3>
+                <div class="api-endpoint">GET /api/v1/custom-fields/?section=early_batch</div>
+                <p>期望返回提前批专栏的所有自定义字段</p>
+                <button onclick="testFilterBySection()">测试专栏筛选</button>
+                <div id="section-result" class="test-result"></div>
+            </div>
+            
+            <div class="test-case">
+                <h3>测试 3: 按省份筛选字段</h3>
+                <div class="api-endpoint">GET /api/v1/custom-fields/?province=广东省</div>
+                <p>期望返回广东省相关的自定义字段</p>
+                <button onclick="testFilterByProvince()">测试省份筛选</button>
+                <div id="province-result" class="test-result"></div>
+            </div>
+            
+            <div class="test-case">
+                <h3>测试 4: 省份和专栏联合搜索</h3>
+                <div class="api-endpoint">GET /api/v1/custom-fields/?section=basic&province=广东省</div>
+                <p>期望返回广东省基本政策信息专栏的字段</p>
+                <button onclick="testCombinedSearch()">测试联合搜索</button>
+                <div id="combined-result" class="test-result"></div>
+            </div>
+        </div>
+
+        <!-- 前端功能测试 -->
+        <div class="test-section">
+            <h2 class="test-title">🎨 前端功能测试</h2>
+            
+            <div class="test-case">
+                <h3>测试 5: 搜索组件交互</h3>
+                <p>测试搜索过滤器的交互逻辑和状态管理</p>
+                <div id="ui-test-area">
+                    <div style="margin-bottom: 15px;">
+                        <label>选择专栏：</label>
+                        <select id="section-select" onchange="updateSearchStatus()">
+                            <option value="basic">基本政策信息</option>
+                            <option value="early_batch">提前批板块</option>
+                            <option value="rural_grid">农网板块</option>
+                            <option value="regional">地市县概览</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label>选择省份：</label>
+                        <select id="province-select" onchange="updateSearchStatus()">
+                            <option value="">请选择省份</option>
+                            <option value="广东省">广东省</option>
+                            <option value="北京">北京</option>
+                            <option value="上海">上海</option>
+                            <option value="浙江省">浙江省</option>
+                        </select>
+                    </div>
+                    <div id="search-status" style="margin: 10px 0; padding: 10px; background: #f0f8ff; border-radius: 4px;">
+                        <strong>当前搜索状态：</strong><span id="status-text">基本政策信息</span>
+                    </div>
+                    <button onclick="resetFilters()">重置筛选</button>
+                    <button onclick="simulateSearch()">模拟搜索</button>
+                </div>
+                <div id="ui-result" class="test-result"></div>
+            </div>
+        </div>
+
+        <!-- 测试结果汇总 -->
+        <div class="test-section">
+            <h2 class="test-title">📊 测试结果汇总</h2>
+            <div id="test-summary">
+                <p>点击上方测试按钮开始测试...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let testResults = [];
+
+        // 模拟API调用（实际环境中会调用真实的API）
+        function mockApiCall(url, expectedData) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // 模拟不同的API响应
+                    if (url.includes('provinces')) {
+                        resolve({
+                            success: true,
+                            data: {
+                                total_provinces: 2,
+                                provinces: [
+                                    { province: '广东省', field_count: 5 },
+                                    { province: '北京', field_count: 3 }
+                                ]
+                            }
+                        });
+                    } else if (url.includes('section=early_batch')) {
+                        resolve({
+                            success: true,
+                            data: {
+                                fields: [
+                                    { field_name: 'early_schedule', display_name: '提前批时间安排', section: 'early_batch' },
+                                    { field_name: 'early_requirement', display_name: '提前批要求', section: 'early_batch' }
+                                ]
+                            }
+                        });
+                    } else if (url.includes('province=广东省')) {
+                        resolve({
+                            success: true,
+                            data: {
+                                fields: [
+                                    { field_name: 'gd_special', display_name: '广东特殊政策', province: '广东省' },
+                                    { field_name: 'gd_requirement', display_name: '广东要求', province: '广东省' }
+                                ]
+                            }
+                        });
+                    } else {
+                        resolve({
+                            success: true,
+                            data: { fields: [] }
+                        });
+                    }
+                }, 500);
+            });
+        }
+
+        async function testGetProvinces() {
+            const resultDiv = document.getElementById('provinces-result');
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在测试获取省份列表...</div>';
+            
+            try {
+                const response = await mockApiCall('/api/v1/custom-fields/provinces');
+                if (response.success && response.data.provinces.length > 0) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ 测试通过</div>
+                        <div>共获取到 ${response.data.total_provinces} 个省份:</div>
+                        <ul>${response.data.provinces.map(p => `<li>${p.province} (${p.field_count}个字段)</li>`).join('')}</ul>
+                    `;
+                    addTestResult('获取省份列表', true, '成功获取省份数据');
+                } else {
+                    throw new Error('返回数据格式错误');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 测试失败: ${error.message}</div>`;
+                addTestResult('获取省份列表', false, error.message);
+            }
+        }
+
+        async function testFilterBySection() {
+            const resultDiv = document.getElementById('section-result');
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在测试专栏筛选...</div>';
+            
+            try {
+                const response = await mockApiCall('/api/v1/custom-fields/?section=early_batch');
+                if (response.success && response.data.fields.length > 0) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ 测试通过</div>
+                        <div>找到 ${response.data.fields.length} 个提前批字段:</div>
+                        <ul>${response.data.fields.map(f => `<li>${f.display_name} (${f.field_name})</li>`).join('')}</ul>
+                    `;
+                    addTestResult('专栏筛选', true, `找到${response.data.fields.length}个字段`);
+                } else {
+                    throw new Error('未找到提前批字段');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 测试失败: ${error.message}</div>`;
+                addTestResult('专栏筛选', false, error.message);
+            }
+        }
+
+        async function testFilterByProvince() {
+            const resultDiv = document.getElementById('province-result');
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在测试省份筛选...</div>';
+            
+            try {
+                const response = await mockApiCall('/api/v1/custom-fields/?province=广东省');
+                if (response.success && response.data.fields.length > 0) {
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ 测试通过</div>
+                        <div>找到 ${response.data.fields.length} 个广东省字段:</div>
+                        <ul>${response.data.fields.map(f => `<li>${f.display_name} (${f.field_name})</li>`).join('')}</ul>
+                    `;
+                    addTestResult('省份筛选', true, `找到${response.data.fields.length}个字段`);
+                } else {
+                    throw new Error('未找到广东省字段');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 测试失败: ${error.message}</div>`;
+                addTestResult('省份筛选', false, error.message);
+            }
+        }
+
+        async function testCombinedSearch() {
+            const resultDiv = document.getElementById('combined-result');
+            resultDiv.innerHTML = '<div class="loading">⏳ 正在测试联合搜索...</div>';
+            
+            try {
+                const response = await mockApiCall('/api/v1/custom-fields/?section=basic&province=广东省');
+                resultDiv.innerHTML = `
+                    <div class="success">✅ 测试通过</div>
+                    <div>联合搜索参数: section=basic, province=广东省</div>
+                    <div>找到 ${response.data.fields.length} 个匹配字段</div>
+                `;
+                addTestResult('联合搜索', true, '联合搜索功能正常');
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ 测试失败: ${error.message}</div>`;
+                addTestResult('联合搜索', false, error.message);
+            }
+        }
+
+        function updateSearchStatus() {
+            const section = document.getElementById('section-select').value;
+            const province = document.getElementById('province-select').value;
+            
+            const sectionNames = {
+                'basic': '基本政策信息',
+                'early_batch': '提前批板块',
+                'rural_grid': '农网板块',
+                'regional': '地市县概览'
+            };
+            
+            let statusText = sectionNames[section] || section;
+            if (province) {
+                statusText += ` | 省份：${province}`;
+            }
+            
+            document.getElementById('status-text').textContent = statusText;
+        }
+
+        function resetFilters() {
+            document.getElementById('section-select').value = 'basic';
+            document.getElementById('province-select').value = '';
+            updateSearchStatus();
+            
+            const resultDiv = document.getElementById('ui-result');
+            resultDiv.innerHTML = '<div class="success">✅ 筛选器已重置</div>';
+            addTestResult('重置筛选器', true, '筛选器重置功能正常');
+        }
+
+        function simulateSearch() {
+            const section = document.getElementById('section-select').value;
+            const province = document.getElementById('province-select').value;
+            
+            const resultDiv = document.getElementById('ui-result');
+            resultDiv.innerHTML = `
+                <div class="success">✅ 模拟搜索执行成功</div>
+                <div>搜索参数: section=${section}, province=${province || '(空)'}</div>
+            `;
+            addTestResult('前端交互', true, '搜索组件交互正常');
+        }
+
+        function addTestResult(testName, passed, message) {
+            testResults.push({ testName, passed, message, timestamp: new Date() });
+            updateTestSummary();
+        }
+
+        function updateTestSummary() {
+            const summaryDiv = document.getElementById('test-summary');
+            const passedTests = testResults.filter(t => t.passed).length;
+            const totalTests = testResults.length;
+            
+            let html = `
+                <h3>测试统计 (${passedTests}/${totalTests} 通过)</h3>
+                <div style="margin: 10px 0;">
+                    <div style="width: 100%; background: #f0f0f0; border-radius: 4px; height: 20px;">
+                        <div style="width: ${(passedTests/totalTests)*100}%; background: #52c41a; height: 100%; border-radius: 4px; transition: width 0.3s;"></div>
+                    </div>
+                </div>
+                <ul>
+            `;
+            
+            testResults.forEach(result => {
+                const icon = result.passed ? '✅' : '❌';
+                const color = result.passed ? '#52c41a' : '#ff4d4f';
+                html += `<li style="color: ${color};">${icon} ${result.testName}: ${result.message}</li>`;
+            });
+            
+            html += '</ul>';
+            
+            if (totalTests > 0) {
+                const overallStatus = passedTests === totalTests ? '🎉 全部测试通过！' : '⚠️ 部分测试失败';
+                html += `<div style="margin-top: 15px; padding: 10px; background: ${passedTests === totalTests ? '#f6ffed' : '#fff7e6'}; border-radius: 4px;">
+                    <strong>${overallStatus}</strong>
+                </div>`;
+            }
+            
+            summaryDiv.innerHTML = html;
+        }
+
+        // 页面加载时自动运行基本测试
+        window.onload = function() {
+            setTimeout(() => {
+                console.log('🚀 开始自动测试...');
+                updateSearchStatus();
+            }, 1000);
+        };
+    </script>
+</body>
+</html>

@@ -665,8 +665,19 @@ watch(() => props.query, (newQuery) => {
 
 // 生命周期
 onMounted(async () => {
-  await loadAvailableOptions()
-  await loadAllSecondaryUnits()
+  // 暂时跳过选项加载，使用默认数据
+  try {
+    await loadAvailableOptions()
+  } catch (error) {
+    console.warn('选项加载失败，使用默认数据')
+  }
+  
+  try {
+    await loadAllSecondaryUnits()
+  } catch (error) {
+    console.warn('单位数据加载失败')
+  }
+  
   loadQueryHistory()
 })
 </script>

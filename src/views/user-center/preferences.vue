@@ -18,14 +18,14 @@
         <!-- 界面设置 -->
         <a-tab-pane key="appearance" tab="界面设置">
           <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-            <a-form-item label="主题模式">
+            <a-form-item label="主题模式" name="theme_mode">
               <a-radio-group v-model:value="preferences.appearance.theme_mode">
                 <a-radio value="light">浅色主题</a-radio>
                 <a-radio value="dark">深色主题</a-radio>
               </a-radio-group>
             </a-form-item>
 
-            <a-form-item label="侧边栏">
+            <a-form-item label="侧边栏" name="sidebar_collapsed">
               <a-switch 
                 v-model:checked="preferences.appearance.sidebar_collapsed"
                 checked-children="收起"
@@ -33,7 +33,7 @@
               />
             </a-form-item>
 
-            <a-form-item label="面包屑导航">
+            <a-form-item label="面包屑导航" name="show_breadcrumb">
               <a-switch 
                 v-model:checked="preferences.appearance.show_breadcrumb"
                 checked-children="显示"
@@ -41,14 +41,14 @@
               />
             </a-form-item>
 
-            <a-form-item label="语言">
+            <a-form-item label="语言" name="language">
               <a-select v-model:value="preferences.appearance.language" style="width: 200px">
                 <a-select-option value="zh-CN">简体中文</a-select-option>
                 <a-select-option value="en-US">English</a-select-option>
               </a-select>
             </a-form-item>
 
-            <a-form-item label="字体大小">
+            <a-form-item label="字体大小" name="font_size">
               <a-radio-group v-model:value="preferences.appearance.font_size">
                 <a-radio value="small">小</a-radio>
                 <a-radio value="medium">中</a-radio>
@@ -61,7 +61,7 @@
         <!-- 通知设置 -->
         <a-tab-pane key="notification" tab="通知设置">
           <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-            <a-form-item label="系统通知">
+            <a-form-item label="系统通知" name="system_notification">
               <a-switch 
                 v-model:checked="preferences.notification.system_notification"
                 checked-children="开启"
@@ -70,7 +70,7 @@
               <div class="setting-desc">接收系统重要通知和公告</div>
             </a-form-item>
 
-            <a-form-item label="邮件通知">
+            <a-form-item label="邮件通知" name="email_notification">
               <a-switch 
                 v-model:checked="preferences.notification.email_notification"
                 checked-children="开启"
@@ -79,7 +79,7 @@
               <div class="setting-desc">通过邮件接收通知</div>
             </a-form-item>
 
-            <a-form-item label="声音提醒">
+            <a-form-item label="声音提醒" name="sound_notification">
               <a-switch 
                 v-model:checked="preferences.notification.sound_notification"
                 checked-children="开启"
@@ -88,7 +88,7 @@
               <div class="setting-desc">新消息时播放提示音</div>
             </a-form-item>
 
-            <a-form-item label="浏览器通知">
+            <a-form-item label="浏览器通知" name="browser_notification">
               <a-switch 
                 v-model:checked="preferences.notification.browser_notification"
                 checked-children="开启"
@@ -102,7 +102,7 @@
         <!-- 安全设置 -->
         <a-tab-pane key="security" tab="安全设置">
           <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-            <a-form-item label="自动登出时间">
+            <a-form-item label="自动登出时间" name="auto_logout_time">
               <a-select v-model:value="preferences.security.auto_logout_time" style="width: 200px">
                 <a-select-option :value="30">30分钟</a-select-option>
                 <a-select-option :value="60">1小时</a-select-option>
@@ -113,7 +113,7 @@
               <div class="setting-desc">无操作自动登出时间</div>
             </a-form-item>
 
-            <a-form-item label="会话超时">
+            <a-form-item label="会话超时" name="session_timeout">
               <a-select v-model:value="preferences.security.session_timeout" style="width: 200px">
                 <a-select-option :value="15">15分钟</a-select-option>
                 <a-select-option :value="30">30分钟</a-select-option>
@@ -123,7 +123,7 @@
               <div class="setting-desc">会话超时时间</div>
             </a-form-item>
 
-            <a-form-item label="双因素认证">
+            <a-form-item label="双因素认证" name="enable_two_factor">
               <a-switch 
                 v-model:checked="preferences.security.enable_two_factor"
                 checked-children="启用"
@@ -138,7 +138,7 @@
         <!-- 工作区设置 -->
         <a-tab-pane key="workspace" tab="工作区设置">
           <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
-            <a-form-item label="默认首页">
+            <a-form-item label="默认首页" name="default_page">
               <a-select v-model:value="preferences.workspace.default_page" style="width: 300px">
                 <a-select-option value="/dashboard">仪表盘</a-select-option>
                 <a-select-option value="/customer/list">客户管理</a-select-option>
@@ -148,7 +148,7 @@
               <div class="setting-desc">登录后默认跳转的页面</div>
             </a-form-item>
 
-            <a-form-item label="分页大小">
+            <a-form-item label="分页大小" name="items_per_page">
               <a-select v-model:value="preferences.workspace.items_per_page" style="width: 200px">
                 <a-select-option :value="10">10条/页</a-select-option>
                 <a-select-option :value="20">20条/页</a-select-option>
@@ -159,7 +159,7 @@
               <div class="setting-desc">列表页面默认显示条数</div>
             </a-form-item>
 
-            <a-form-item label="日期格式">
+            <a-form-item label="日期格式" name="date_format">
               <a-select v-model:value="preferences.workspace.date_format" style="width: 200px">
                 <a-select-option value="YYYY-MM-DD">2024-01-15</a-select-option>
                 <a-select-option value="YYYY/MM/DD">2024/01/15</a-select-option>
@@ -169,7 +169,7 @@
               <div class="setting-desc">系统中日期的显示格式</div>
             </a-form-item>
 
-            <a-form-item label="时间格式">
+            <a-form-item label="时间格式" name="time_format">
               <a-radio-group v-model:value="preferences.workspace.time_format">
                 <a-radio value="24h">24小时制</a-radio>
                 <a-radio value="12h">12小时制</a-radio>

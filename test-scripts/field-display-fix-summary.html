@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>字段显示修复完成</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .header h1 {
+      color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    
+    .success-alert {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 20px rgba(17, 153, 142, 0.3);
+    }
+    
+    .problem-section {
+      background: #fff3e0;
+      border: 2px solid #ffb74d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .problem-section h3 {
+      color: #ef6c00;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .problem-section h3::before {
+      content: "🐛";
+      margin-right: 8px;
+    }
+    
+    .solution-section {
+      background: #e8f5e8;
+      border: 2px solid #81c784;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .solution-section h3 {
+      color: #2e7d32;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .solution-section h3::before {
+      content: "🔧";
+      margin-right: 8px;
+    }
+    
+    .data-structure {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    
+    .data-structure h4 {
+      margin: 0 0 12px 0;
+      color: #495057;
+    }
+    
+    .code-block {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 12px 0;
+      overflow-x: auto;
+    }
+    
+    .highlight-problem {
+      background: #744949;
+      color: #fed7d7;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .highlight-solution {
+      background: #2f5233;
+      color: #c6f6d5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 24px 0;
+    }
+    
+    .comparison-card {
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .comparison-card.before {
+      border-color: #ff9f9f;
+    }
+    
+    .comparison-card.after {
+      border-color: #95f985;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .comparison-card.before .card-header {
+      background: #ff6b6b;
+    }
+    
+    .comparison-card.after .card-header {
+      background: #51cf66;
+    }
+    
+    .card-content {
+      padding: 20px;
+    }
+    
+    .api-response {
+      background: #f0f8ff;
+      border: 1px solid #90caf9;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 16px 0;
+    }
+    
+    .api-response h4 {
+      color: #1565c0;
+      margin: 0 0 8px 0;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✅ 字段显示修复完成</h1>
+      <p style="color: #7f8c8d; font-size: 16px;">解决自定义字段值不显示的问题</p>
+    </div>
+    
+    <div class="success-alert">
+      <h2>🎉 修复完成！</h2>
+      <p>自定义字段现在能正确显示字段值了</p>
+    </div>
+    
+    <div class="problem-section">
+      <h3>问题分析</h3>
+      <p><strong>根本原因：</strong> 前端代码只处理了字段定义（添加到 <code>allFields</code>），但<strong>没有处理字段值</strong>。</p>
+      
+      <div class="api-response">
+        <h4>API返回的正确数据结构：</h4>
+        <div class="code-block">
+{
+  "data": {
+    "fields": [
+      {
+        "field_name": "custom_1757226925033",
+        <span class="highlight-solution">"display_name": "发展前景如何",</span>
+        <span class="highlight-solution">"field_value": "1",</span>  // ← 这个值没有被前端使用
+        "field_type": "text",
+        "is_visible": 1,
+        ...
+      }
+    ]
+  }
+}
+        </div>
+      </div>
+      
+      <p><strong>问题表现：</strong></p>
+      <ul>
+        <li>❌ 字段标题显示正常（"发展前景如何"、"福利待遇"）</li>
+        <li>❌ 字段值不显示（应该显示 "1"、"2" 等值）</li>
+        <li>❌ 界面上只能看到字段名，没有内容</li>
+      </ul>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="comparison-card before">
+        <div class="card-header">❌ 修复前的代码逻辑</div>
+        <div class="card-content">
+          <div class="code-block">
+<span class="highlight-problem">// 只处理字段定义，没有处理字段值</span>
+result.fields.forEach((field: any) => {
+  if (field.is_visible) {
+    allFields[field.field_name] = {
+      display_name: field.display_name,
+      type: field.field_type || 'text',
+      description: field.field_content || field.display_name,
+      is_custom: true
+    }
+    <span class="highlight-problem">// 缺少：没有将 field_value 添加到 policyInfo</span>
+  }
+})
+          </div>
+          <div style="background: #ffebee; padding: 12px; border-radius: 6px; margin-top: 12px;">
+            <strong>结果：</strong> 字段定义有了，但没有值
+          </div>
+        </div>
+      </div>
+      
+      <div class="comparison-card after">
+        <div class="card-header">✅ 修复后的代码逻辑</div>
+        <div class="card-content">
+          <div class="code-block">
+<span class="highlight-solution">// 同时处理字段定义和字段值</span>
+result.fields.forEach((field: any) => {
+  if (field.is_visible) {
+    <span class="highlight-solution">// 1. 添加字段定义到allFields</span>
+    allFields[field.field_name] = {
+      display_name: field.display_name,
+      type: field.field_type || 'text',
+      description: field.field_content || field.display_name,
+      is_custom: true
+    }
+    
+    <span class="highlight-solution">// 2. 添加字段值到policyInfo</span>
+    policyInfo.value[field.field_name] = {
+      <span class="highlight-solution">value: field.field_value || '',</span>
+      display_name: field.display_name,
+      type: field.field_type || 'text',
+      priority: 999,
+      data_source: 'custom_fields'
+    }
+  }
+})
+          </div>
+          <div style="background: #e8f5e8; padding: 12px; border-radius: 6px; margin-top: 12px;">
+            <strong>结果：</strong> 字段定义和值都有了
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="solution-section">
+      <h3>修复方案详解</h3>
+      
+      <div class="data-structure">
+        <h4>数据流程修复：</h4>
+        <ol>
+          <li><strong>API响应</strong> → 包含字段定义和值的完整数据</li>
+          <li><strong>字段定义处理</strong> → 添加到 <code>allFields</code>（用于字段配置）</li>
+          <li><strong>字段值处理</strong> → 添加到 <code>policyInfo.value</code>（用于显示）</li>
+          <li><strong>界面渲染</strong> → 从 <code>visibleFields</code> 获取完整的字段信息显示</li>
+        </ol>
+      </div>
+      
+      <p><strong>关键修复点：</strong></p>
+      <ul>
+        <li>✅ 初始化 <code>policyInfo.value = {}</code> 确保对象存在</li>
+        <li>✅ 将 <code>field.field_value</code> 映射到 <code>policyInfo.value[fieldName].value</code></li>
+        <li>✅ 保持数据结构一致性，符合现有显示逻辑</li>
+        <li>✅ 添加详细日志，便于调试和监控</li>
+      </ul>
+    </div>
+    
+    <div style="background: #e3f2fd; border: 2px solid #90caf9; border-radius: 12px; padding: 20px; margin: 24px 0;">
+      <h3 style="color: #1565c0; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🧪</span>
+        测试验证
+      </h3>
+      <ol>
+        <li><strong>清除缓存</strong> - 按 Ctrl+Shift+R（或 Cmd+Shift+R）</li>
+        <li><strong>打开控制台</strong> - 查看详细的字段处理日志</li>
+        <li><strong>访问页面</strong> - 进入数据查询，选择广东省的单位</li>
+        <li><strong>检查显示</strong> - 确认"发展前景如何"显示值"1"，"福利待遇"显示值"2"</li>
+        <li><strong>验证编辑</strong> - 点击编辑模式，确认字段值可以正常编辑</li>
+      </ol>
+      
+      <div style="background: #fff3e0; border: 1px solid #ffb74d; border-radius: 6px; padding: 12px; margin-top: 16px;">
+        <strong>预期结果：</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>字段"发展前景如何"显示值"1"</li>
+          <li>字段"福利待遇"显示值"2"</li>
+          <li>控制台显示完整的字段处理日志</li>
+          <li>编辑模式下可以修改字段值</li>
+        </ul>
+      </div>
+    </div>
+    
+    <div style="background: #f1f8e9; border: 1px solid #aed581; border-radius: 8px; padding: 20px; margin-top: 24px;">
+      <h4 style="color: #33691e; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🎯</span>
+        修复总结
+      </h4>
+      <ul style="margin: 0; padding-left: 20px; color: #33691e;">
+        <li><strong>问题定位：</strong> API数据正确，前端处理不完整</li>
+        <li><strong>根本原因：</strong> 只处理字段定义，忽略字段值</li>
+        <li><strong>解决方案：</strong> 同时处理定义和值，填充到正确的数据结构</li>
+        <li><strong>验证方法：</strong> 检查页面显示和控制台日志</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🎯 字段显示修复完成');
+      console.log('✅ 现在会同时处理字段定义和字段值');
+      console.log('🔧 policyInfo.value 将包含完整的字段数据');
+      console.log('📋 请检查页面显示效果');
+      
+      // 模拟预期的数据结构
+      console.log('📝 修复后预期的policyInfo.value结构:');
+      console.log({
+        'custom_1757226925033': {
+          value: '1',
+          display_name: '发展前景如何',
+          type: 'text',
+          priority: 999,
+          data_source: 'custom_fields'
+        },
+        'custom_1757235485147': {
+          value: '2',
+          display_name: '福利待遇',
+          type: 'text',
+          priority: 999,
+          data_source: 'custom_fields'
+        }
+      });
+    });
+  </script>
+</body>
+</html>

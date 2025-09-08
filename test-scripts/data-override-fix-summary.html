@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>数据覆盖问题修复</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+    }
+    
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    
+    .header h1 {
+      color: #2c3e50;
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    
+    .success-alert {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+      padding: 24px;
+      border-radius: 12px;
+      text-align: center;
+      margin-bottom: 32px;
+      box-shadow: 0 10px 20px rgba(17, 153, 142, 0.3);
+    }
+    
+    .problem-section {
+      background: #fff3e0;
+      border: 2px solid #ffb74d;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .problem-section h3 {
+      color: #ef6c00;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .problem-section h3::before {
+      content: "🐛";
+      margin-right: 8px;
+    }
+    
+    .timeline {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 16px 0;
+    }
+    
+    .timeline h4 {
+      margin: 0 0 16px 0;
+      color: #495057;
+    }
+    
+    .timeline-item {
+      display: flex;
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+    
+    .timeline-time {
+      background: #007bff;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      min-width: 80px;
+      text-align: center;
+      margin-right: 12px;
+      margin-top: 2px;
+    }
+    
+    .timeline-content {
+      flex: 1;
+      font-size: 14px;
+    }
+    
+    .timeline-content.problem {
+      color: #dc3545;
+    }
+    
+    .timeline-content.good {
+      color: #28a745;
+    }
+    
+    .code-block {
+      background: #2d3748;
+      color: #e2e8f0;
+      padding: 16px;
+      border-radius: 8px;
+      font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      margin: 12px 0;
+      overflow-x: auto;
+    }
+    
+    .highlight-problem {
+      background: #744949;
+      color: #fed7d7;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .highlight-solution {
+      background: #2f5233;
+      color: #c6f6d5;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+    
+    .comparison-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin: 24px 0;
+    }
+    
+    .comparison-card {
+      border: 2px solid #e8e8e8;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .comparison-card.before {
+      border-color: #ff9f9f;
+    }
+    
+    .comparison-card.after {
+      border-color: #95f985;
+    }
+    
+    .card-header {
+      padding: 16px 20px;
+      font-weight: bold;
+      color: white;
+    }
+    
+    .comparison-card.before .card-header {
+      background: #ff6b6b;
+    }
+    
+    .comparison-card.after .card-header {
+      background: #51cf66;
+    }
+    
+    .card-content {
+      padding: 20px;
+    }
+    
+    .solution-section {
+      background: #e8f5e8;
+      border: 2px solid #81c784;
+      border-radius: 12px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+    
+    .solution-section h3 {
+      color: #2e7d32;
+      margin: 0 0 12px 0;
+      display: flex;
+      align-items: center;
+    }
+    
+    .solution-section h3::before {
+      content: "🔧";
+      margin-right: 8px;
+    }
+    
+    @media (max-width: 768px) {
+      .comparison-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .container {
+        margin: 10px;
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🎯 数据覆盖问题修复</h1>
+      <p style="color: #7f8c8d; font-size: 16px;">解决函数并发执行导致的数据丢失问题</p>
+    </div>
+    
+    <div class="success-alert">
+      <h2>🎉 根本问题已修复！</h2>
+      <p>loadPolicyInfo 函数不再覆盖自定义字段数据</p>
+    </div>
+    
+    <div class="problem-section">
+      <h3>问题根因分析</h3>
+      <p><strong>核心问题：</strong> 多个函数并发执行，后执行的函数覆盖了先执行函数的数据。</p>
+      
+      <div class="timeline">
+        <h4>问题执行时序：</h4>
+        <div class="timeline-item">
+          <div class="timeline-time">T1</div>
+          <div class="timeline-content good">
+            <code>loadCustomFields()</code> 执行完成<br>
+            <small>✅ 添加自定义字段到 policyInfo.value = {custom_xxx: {value: "1233435"}, ...}</small>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">T2</div>
+          <div class="timeline-content problem">
+            <code>loadPolicyInfo()</code> 执行<br>
+            <small>❌ 重置 policyInfo.value = {} ← 自定义字段数据丢失！</small>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-time">T3</div>
+          <div class="timeline-content problem">
+            <code>visibleFields</code> 计算<br>
+            <small>❌ 找不到自定义字段数据，页面显示空白</small>
+          </div>
+        </div>
+      </div>
+      
+      <p><strong>从控制台日志可以验证：</strong></p>
+      <ul>
+        <li>✅ API请求成功: <code>GET /api/v1/custom-fields/values/1</code></li>
+        <li>✅ 数据返回正确: <code>field_value: "1233435", "1234335366214"</code></li>
+        <li>✅ loadCustomFields 执行正常</li>
+        <li>❌ 但页面不显示，说明数据被后续函数覆盖了</li>
+      </ul>
+    </div>
+    
+    <div class="comparison-grid">
+      <div class="comparison-card before">
+        <div class="card-header">❌ 修复前：数据覆盖</div>
+        <div class="card-content">
+          <div class="code-block">
+<span class="highlight-problem">// loadPolicyInfo 函数 - 第1047行</span>
+if (basicPolicyData) {
+  <span class="highlight-problem">policyInfo.value = {}</span>  // ← 完全重置，丢失自定义字段
+  
+  // 处理基本政策数据...
+  Object.keys(basicPolicyData).forEach(fieldName => {
+    policyInfo.value[fieldName] = { ... }
+  })
+}
+          </div>
+          <div style="background: #ffebee; padding: 12px; border-radius: 6px;">
+            <strong>结果：</strong> 自定义字段被清空，只剩基本政策字段
+          </div>
+        </div>
+      </div>
+      
+      <div class="comparison-card after">
+        <div class="card-header">✅ 修复后：数据合并</div>
+        <div class="card-content">
+          <div class="code-block">
+<span class="highlight-solution">// loadPolicyInfo 函数 - 修复后</span>
+if (basicPolicyData) {
+  <span class="highlight-solution">if (!policyInfo.value) {</span>
+    <span class="highlight-solution">policyInfo.value = {}</span>
+  <span class="highlight-solution">}</span>  // ← 仅在需要时初始化，保留现有数据
+  
+  console.log('当前policyInfo包含:', Object.keys(policyInfo.value))
+  
+  // 处理基本政策数据...（追加，不覆盖）
+  Object.keys(basicPolicyData).forEach(fieldName => {
+    policyInfo.value[fieldName] = { ... }
+  })
+}
+          </div>
+          <div style="background: #e8f5e8; padding: 12px; border-radius: 6px;">
+            <strong>结果：</strong> 保留自定义字段，添加基本政策字段
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="solution-section">
+      <h3>修复方案详解</h3>
+      
+      <p><strong>具体修复位置：</strong></p>
+      <ul>
+        <li>📍 <strong>第1047行</strong> - <code>loadPolicyInfo</code> 函数中的重置逻辑</li>
+        <li>📍 <strong>第1042行</strong> - 异常情况下的重置逻辑</li>
+        <li>✅ <strong>第982行</strong> - <code>loadBasicPolicyData</code> 函数已经是正确的</li>
+      </ul>
+      
+      <div class="code-block">
+<span class="highlight-solution">// 修复策略：从重置改为合并</span>
+
+// 修复前
+policyInfo.value = {}  // ❌ 清空所有数据
+
+// 修复后  
+if (!policyInfo.value) {  // ✅ 仅在需要时初始化
+  policyInfo.value = {}
+}
+// 保留已有数据，追加新数据
+      </div>
+      
+      <p><strong>新增调试日志：</strong></p>
+      <ul>
+        <li>🔍 <code>loadPolicyInfo - 处理基本政策数据前，当前policyInfo包含: [...]</code></li>
+        <li>🔍 <code>visibleFields处理字段 xxx: {fieldValue, dataSource, ...}</code></li>
+        <li>🔍 <code>最终visibleFields结果: {...}</code></li>
+      </ul>
+    </div>
+    
+    <div style="background: #e3f2fd; border: 2px solid #90caf9; border-radius: 12px; padding: 20px; margin: 24px 0;">
+      <h3 style="color: #1565c0; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🧪</span>
+        测试验证
+      </h3>
+      <ol>
+        <li><strong>清除缓存</strong> - 按 Ctrl+Shift+R（或 Cmd+Shift+R）</li>
+        <li><strong>打开控制台</strong> - 查看新的调试日志</li>
+        <li><strong>选择单位</strong> - 广东省的任意单位</li>
+        <li><strong>观察日志</strong> - 确认没有数据覆盖</li>
+        <li><strong>检查显示</strong> - 自定义字段应该正常显示值</li>
+      </ol>
+      
+      <div style="background: #fff3e0; border: 1px solid #ffb74d; border-radius: 6px; padding: 12px; margin-top: 16px;">
+        <strong>预期控制台日志：</strong>
+        <ul style="margin: 8px 0; padding-left: 20px;">
+          <li>✅ <code>✅ 字段 custom_1757226925033 已添加，值: 1233435</code></li>
+          <li>✅ <code>🔍 loadPolicyInfo - 处理基本政策数据前，当前policyInfo包含: [...custom字段...]</code></li>
+          <li>✅ <code>🔍 visibleFields处理字段: {fieldValue: "1233435", ...}</code></li>
+        </ul>
+      </div>
+    </div>
+    
+    <div style="background: #f1f8e9; border: 1px solid #aed581; border-radius: 8px; padding: 20px; margin-top: 24px;">
+      <h4 style="color: #33691e; margin: 0 0 12px 0; display: flex; align-items: center;">
+        <span style="margin-right: 8px;">🎯</span>
+        修复总结
+      </h4>
+      <ul style="margin: 0; padding-left: 20px; color: #33691e;">
+        <li><strong>问题定位：</strong> 并发执行的函数互相覆盖数据</li>
+        <li><strong>根本原因：</strong> 使用 <code>policyInfo.value = {}</code> 重置整个对象</li>
+        <li><strong>解决方案：</strong> 改为条件初始化，保留现有数据</li>
+        <li><strong>新增监控：</strong> 添加详细日志跟踪数据流</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('🎯 数据覆盖问题修复完成');
+      console.log('✅ loadPolicyInfo 不再重置 policyInfo.value');
+      console.log('🔧 改为条件初始化，保留自定义字段数据');
+      console.log('🔍 新增调试日志，便于问题追踪');
+      console.log('📋 请测试页面显示效果');
+    });
+  </script>
+</body>
+</html>

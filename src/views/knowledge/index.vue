@@ -364,7 +364,7 @@
     >
       <div class="mobile-filter-content">
         <a-form layout="vertical">
-          <a-form-item label="搜索关键词">
+          <a-form-item label="搜索关键词" name="search_keyword">
             <a-input-search
               v-model:value="searchKeyword"
               placeholder="搜索问题、答案或标签"
@@ -374,7 +374,7 @@
             />
           </a-form-item>
           
-          <a-form-item label="知识类型">
+          <a-form-item label="知识类型" name="knowledge_type">
             <a-select
               v-model:value="selectedType"
               placeholder="选择类型"
@@ -392,7 +392,7 @@
             </a-select>
           </a-form-item>
           
-          <a-form-item label="分类">
+          <a-form-item label="分类" name="category">
             <a-select
               v-model:value="selectedCategory"
               placeholder="选择分类"
@@ -410,7 +410,7 @@
             </a-select>
           </a-form-item>
           
-          <a-form-item label="省份电网">
+          <a-form-item label="省份电网" name="unit">
             <a-select
               v-model:value="selectedUnit"
               placeholder="选择省份电网"
@@ -427,7 +427,7 @@
             </a-select>
           </a-form-item>
           
-          <a-form-item label="视图模式">
+          <a-form-item label="视图模式" name="view_mode">
             <a-radio-group v-model:value="viewMode" size="large">
               <a-radio-button value="list">
                 <UnorderedListOutlined />
