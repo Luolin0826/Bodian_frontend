@@ -87,8 +87,8 @@
           v-model:open="showDrawer"
           placement="left"
           :closable="false"
-          :width="280"
-          :body-style="{ padding: 0 }"
+          :width="260"
+          :body-style="{ padding: 0, backgroundColor: '#fff' }"
           class="mobile-drawer"
         >
           <div class="drawer-header">
@@ -352,18 +352,31 @@
     // 抽屉样式
     .mobile-drawer {
       :deep(.ant-drawer-content-wrapper) {
-        width: 280px !important;
+        width: 260px !important;
+      }
+      
+      :deep(.ant-drawer-body) {
+        padding: 0;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+      
+      :deep(.ant-drawer-content) {
+        background: #fff;
       }
     }
     
     .drawer-header {
-      height: var(--header-height-mobile);
+      height: 60px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 16px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
+      padding: 0 20px;
+      background: #fff;
+      border-bottom: 1px solid #f0f0f0;
+      color: #333;
     }
     
     .drawer-logo {
@@ -372,7 +385,7 @@
     }
     
     .drawer-logo-image {
-      height: 32px;
+      height: 40px;
       width: auto;
       object-fit: contain;
     }
@@ -384,14 +397,15 @@
       width: 32px;
       height: 32px;
       border: none;
-      background: rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.06);
       border-radius: 50%;
-      color: white;
+      color: #666;
       cursor: pointer;
-      transition: var(--transition-base);
+      transition: all 0.2s ease;
       
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.12);
+        color: #333;
       }
     }
     
@@ -422,6 +436,65 @@
       
       &.ant-menu-dark {
         background: #001529;
+      }
+    }
+    
+    // 移动端抽屉中的菜单样式
+    .mobile-drawer {
+      :deep(.ant-menu) {
+        background: #fff !important;
+        border-right: none;
+        flex: 1;
+        overflow-y: auto;
+        
+        &.ant-menu-dark {
+          background: #fff !important;
+          
+          .ant-menu-item, .ant-menu-submenu {
+            color: #333 !important;
+            min-height: 48px !important;
+            line-height: 48px !important;
+            padding: 0 20px !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            
+            &:hover {
+              background-color: #f5f5f5 !important;
+              color: #1890ff !important;
+            }
+            
+            &.ant-menu-item-selected {
+              background-color: #e6f7ff !important;
+              color: #1890ff !important;
+              border-right: 3px solid #1890ff !important;
+            }
+            
+            &:active {
+              background-color: #d4edda !important;
+            }
+          }
+          
+          .ant-menu-submenu-title {
+            color: #333 !important;
+            min-height: 48px !important;
+            line-height: 48px !important;
+            padding: 0 20px !important;
+            margin: 0 !important;
+            
+            &:hover {
+              background-color: #f5f5f5 !important;
+              color: #1890ff !important;
+            }
+            
+            &:active {
+              background-color: #d4edda !important;
+            }
+          }
+          
+          .ant-menu-item-icon {
+            color: #666 !important;
+          }
+        }
       }
     }
     

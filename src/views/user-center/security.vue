@@ -23,20 +23,20 @@
       </a-alert>
     </div>
 
-    <a-row :gutter="24">
+    <a-row :gutter="[16, 16]">
       <!-- 安全概览 -->
-      <a-col :span="16">
+      <a-col :xs="24" :sm="24" :md="16" :lg="16">
         <a-card title="安全概览" :loading="loading">
           <div class="security-overview">
-            <a-row :gutter="16">
-              <a-col :span="8">
+            <a-row :gutter="[12, 16]">
+              <a-col :xs="24" :sm="8" :md="8">
                 <a-statistic 
                   title="密码强度" 
                   :value="securitySettings?.password_strength || '-'"
                   :value-style="getPasswordStrengthStyle(securitySettings?.password_strength)"
                 />
               </a-col>
-              <a-col :span="8">
+              <a-col :xs="24" :sm="8" :md="8">
                 <a-statistic 
                   title="登录成功率" 
                   :value="securitySettings?.login_stats.success_rate || 0"
@@ -44,7 +44,7 @@
                   :precision="1"
                 />
               </a-col>
-              <a-col :span="8">
+              <a-col :xs="24" :sm="8" :md="8">
                 <a-statistic 
                   title="信任设备数" 
                   :value="securitySettings?.trusted_devices || 0"
@@ -169,7 +169,7 @@
       </a-col>
 
       <!-- 安全统计 -->
-      <a-col :span="8">
+      <a-col :xs="24" :sm="24" :md="8" :lg="8">
         <a-card title="安全统计" :loading="loading">
           <div class="security-stats">
             <div class="stat-item">
@@ -231,7 +231,7 @@
         style="margin-bottom: 16px;"
       />
       
-      <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+      <a-form :label-col="{ xs: { span: 24 }, sm: { span: 6 } }" :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 } }">
         <a-form-item label="当前密码" name="current_password" required>
           <a-input-password 
             v-model:value="disablePassword"
@@ -636,5 +636,150 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .security-page {
+    padding: 16px;
+  }
+  
+  /* 安全告警适配 */
+  .security-alerts {
+    margin-bottom: 16px !important;
+  }
+  
+  :deep(.ant-alert) {
+    margin-bottom: 12px !important;
+    
+    .ant-alert-action {
+      margin-left: 0;
+      margin-top: 8px;
+    }
+  }
+  
+  /* 卡片间距调整 */
+  :deep(.ant-card) {
+    margin-top: 16px !important;
+  }
+  
+  /* 统计数据适配 */
+  :deep(.ant-statistic) {
+    text-align: center;
+    
+    .ant-statistic-title {
+      font-size: 13px;
+    }
+    
+    .ant-statistic-content {
+      font-size: 20px;
+    }
+  }
+  
+  /* 列表项适配 */
+  :deep(.ant-list-item) {
+    flex-direction: column;
+    align-items: flex-start !important;
+    padding: 16px 12px;
+    
+    .ant-list-item-meta {
+      margin-bottom: 12px;
+      width: 100%;
+      
+      .ant-list-item-meta-content {
+        .ant-list-item-meta-title {
+          font-size: 14px;
+        }
+        
+        .ant-list-item-meta-description {
+          font-size: 12px;
+        }
+      }
+    }
+    
+    .ant-list-item-action {
+      margin-left: 0;
+      width: 100%;
+      
+      li {
+        padding: 0;
+      }
+    }
+  }
+  
+  /* 按钮组适配 */
+  :deep(.ant-card-extra) {
+    margin-top: 12px;
+  }
+  
+  :deep(.ant-space) {
+    width: 100%;
+    justify-content: center;
+    
+    .ant-space-item {
+      flex: 1;
+      
+      .ant-btn {
+        width: 100%;
+        min-height: 44px;
+      }
+    }
+  }
+  
+  /* 会话状态适配 */
+  .session-status {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+  }
+  
+  /* 表单适配 */
+  :deep(.ant-form-item-label) {
+    text-align: left !important;
+    padding-bottom: 4px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .security-page {
+    padding: 12px;
+  }
+  
+  /* 统计数据小屏幕适配 */
+  :deep(.ant-statistic-content) {
+    font-size: 18px !important;
+  }
+  
+  /* 按钮触摸适配 */
+  :deep(.ant-btn) {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  
+  /* 列表项紧凑布局 */
+  :deep(.ant-list-item) {
+    padding: 12px 8px;
+  }
+  
+  /* 标签适配 */
+  :deep(.ant-tag) {
+    margin: 2px;
+  }
+  
+  /* 输入框适配 */
+  :deep(.ant-input) {
+    min-height: 44px;
+  }
+  
+  /* 模态框适配 */
+  :deep(.ant-modal) {
+    margin: 0;
+    max-width: calc(100vw - 32px);
+    
+    .ant-modal-content {
+      border-radius: 8px;
+    }
+  }
 }
 </style>

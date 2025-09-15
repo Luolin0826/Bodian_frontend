@@ -96,7 +96,7 @@
           />
           <a-range-picker
             v-model:value="hireDateRange"
-            placeholder="入职时间范围"
+            :placeholder="['开始日期', '结束日期']"
             @change="handleSearch"
             size="large"
           />
@@ -157,6 +157,29 @@
                 {{ record.department_name }}
               </a-tag>
               <span v-else class="text-gray">未分配</span>
+            </template>
+            
+            <template v-if="column.key === 'phone'">
+              <MaskedText 
+                :value="record.phone || '-'"
+                data-type="phone"
+                :show-apply-button="false"
+              />
+            </template>
+            
+            <template v-if="column.key === 'email'">
+              <MaskedText 
+                :value="record.email || '-'"
+                data-type="email"
+                :show-apply-button="false"
+              />
+            </template>
+            
+            <template v-if="column.key === 'hire_date'">
+              <span v-if="record.hire_date" class="hire-date">
+                {{ formatDate(record.hire_date) }}
+              </span>
+              <span v-else class="text-gray">-</span>
             </template>
             
             <template v-if="column.key === 'is_active'">
@@ -343,11 +366,19 @@
             </div>
             <div class="info-item">
               <label>手机号</label>
-              <span>{{ currentUser.phone || '-' }}</span>
+              <MaskedText 
+                :value="currentUser.phone || '-'"
+                data-type="phone"
+                :show-apply-button="false"
+              />
             </div>
             <div class="info-item">
               <label>邮箱</label>
-              <span>{{ currentUser.email || '-' }}</span>
+              <MaskedText 
+                :value="currentUser.email || '-'"
+                data-type="email"
+                :show-apply-button="false"
+              />
             </div>
             <div class="info-item">
               <label>入职日期</label>
@@ -418,6 +449,9 @@ import {
   ClockCircleOutlined
 } from '@ant-design/icons-vue'
 import { useResponsive } from '@/composables/useResponsive'
+import { useUserStore } from '@/stores/user'
+import { processMaskedArray, SENSITIVE_FIELD_NAMES } from '@/utils/dataMasking'
+import MaskedText from '@/components/common/MaskedText.vue'
 import {
   getUsers,
   createUser,
@@ -429,7 +463,6 @@ import {
   type User,
   type Department
 } from '@/api/system'
-import { useUserStore } from '@/stores/user'
 
 // 响应式工具
 const { isMobile } = useResponsive()
@@ -594,6 +627,11 @@ const getRoleLabel = (role: string) => {
   return labelMap[role] || role
 }
 
+// 格式化日期
+const formatDate = (dateStr: string) => {
+  return dayjs(dateStr).format('YYYY-MM-DD')
+}
+
 // 格式化日期时间
 const formatDateTime = (dateStr: string) => {
   return dayjs(dateStr).format('YYYY-MM-DD HH:mm')
@@ -615,7 +653,10 @@ const loadUsers = async () => {
     }
     
     const response = await getUsers(params)
-    userList.value = response.data
+    
+    // 处理脱敏数据
+    const processedData = processMaskedArray(response.data, ['phone', 'email'])
+    userList.value = processedData
     pagination.total = response.total
     
     // 更新统计数据

@@ -68,9 +68,14 @@ export interface TimePermission {
 
 // 数据权限接口
 export interface DataPermission {
-  scope: 'all' | 'department' | 'self' | 'custom'
-  custom_scopes: string[]
-  sensitive: string[]
+  scope: 'all' | 'department' | 'own' | 'custom'
+  regional_permissions: string[]       // 区域权限
+  department_permissions: string[]     // 部门权限
+  customer_permissions: string[]       // 客户数据权限
+  data_types: string[]                // 数据类型权限
+  sensitive: string[]                 // 敏感数据权限
+  custom_scopes?: string[]           // 自定义范围（兼容字段）
+  project_category_permissions: string[]  // 项目分类权限
 }
 
 // 角色权限接口
@@ -256,6 +261,18 @@ export const validatePermissions = (permissions: RolePermissions): Promise<{
 
 export const importPermissionTemplate = (roleName: string, templateName: string): Promise<{message: string}> => {
   return request.post(`/api/v1/roles/${roleName}/permissions/import`, { template_name: templateName })
+}
+
+// 获取项目分类权限选项
+export const getProjectCategoryPermissionOptions = (): Promise<{
+  categories: Array<{
+    id: number
+    label: string  
+    count: number
+    description?: string
+  }>
+}> => {
+  return request.get('/api/v1/roles/permissions/project-categories')
 }
 
 // 操作日志API

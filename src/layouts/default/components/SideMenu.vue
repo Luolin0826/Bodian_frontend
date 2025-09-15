@@ -43,6 +43,7 @@
       FileTextOutlined,
       BookOutlined,
       SearchOutlined,
+      ScheduleOutlined,
       ProfileOutlined,
       SettingOutlined
     } from '@ant-design/icons-vue'
@@ -84,15 +85,15 @@
         title: '知识库',
         icon: FileTextOutlined
       },
-      // {
-      //   key: '/knowledge',
-      //   title: '知识库',
-      //   icon: BookOutlined
-      // },
       {
         key: '/data-query',
         title: '数查一点通',
         icon: SearchOutlined
+      },
+      {
+        key: '/advance-batch',
+        title: '提前批信息',
+        icon: ScheduleOutlined
       },
       {
         key: '/user-center',
@@ -127,7 +128,8 @@
       console.log('📝 SideMenu: computed 重新计算', {
         userInfo: userStore.userInfo,
         permissions: userStore.permissions,
-        menuCount: userStore.permissions?.menu?.length || 0
+        menuCount: userStore.permissions?.menu?.length || 0,
+        menuPermissions: userStore.permissions?.menu
       })
       
       // 如果用户信息或权限数据还没加载完成，返回空数组
@@ -150,6 +152,8 @@
         return items.filter(item => {
           // 检查当前菜单项是否有权限
           const hasPermission = userStore.hasMenuPermission(item.key)
+          
+          console.log(`📋 菜单项检查: ${item.key} (${item.title}) = ${hasPermission ? '✅' : '❌'}`)
           
           if (!hasPermission) {
             return false

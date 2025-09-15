@@ -125,6 +125,7 @@ export interface AnalyticsQuery {
 
 // 响应数据接口
 export interface DistrictPolicyResponse {
+  query_level?: 'data_overview' | 'policy_included' | 'detailed_policy'
   query_params: DistrictPolicyQuery
   policies: PolicyInfo[]
   summary: {
@@ -176,6 +177,7 @@ export interface DistrictPolicyResponse {
     policies: Array<any>
     total_policies: number
   }
+  debug_policy_info?: any
 }
 
 export interface SchoolLevelResponse {
@@ -250,14 +252,35 @@ export interface BestValueResponse {
   })[]
 }
 
+// batch_code映射配置
+export const batchCodeMapping = {
+  '2025GW01': '第一批',
+  '2025GW02': '第二批', 
+  '2025GW03': '第三批',
+  '2025NW01': '南网批次',
+} as const
+
+export const batchTypeMapping = {
+  '第一批': '2025GW01',
+  '第二批': '2025GW02',
+  '第三批': '2025GW03',
+  '南网批次': '2025NW01',
+  // 简化格式支持
+  '一批': '2025GW01',
+  '二批': '2025GW02',
+  '三批': '2025GW03',
+} as const
+
 // 新增Analytics相关接口类型定义
 export interface SchoolsByBatchQuery {
   unit_id?: number
-  batch_type?: string
-  sort_by?: 'admission_count' | 'school_level' | 'university_name' // 新增排序参数
-  sort_order?: 'asc' | 'desc' // 新增排序方向参数
+  batch_type?: string      // 向后兼容
+  batch_code?: string      // 新的推荐参数
+  sort_by?: 'admission_count' | 'school_level' | 'university_name'
+  sort_order?: 'asc' | 'desc'
   page?: number
   limit?: number
+  quick_filter?: string    // 快捷筛选参数
 }
 
 export interface SchoolsByBatchResponse {
@@ -367,7 +390,7 @@ export const recruitmentAPI = {
       Object.entries(mappedParams).filter(([_, value]) => value !== undefined && value !== null)
     )
 
-    const response = await request.post('/api/v1/data-search/search', cleanParams)
+    const response: any = await request.post('/api/v1/data-search/search', cleanParams)
     
     console.log('🔍 API调用参数:', cleanParams) // 调试日志
     console.log('🔍 API响应数据:', response) // 调试日志
@@ -376,7 +399,7 @@ export const recruitmentAPI = {
     
     // 确定查询级别
     const hasPolicy = (response as any).policy_info?.available && (response as any).policy_info?.policies?.length > 0
-    const queryLevel = hasPolicy ? 'policy_included' : 'data_overview'
+    const queryLevel: 'data_overview' | 'policy_included' | 'detailed_policy' = hasPolicy ? 'policy_included' : 'data_overview'
     
     // 详细调试政策信息
     console.log('🔍 API适配 - 后端原始policy_info:', (response as any).policy_info)
@@ -486,7 +509,7 @@ export const recruitmentAPI = {
       count: number
     }>
   }> {
-    const response = await request.get('/api/v1/data-search/locations/cascade')
+    const response: any = await request.get('/api/v1/data-search/locations/cascade')
     // 适配后端返回的数据结构
     return {
       level: response.level,
@@ -505,7 +528,7 @@ export const recruitmentAPI = {
       count: number
     }>
   }> {
-    const response = await request.get('/api/v1/data-search/locations/cascade', {
+    const response: any = await request.get('/api/v1/data-search/locations/cascade', {
       params: { level: 'city', province }
     })
     // 适配后端返回的数据结构
@@ -528,7 +551,7 @@ export const recruitmentAPI = {
       count: number
     }>
   }> {
-    const response = await request.get('/api/v1/data-search/locations/cascade', {
+    const response: any = await request.get('/api/v1/data-search/locations/cascade', {
       params: { level: 'district', province, city }
     })
     // 适配后端返回的数据结构
@@ -595,7 +618,7 @@ export const recruitmentAPI = {
     }>
   }> {
     try {
-      const response = await request.get('/api/v1/data-search/schools/search', { 
+      const response: any = await request.get('/api/v1/data-search/schools/search', { 
         params: { query, limit } 
       })
       
@@ -702,7 +725,7 @@ export const recruitmentAPI = {
     }>
     count: number
   }> {
-    const response = await request.get('/api/v1/data-search/secondary-units', { 
+    const response: any = await request.get('/api/v1/data-search/secondary-units', { 
       params: { company_type } 
     })
     
@@ -771,9 +794,12 @@ export const recruitmentAPI = {
         const overviewResponse = await recruitmentAPI.getDistrictPolicies(params)
         
         // 即使是 data_overview 级别，如果后端返回了政策信息也要传递给前端
-        const result: any = {
-          query_level: overviewResponse.query_level || 'data_overview',  // 使用后端返回的实际级别
-          data_analysis: overviewResponse.data_analysis
+        const result = {
+          query_level: (overviewResponse.query_level || 'data_overview') as 'data_overview' | 'policy_included' | 'detailed_policy',
+          data_analysis: overviewResponse.data_analysis,
+          policy_info: undefined as any,
+          policy_analysis: undefined as any,
+          debug_policy_info: undefined as any
         }
         
         // 如果后端返回了政策信息，也要传递
@@ -836,9 +862,98 @@ export const recruitmentAPI = {
 
   // ===== 新增Analytics API方法 =====
 
-  // 按批次获取学校录取统计
+  // ===== 统一学校查询接口（新） =====
+  
+  // 统一学校查询接口 - 替代 getSchoolsByBatch 和 checkSchoolAdmission
+  async getSchoolsUnified(params: {
+    unit_id?: number
+    batch_code?: string
+    batch_type?: string  // 兼容旧参数
+    school_name?: string
+    quick_filter?: string
+    sort_by?: string
+    sort_order?: 'asc' | 'desc'
+    page?: number
+    limit?: number
+    include_ratio?: boolean
+  }): Promise<{
+    schools: Array<{
+      university_id: number
+      university_name: string
+      school_level: string
+      admission_count: number
+      admission_ratio?: number
+      male_count: number
+      female_count: number
+      batch: string
+      batch_code: string
+      unit_name: string
+      org_type: string
+      power_feature: number
+    }>
+    pagination: {
+      page: number
+      limit: number
+      total: number
+      total_pages: number
+    }
+    summary: {
+      total_schools: number
+      total_admissions: number
+      male_count: number
+      female_count: number
+      key_schools_count?: number
+    }
+    search_context?: {
+      search_term?: string
+      unit_id?: number
+      batch_code?: string
+      filters_applied: string[]
+    }
+  }> {
+    // 参数处理：优先使用batch_code，如果没有则尝试转换batch_type
+    const processedParams = { ...params }
+    
+    if (!processedParams.batch_code && processedParams.batch_type) {
+      const batchCode = batchTypeMapping[processedParams.batch_type as keyof typeof batchTypeMapping]
+      if (batchCode) {
+        processedParams.batch_code = batchCode
+        delete processedParams.batch_type
+      }
+    }
+    
+    console.log('🔄 getSchoolsUnified 参数处理:', {
+      original: params,
+      processed: processedParams
+    })
+    
+    const response: any = await request.get('/api/v1/analytics/schools-unified', { params: processedParams })
+    if (response.success) {
+      return response.data
+    }
+    throw new Error(response.message || '获取学校数据失败')
+  },
+
+  // 按批次获取学校录取统计（兼容旧接口）
   async getSchoolsByBatch(params: SchoolsByBatchQuery): Promise<SchoolsByBatchResponse['data']> {
-    const response = await request.get('/api/v1/analytics/schools-by-batch', { params })
+    // 参数处理：优先使用batch_code，如果没有则尝试转换batch_type
+    const processedParams = { ...params }
+    
+    if (!processedParams.batch_code && processedParams.batch_type) {
+      // 尝试将batch_type转换为batch_code
+      const batchCode = batchTypeMapping[processedParams.batch_type as keyof typeof batchTypeMapping]
+      if (batchCode) {
+        processedParams.batch_code = batchCode
+        delete processedParams.batch_type // 使用batch_code时移除batch_type
+      }
+    }
+    
+    console.log('🔄 getSchoolsByBatch 参数处理:', {
+      original: params,
+      processed: processedParams
+    })
+    
+    const response: any = await request.get('/api/v1/analytics/schools-by-batch', { params: processedParams })
     if (response.success) {
       return response.data
     }
@@ -847,7 +962,7 @@ export const recruitmentAPI = {
 
   // 获取录取概览数据
   async getAdmissionOverview(params: AdmissionOverviewQuery): Promise<AdmissionOverviewResponse['data']> {
-    const response = await request.get('/api/v1/analytics/admission-overview', { params })
+    const response: any = await request.get('/api/v1/analytics/admission-overview', { params })
     if (response.success) {
       return response.data
     }
@@ -856,7 +971,7 @@ export const recruitmentAPI = {
 
   // 获取批次对比数据
   async getBatchComparison(params: BatchComparisonQuery): Promise<BatchComparisonResponse['data']> {
-    const response = await request.get('/api/v1/analytics/batch-comparison', { params })
+    const response: any = await request.get('/api/v1/analytics/batch-comparison', { params })
     if (response.success) {
       return response.data
     }
@@ -878,7 +993,7 @@ export const recruitmentAPI = {
       percentage: number
     }>
   }> {
-    const response = await request.get('/api/v1/analytics/schools/search', { params })
+    const response: any = await request.get('/api/v1/analytics/schools/search', { params })
     if (response.success) {
       return response.data
     }
@@ -891,7 +1006,7 @@ export const recruitmentAPI = {
     batch_type?: string
     format?: 'json' | 'csv' | 'excel'
   }): Promise<any> {
-    const response = await request.get('/api/v1/analytics/export', { params })
+    const response: any = await request.get('/api/v1/analytics/export', { params })
     if (response.success) {
       return response.data
     }
@@ -905,9 +1020,11 @@ export const recruitmentAPI = {
 
   // 检查特定学校在某单位某批次的录取情况
   async checkSchoolAdmission(params: {
-    unit_id: number
+    unit_id?: number
     batch_type?: string
+    batch_code?: string
     school_name: string
+    quick_filter?: string
   }): Promise<{
     success: boolean
     data: {
@@ -923,7 +1040,18 @@ export const recruitmentAPI = {
       search_query: string
     }
   }> {
-    const response = await request.get('/api/v1/analytics/check-school-admission', { params })
+    // 参数处理：优先使用batch_code，如果没有则尝试转换batch_type
+    const processedParams = { ...params }
+    
+    if (!processedParams.batch_code && processedParams.batch_type) {
+      const batchCode = batchTypeMapping[processedParams.batch_type as keyof typeof batchTypeMapping]
+      if (batchCode) {
+        processedParams.batch_code = batchCode
+        delete processedParams.batch_type
+      }
+    }
+    
+    const response: any = await request.get('/api/v1/analytics/check-school-admission', { params: processedParams })
     if (response.success) {
       return response
     }
@@ -951,6 +1079,7 @@ export const {
   getDetailedPolicy,
   logUserQuery,
   // 新增Analytics方法
+  getSchoolsUnified,
   getSchoolsByBatch,
   getAdmissionOverview,
   getBatchComparison,

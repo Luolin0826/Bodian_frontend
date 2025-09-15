@@ -277,6 +277,71 @@
               </div>
             </div>
           </a-tab-pane>
+
+          <!-- 项目分类权限 -->
+          <a-tab-pane key="project_category" tab="项目分类权限">
+            <div class="permission-section">
+              <div class="section-header">
+                <h4>项目分类访问权限</h4>
+                <p>配置用户可以访问的话术项目分类，限制用户只能查看指定分类下的话术内容</p>
+              </div>
+              
+              <div class="project-category-permissions">
+                <!-- 临时调试信息 -->
+                <div v-if="false" style="margin-bottom: 12px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">
+                  <strong>调试状态:</strong> 项目分类数量: {{ projectCategoryData.length }} | 
+                  权限数组: {{ dataPermissions.project_category_permissions || [] }}
+                </div>
+                
+                <div v-if="projectCategoryData.length === 0" class="loading-state">
+                  <a-spin size="small" />
+                  <span style="margin-left: 8px;">正在加载项目分类选项...</span>
+                </div>
+                
+                <div v-else class="category-grid">
+                  <a-checkbox-group v-model:value="dataPermissions.project_category_permissions">
+                    <a-row :gutter="[16, 16]">
+                      <a-col :span="8" v-for="category in projectCategoryData" :key="category.id">
+                        <div class="category-card" :class="{ 'category-selected': dataPermissions.project_category_permissions.includes(category.id.toString()) }">
+                          <a-checkbox :value="category.id.toString()">
+                            <div class="category-content">
+                              <div class="category-header">
+                                <div class="category-name">{{ category.label }}</div>
+                                <div class="category-count">{{ category.script_count || 0 }}个话术</div>
+                              </div>
+                              <div class="category-desc">{{ category.description || '暂无描述' }}</div>
+                            </div>
+                          </a-checkbox>
+                        </div>
+                      </a-col>
+                    </a-row>
+                  </a-checkbox-group>
+                </div>
+                
+                <!-- 如果没有分类数据，显示提示 -->
+                <div v-if="projectCategoryData.length === 0" class="empty-state">
+                  <div class="empty-content">
+                    <InfoCircleOutlined class="empty-icon" />
+                    <div class="empty-title">暂无项目分类可配置</div>
+                    <div class="empty-desc">请先在话术管理中创建项目分类，或联系管理员配置分类数据</div>
+                  </div>
+                </div>
+                
+                <!-- 权限说明 -->
+                <div class="permission-tip">
+                  <div class="tip-header">
+                    <InfoCircleOutlined />
+                    <strong>权限说明</strong>
+                  </div>
+                  <ul class="tip-list">
+                    <li>未选择任何分类时，用户将无法访问话术功能</li>
+                    <li>选择分类后，用户只能查看和操作选中分类下的话术内容</li>
+                    <li>管理员和超级管理员默认拥有所有分类的访问权限</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </a-tab-pane>
             </a-tabs>
           </div>
         </a-spin>
@@ -328,7 +393,8 @@ import {
   KeyOutlined,
   SettingOutlined,
   MoreOutlined,
-  SaveOutlined
+  SaveOutlined,
+  InfoCircleOutlined
 } from '@ant-design/icons-vue'
 import {
   getRoles,
@@ -354,6 +420,8 @@ const currentRoleForUsers = ref<Role | null>(null)
 const roleUsers = ref<User[]>([])
 const activePermissionTab = ref('menu')
 
+// 权限格式已统一，无需记录格式类型
+
 // 统计数据
 const roleStats = reactive({
   total: 0,
@@ -368,76 +436,93 @@ const operationPermissions = reactive<Record<string, string[]>>({})
 const dataPermissions = reactive({
   scope: 'department',
   custom_scopes: [],
-  sensitive: []
+  sensitive: [],
+  project_category_permissions: []
 })
+
+// 项目分类数据
+const projectCategoryData = ref<any[]>([])
 
 // 菜单树数据 - 基于实际路由结构
 const menuTreeData = [
   {
     title: '工作台',
-    key: '/dashboard',
+    key: 'dashboard',
     description: '系统工作台首页'
   },
   {
     title: '客户管理',
-    key: '/customer',
+    key: 'customer',
     description: '学生客户管理模块',
     children: [
-      { title: '客户列表', key: '/customer/list', description: '查看和管理客户列表' },
-      { title: '跟进管理', key: '/customer/follow', description: '客户跟进记录管理' },
-      { title: '跟进提醒', key: '/customer/reminders', description: '客户跟进提醒功能' },
-      { title: '跟进分析', key: '/customer/analytics', description: '客户跟进数据分析' }
+      { title: '客户列表', key: 'customer.list', description: '查看和管理客户列表' },
+      { title: '跟进管理', key: 'customer.follow', description: '客户跟进记录管理' },
+      { title: '跟进提醒', key: 'customer.reminders', description: '客户跟进提醒功能' },
+      { title: '跟进分析', key: 'customer.analytics', description: '客户跟进数据分析' }
     ]
   },
   {
     title: '销售管理',
-    key: '/sales',
+    key: 'sales',
     description: '销售业务管理模块',
     children: [
-      { title: '销售记录', key: '/sales/record', description: '销售记录管理' },
-      { title: '销售统计', key: '/sales/stats', description: '销售数据统计分析' }
+      { title: '销售记录', key: 'sales.record', description: '销售记录管理' },
+      { title: '销售统计', key: 'sales.stats', description: '销售数据统计分析' }
     ]
   },
   {
     title: '话术库',
-    key: '/script',
+    key: 'script',
     description: '营销话术库管理'
   },
   {
     title: '知识库',
-    key: '/knowledge',
+    key: 'knowledge',
     description: '企业知识库管理'
   },
   {
     title: '数查一点通',
-    key: '/data-query',
+    key: 'data-query',
     description: '电网录取信息查询和分析工具'
   },
   {
+    title: '提前批信息',
+    key: 'advance-batch',
+    description: '提前批录取信息管理'
+  },
+  {
     title: '用户中心',
-    key: '/user-center',
+    key: 'user-center',
     description: '个人用户中心',
     children: [
-      { title: '个人信息', key: '/user-center/profile', description: '个人资料管理' },
-      { title: '偏好设置', key: '/user-center/preferences', description: '个人偏好设置' },
-      { title: '消息通知', key: '/user-center/notifications', description: '消息通知管理' },
-      { title: '安全设置', key: '/user-center/security', description: '账户安全设置' },
-      { title: '登录日志', key: '/user-center/login-logs', description: '登录历史记录' }
+      { title: '个人信息', key: 'user-center.profile', description: '个人资料管理' },
+      { title: '偏好设置', key: 'user-center.preferences', description: '个人偏好设置' },
+      { title: '安全设置', key: 'user-center.security', description: '账户安全设置' },
+      { title: '登录日志', key: 'user-center.logs', description: '登录历史记录' },
+      { title: '设备管理', key: 'user-center.devices', description: '登录设备管理' },
+      { title: '消息通知', key: 'user-center.notifications', description: '消息通知管理' }
     ]
   },
   {
     title: '系统设置',
-    key: '/system',
+    key: 'system',
     description: '系统管理设置',
     children: [
-      { title: '用户管理', key: '/system/user', description: '系统用户账户管理' },
-      { title: '部门管理', key: '/system/department', description: '组织部门结构管理' },
-      { title: '角色权限', key: '/system/role', description: '系统角色权限配置' },
-      { title: '操作日志', key: '/system/log', description: '系统操作日志查看' },
-      { title: 'API测试', key: '/system/test-api', description: '系统API接口测试' }
+      { title: '用户管理', key: 'system.user', description: '系统用户账户管理' },
+      { title: '部门管理', key: 'system.department', description: '组织部门结构管理' },
+      { title: '角色权限', key: 'system.role', description: '系统角色权限配置' },
+      { title: '区域管理', key: 'system.region', description: '区域信息管理' },
+      { title: '操作日志', key: 'system.log', description: '系统操作日志查看' },
+      { title: 'API测试', key: 'system.test_api', description: '系统API接口测试工具' }
     ]
   }
 ]
+
+// 后端权限格式已统一为点号分隔格式，无需格式转换
+
+// 权限格式转换函数已移除，后端格式已统一
+
+// createCompleteMenuTreeData函数已移除，权限树结构直接使用menuTreeData
 
 // 操作权限模块 - 基于实际业务功能
 const operationModules = [
@@ -737,16 +822,56 @@ const loadRoles = async () => {
   }
 }
 
+// 加载项目分类数据
+const loadProjectCategoryData = async () => {
+  try {
+    console.log('🔄 开始加载项目分类数据...')
+    
+    // 优先尝试从script API获取项目分类（这个接口已经存在且可用）
+    const { getProjectCategories } = await import('@/api/script')
+    const scriptResponse = await getProjectCategories()
+    
+    if (scriptResponse && scriptResponse.data && scriptResponse.data.length > 0) {
+      projectCategoryData.value = scriptResponse.data
+      console.log('✅ 项目分类数据加载成功:', scriptResponse.data.length, '个分类')
+      console.log('📋 分类详情:', scriptResponse.data)
+      return
+    }
+  } catch (scriptError) {
+    console.warn('脚本API接口失败:', scriptError)
+  }
+  
+  // 如果API失败，使用默认数据确保UI能正常显示
+  console.log('⚠️ API失败，使用默认项目分类数据')
+  projectCategoryData.value = [
+    { id: 1, label: '电网知识', count: 0, description: '电力系统相关知识话术' },
+    { id: 2, label: '电工考试', count: 0, description: '电工考试辅导话术' },
+    { id: 3, label: '产品介绍', count: 0, description: '产品相关介绍话术' },
+    { id: 4, label: '市场营销', count: 0, description: '营销推广话术' },
+    { id: 5, label: '常见问题', count: 0, description: 'FAQ问答话术' }
+  ]
+  
+  console.log('📋 使用默认项目分类:', projectCategoryData.value)
+}
+
 // 选择角色
 const selectRole = async (role: Role) => {
   selectedRole.value = role
   permissionLoading.value = true
   
+  // 加载项目分类数据（并行加载，不阻塞权限加载）
+  loadProjectCategoryData()
+  
   try {
     const permissions = await getRolePermissions(role.name)
     
-    // 设置菜单权限
-    menuPermissions.value = permissions.menu || []
+    // 设置菜单权限，后端格式已统一为点号分隔格式
+    const originalMenuPermissions = permissions.menu || []
+    console.log('🔍 后端返回的菜单权限:', originalMenuPermissions)
+    
+    // 直接使用后端返回的权限，无需格式转换
+    menuPermissions.value = originalMenuPermissions
+    console.log('✅ 菜单权限设置完成:', menuPermissions.value)
     
     // 重置操作权限对象
     Object.keys(operationPermissions).forEach(key => {
@@ -769,11 +894,14 @@ const selectRole = async (role: Role) => {
     console.log('✅ 操作权限设置完成:', operationPermissions)
     
     // 设置数据权限
+    console.log('🔍 后端返回的数据权限:', permissions.data)
     Object.assign(dataPermissions, {
       scope: permissions.data?.scope || 'department',
       custom_scopes: permissions.data?.custom_scopes || [],
-      sensitive: permissions.data?.sensitive || []
+      sensitive: permissions.data?.sensitive || [],
+      project_category_permissions: permissions.data?.project_category_permissions || []
     })
+    console.log('✅ 数据权限设置完成:', dataPermissions)
   } catch (error) {
     message.error('加载角色权限失败')
     // 出错时也要初始化操作权限，确保UI能显示
@@ -810,11 +938,17 @@ const savePermissions = async () => {
   
   saveLoading.value = true
   try {
+    // 直接使用统一格式的权限，无需转换
     const permissions = {
       menu: menuPermissions.value,
       operation: operationPermissions,
       data: dataPermissions
     }
+    
+    console.log('💾 保存权限配置:')
+    console.log('  - 菜单权限:', menuPermissions.value)
+    console.log('  - 操作权限:', operationPermissions)
+    console.log('  - 数据权限:', dataPermissions)
     
     await updateRolePermissions(selectedRole.value.name, permissions)
     message.success('权限配置保存成功')
@@ -842,6 +976,8 @@ const initializeOperationPermissions = () => {
 onMounted(() => {
   // 先初始化操作权限模块
   initializeOperationPermissions()
+  // 预加载项目分类数据
+  loadProjectCategoryData()
   // 然后加载角色列表
   loadRoles()
 })
@@ -1211,7 +1347,8 @@ onMounted(() => {
 .data-permissions {
   .data-scope-section,
   .custom-scope-section,
-  .sensitive-data-section {
+  .sensitive-data-section,
+  .project-category-section {
     margin-bottom: 24px;
     
     h5 {
@@ -1225,6 +1362,171 @@ onMounted(() => {
       display: flex;
       flex-direction: column;
       gap: 8px;
+    }
+    
+    .section-desc {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+  }
+  
+  .project-category-section {
+    .category-checkbox {
+      width: 100%;
+      margin-bottom: 8px;
+      
+      .checkbox-content {
+        margin-left: 8px;
+        
+        .category-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #262626;
+          margin-bottom: 2px;
+        }
+        
+        .category-desc {
+          font-size: 12px;
+          color: #8c8c8c;
+        }
+      }
+      
+      &:hover {
+        .checkbox-content .category-name {
+          color: #1890ff;
+        }
+      }
+    }
+  }
+}
+
+// 项目分类权限
+.project-category-permissions {
+  .loading-state {
+    text-align: center;
+    color: #666;
+    padding: 40px 20px;
+  }
+  
+  .category-grid {
+    margin-bottom: 24px;
+  }
+  
+  .category-card {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+    height: 100%;
+    
+    &:hover {
+      border-color: #d9d9d9;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    &.category-selected {
+      border-color: #1890ff;
+      background: #f6ffed;
+      
+      .category-name {
+        color: #1890ff;
+        font-weight: 600;
+      }
+    }
+    
+    .category-content {
+      width: 100%;
+      
+      .category-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        
+        .category-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #262626;
+        }
+        
+        .category-count {
+          font-size: 12px;
+          color: #1890ff;
+          background: #f0f9ff;
+          padding: 2px 8px;
+          border-radius: 12px;
+        }
+      }
+      
+      .category-desc {
+        font-size: 12px;
+        color: #8c8c8c;
+        line-height: 1.4;
+        margin-top: 4px;
+      }
+    }
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    
+    .empty-content {
+      .empty-icon {
+        font-size: 48px;
+        color: #d9d9d9;
+        margin-bottom: 16px;
+      }
+      
+      .empty-title {
+        font-size: 16px;
+        color: #262626;
+        margin-bottom: 8px;
+      }
+      
+      .empty-desc {
+        font-size: 14px;
+        color: #8c8c8c;
+        line-height: 1.5;
+      }
+    }
+  }
+  
+  .permission-tip {
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    padding: 16px;
+    margin-top: 24px;
+    
+    .tip-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #1890ff;
+      
+      strong {
+        font-size: 14px;
+      }
+    }
+    
+    .tip-list {
+      margin: 0;
+      padding-left: 20px;
+      
+      li {
+        font-size: 13px;
+        color: #666;
+        line-height: 1.6;
+        margin-bottom: 4px;
+        
+        &:last-child {
+          margin-bottom: 0;
+        }
+      }
     }
   }
 }

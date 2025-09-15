@@ -232,7 +232,7 @@ export const deleteNotification = (id: number): Promise<{ code: number; message:
 export interface LoginLogQueryParams {
   page?: number
   page_size?: number
-  status?: 'success' | 'failed'
+  status?: 'success' | 'failed' | ''
   days?: number
 }
 

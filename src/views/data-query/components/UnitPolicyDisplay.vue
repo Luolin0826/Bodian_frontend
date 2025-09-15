@@ -7,83 +7,6 @@
           <info-circle-outlined class="section-icon" />
           基本政策信息
         </h4>
-        <div class="section-actions">
-          <!-- 编辑状态指示 -->
-          <div v-if="isEditing || hasChanges" class="edit-status">
-            <a-tag v-if="saving" color="blue" class="status-tag">
-              <save-outlined spin />
-              自动保存中...
-            </a-tag>
-            <a-tag v-else-if="hasChanges && isEditing" color="orange" class="status-tag">
-              有未保存更改
-            </a-tag>
-            <a-tag v-else-if="isEditing" color="green" class="status-tag">
-              编辑模式
-            </a-tag>
-          </div>
-          
-          <!-- 非编辑模式按钮组 -->
-          <template v-if="!isEditing">
-            <a-tooltip title="刷新数据">
-              <a-button
-                type="text"
-                size="small"
-                @click="handleRefresh"
-                :loading="refreshing"
-                class="refresh-btn"
-              >
-                <reload-outlined />
-              </a-button>
-            </a-tooltip>
-
-            <a-tooltip title="编辑政策">
-              <a-button
-                type="text"
-                size="small"
-                @click="enterEditMode"
-                class="edit-btn"
-              >
-                <edit-outlined />
-              </a-button>
-            </a-tooltip>
-
-            <a-tooltip title="管理字段 (添加/编辑/删除/排序)">
-              <a-button
-                type="text"
-                size="small"
-                @click="openFieldManagerDialog"
-                class="manage-fields-btn"
-              >
-                <setting-outlined />
-              </a-button>
-            </a-tooltip>
-          </template>
-          
-          <!-- 编辑模式按钮组 -->
-          <template v-if="isEditing">
-            <a-tooltip title="保存更改">
-              <a-button
-                type="text"
-                size="small"
-                @click="saveChanges"
-                :loading="saving"
-                class="save-btn"
-              >
-                <save-outlined />
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="取消编辑">
-              <a-button
-                type="text"
-                size="small"
-                @click="cancelEdit"
-                class="cancel-btn"
-              >
-                <close-outlined />
-              </a-button>
-            </a-tooltip>
-          </template>
-        </div>
       </div>
 
       <!-- 加载状态 -->
@@ -93,241 +16,52 @@
         </a-spin>
       </div>
 
-      <!-- 政策字段展示 -->
-      <div v-else-if="policyInfo || showEmptyState" class="policy-fields">
-        <!-- 显示模式 -->
-        <div v-if="!isEditing" class="fields-grid">
-          <!-- 有数据时显示字段 -->
-          <template v-if="policyInfo && Object.keys(visibleFields).length > 0">
-            <div
-              v-for="(fieldConfig, fieldName) in visibleFields"
-              :key="fieldName"
-              class="field-item"
-              :class="[fieldConfig.type, allFields[fieldName]?.is_custom ? 'custom-field' : 'default-field']"
-            >
-            <div class="field-label">
-              <span class="label-text">{{ fieldConfig.display_name }}</span>
-            </div>
-            <div class="field-value">
-              <!-- 文本类型 -->
-              <div
-                v-if="fieldConfig.type === 'text' || fieldConfig.type === 'textarea'"
-                class="value-text"
-                :class="{ 
-                  'multiline': fieldConfig.type === 'textarea',
-                  'expandable': isContentLong(fieldConfig.value)
-                }"
-                @click="isContentLong(fieldConfig.value) ? openContentPreview(fieldConfig) : null"
-                :title="isContentLong(fieldConfig.value) ? '点击查看完整内容' : ''"
-              >
-                {{ formatFieldValue(fieldConfig.value) }}
-                <!-- 长内容指示器 -->
-                <expand-outlined 
-                  v-if="isContentLong(fieldConfig.value)" 
-                  class="expand-indicator"
-                />
-              </div>
-              
-              <!-- 数字类型 -->
-              <span
-                v-else-if="fieldConfig.type === 'number'"
-                class="value-number"
-              >
-                {{ formatNumber(fieldConfig.value) }}
-                <span v-if="isCountField(fieldName)" class="unit">人</span>
-                <span v-else-if="isScoreField(fieldName)" class="unit">分</span>
-              </span>
-              
-              <!-- 选择类型 -->
-              <a-tag
-                v-else-if="fieldConfig.type === 'select'"
-                :color="getSelectColor(fieldConfig.value)"
-                class="value-select"
-              >
-                {{ fieldConfig.value || '-' }}
-              </a-tag>
-              
-              <!-- 布尔类型 -->
-              <a-tag
-                v-else-if="fieldConfig.type === 'boolean'"
-                :color="fieldConfig.value ? 'green' : 'red'"
-                class="value-boolean"
-              >
-                {{ fieldConfig.value ? '是' : '否' }}
-              </a-tag>
-              
-              <!-- 默认显示 -->
-              <span v-else class="value-default">
-                {{ formatFieldValue(fieldConfig.value) }}
-              </span>
-            </div>
-            </div>
-          </template>
-          
-          <!-- 空状态占位 -->
-          <template v-else>
-            <div class="empty-placeholder">
-              <div class="placeholder-grid">
-                <div class="placeholder-item" v-for="n in 6" :key="n">
-                  <div class="placeholder-label"></div>
-                  <div class="placeholder-value"></div>
-                </div>
-              </div>
-              <div class="placeholder-hint">
-                <div class="hint-content">
-                  <file-text-outlined class="hint-icon" />
-                  <h4 class="hint-title">基本政策信息</h4>
-                  <p class="hint-text">请先选择一个单位查看对应的政策信息</p>
-                  <a-tag color="blue" class="hint-tag">
-                    <info-circle-outlined />
-                    等待选择单位
-                  </a-tag>
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- 编辑模式 -->
-        <div v-else class="edit-form">
-          <a-form
-            :model="editForm"
-            :rules="formRules"
-            layout="vertical"
-            @finish="handleFormSubmit"
-            @finishFailed="handleFormSubmitFailed"
-          >
-            <a-row :gutter="[16, 16]">
-              <a-col
-                v-for="(fieldConfig, fieldName) in visibleFields"
-                :key="fieldName"
-                :xs="24"
-                :sm="12"
-                :md="8"
-              >
-                <a-form-item
-                  :label="fieldConfig.display_name"
-                  :name="fieldName"
-                  :required="isRequiredField(fieldName)"
-                >
-                  <!-- 文本输入 -->
-                  <a-input
-                    v-if="fieldConfig.type === 'text'"
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-input"
-                  />
-                  
-                  <!-- 文本域 -->
-                  <a-textarea
-                    v-else-if="fieldConfig.type === 'textarea'"
-                    v-model:value="editForm[fieldName]"
-                    :rows="4"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-textarea"
-                    :auto-size="{ minRows: 4, maxRows: 8 }"
-                  />
-                  
-                  <!-- 数字输入 -->
-                  <a-input-number
-                    v-else-if="fieldConfig.type === 'number'"
-                    v-model:value="editForm[fieldName]"
-                    :min="0"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-input-number"
-                    style="width: 100%"
-                  />
-                  
-                  <!-- 选择器 -->
-                  <a-select
-                    v-else-if="fieldConfig.type === 'select'"
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请选择${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-select"
-                  >
-                    <!-- 使用动态选项，如果有field_options则使用，否则使用默认选项 -->
-                    <template v-if="fieldConfig.field_options && fieldConfig.field_options.length > 0">
-                      <a-select-option 
-                        v-for="option in fieldConfig.field_options" 
-                        :key="option" 
-                        :value="option"
-                      >
-                        {{ option }}
-                      </a-select-option>
-                    </template>
-                    <!-- 默认选项 -->
-                    <template v-else>
-                      <a-select-option value="是">是</a-select-option>
-                      <a-select-option value="否">否</a-select-option>
-                      <a-select-option value="部分">部分</a-select-option>
-                      <a-select-option value="视情况">视情况</a-select-option>
-                    </template>
-                  </a-select>
-                  
-                  <!-- 布尔选择 -->
-                  <a-radio-group
-                    v-else-if="fieldConfig.type === 'boolean'"
-                    v-model:value="editForm[fieldName]"
-                    size="large"
-                    class="uniform-radio-group"
-                  >
-                    <a-radio :value="true">是</a-radio>
-                    <a-radio :value="false">否</a-radio>
-                  </a-radio-group>
-                  
-                  <!-- 日期选择器 -->
-                  <a-date-picker
-                    v-else-if="fieldConfig.type === 'date'"
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请选择${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-date-picker"
-                    style="width: 100%"
-                    format="YYYY-MM-DD"
-                  />
-                  
-                  <!-- 默认文本输入 -->
-                  <a-input
-                    v-else
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-input"
-                  />
-                </a-form-item>
-              </a-col>
-            </a-row>
-          </a-form>
-        </div>
-
-        <!-- 字段配置面板 -->
-        <div v-if="showFieldConfig" class="field-config-panel">
-          <div class="config-header">
-            <h5>字段显示配置</h5>
-            <a-button type="text" size="small" @click="showFieldConfig = false">
-              <close-outlined />
-            </a-button>
+      <!-- 空状态占位 - 没有选择单位时显示 -->
+      <div v-else-if="showEmptyState" class="policy-content">
+        <div class="empty-state-card">
+          <div class="empty-content">
+            <file-text-outlined class="empty-icon" />
+            <h4 class="empty-title">基本政策信息</h4>
+            <p class="empty-text">请先选择一个单位查看对应的政策信息</p>
           </div>
-          <div class="config-content">
-            <a-checkbox-group
-              v-model:value="enabledFields"
-              @change="handleFieldConfigChange"
-              class="field-checkboxes"
-            >
-              <div
-                v-for="(fieldConfig, fieldName) in allFields"
-                :key="fieldName"
-                class="field-checkbox-item"
-              >
-                <a-checkbox :value="fieldName">
-                  {{ fieldConfig.display_name }}
-                </a-checkbox>
-              </div>
-            </a-checkbox-group>
+        </div>
+      </div>
+
+      <!-- 政策内容展示 -->
+      <div v-else-if="policyInfo" class="policy-content">
+        <!-- 有数据时显示内容卡片网格 -->
+        <div v-if="Object.keys(visibleFields).length > 0" class="content-grid">
+          <div
+            v-for="(fieldConfig, fieldName) in visibleFields"
+            :key="fieldName"
+            class="content-card"
+            @click="openContentPreview(fieldConfig)"
+          >
+            <div class="card-header">
+              <h4 class="card-title">{{ fieldConfig.display_name }}</h4>
+            </div>
+            <div class="card-content">
+              <p class="content-preview">{{ formatFieldValue(fieldConfig.value) }}</p>
+            </div>
+          </div>
+          
+          <!-- 新增内容按钮（有数据时） -->
+          <div v-if="unitId" class="add-content-card" @click="openAddDialog">
+            <div class="add-content-inner">
+              <plus-outlined class="add-icon" />
+              <span class="add-text">新增内容</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- 选中单位但无数据状态 -->
+        <div v-else class="content-grid">
+          <!-- 新增内容按钮 -->
+          <div class="add-content-card" @click="openAddDialog">
+            <div class="add-content-inner">
+              <plus-outlined class="add-icon" />
+              <span class="add-text">新增内容</span>
+            </div>
           </div>
         </div>
       </div>
@@ -343,39 +77,129 @@
       </div>
     </div>
     
-    <!-- 字段管理对话框 -->
-    <FieldManagerDialog
-      v-model:open="fieldManagerDialogVisible"
-      module-type="basic-policy"
-      :module-info="{ sectionName: '基本政策信息' }"
-      :unit-id="unitId"
-      :unit-info="unitInfo"
-      :province="currentProvince"
-      @fields-updated="handleFieldsUpdated"
-    />
-    
-    <!-- 内容预览对话框 -->
+    <!-- 新增内容对话框 -->
     <a-modal
-      v-model:open="contentPreviewVisible"
-      :title="previewFieldConfig?.display_name || '内容预览'"
-      width="80%"
-      :max-width="800"
+      v-model:open="addDialogVisible"
+      title="新增基本政策信息"
+      width="600px"
+      @ok="handleAddContent"
+      @cancel="handleCancelAdd"
+    >
+      <div class="add-form">
+        <a-form
+          :model="addForm"
+          layout="vertical"
+        >
+          <a-form-item label="标题" required>
+            <a-input
+              v-model:value="addForm.title"
+              placeholder="请输入标题"
+              size="large"
+            />
+          </a-form-item>
+          <a-form-item label="内容" required>
+            <a-textarea
+              v-model:value="addForm.content"
+              placeholder="请输入内容"
+              :rows="6"
+              size="large"
+            />
+          </a-form-item>
+        </a-form>
+      </div>
+    </a-modal>
+    
+    <!-- 内容预览对话框 - 简洁美化设计 -->
+    <a-modal
+      v-model:open="previewDialogVisible"
+      title="内容详情"
+      width="650px"
       :footer="null"
       class="content-preview-modal"
     >
-      <div class="preview-content" v-if="previewFieldConfig">
-        <div class="field-info">
-          <a-tag 
-            :color="allFields[Object.keys(visibleFields).find(key => visibleFields[key] === previewFieldConfig)]?.is_custom ? 'purple' : 'blue'"
-            class="field-type-indicator"
-          >
-            {{ allFields[Object.keys(visibleFields).find(key => visibleFields[key] === previewFieldConfig)]?.is_custom ? '附加字段' : '基本字段' }}
-          </a-tag>
-          <span class="field-name">{{ previewFieldConfig.display_name }}</span>
+      <div v-if="currentPreviewContent" class="content-preview">
+        <!-- 标题区域 -->
+        <div class="field-section">
+          <div class="section-label">
+            <file-text-outlined class="section-icon" />
+            <span>标题</span>
+          </div>
+          <div class="section-content title-content">
+            {{ currentPreviewContent.display_name }}
+          </div>
         </div>
-        <div class="content-text">
-          {{ formatFieldValue(previewFieldConfig.value) }}
+        
+        <!-- 内容区域 -->
+        <div class="field-section">
+          <div class="section-label">
+            <edit-outlined class="section-icon" />
+            <span>内容详情</span>
+          </div>
+          <div class="section-content main-content">
+            {{ currentPreviewContent.value }}
+          </div>
         </div>
+        
+        <!-- 操作按钮区域 -->
+        <div class="action-buttons">
+          <a-space size="middle">
+            <!-- 复制按钮 -->
+            <a-button @click="copyToClipboard(currentPreviewContent.value)">
+              <copy-outlined />
+              复制内容
+            </a-button>
+            <!-- 编辑按钮 -->
+            <a-button 
+              type="primary" 
+              @click="handleEditContent"
+            >
+              <edit-outlined />
+              编辑内容
+            </a-button>
+            <!-- 删除按钮 -->
+            <a-button 
+              type="primary" 
+              danger 
+              @click="handleDeleteContent"
+            >
+              <delete-outlined />
+              删除内容
+            </a-button>
+          </a-space>
+        </div>
+      </div>
+    </a-modal>
+    
+    <!-- 编辑内容对话框 -->
+    <a-modal
+      v-model:open="isEditingContent"
+      title="编辑内容"
+      width="600px"
+      @ok="handleSaveEdit"
+      @cancel="handleCancelEdit"
+      :confirm-loading="saving"
+    >
+      <div class="edit-form">
+        <a-form
+          :model="editContentForm"
+          layout="vertical"
+        >
+          <a-form-item label="标题" required>
+            <a-input
+              v-model:value="editContentForm.title"
+              placeholder="请输入标题"
+              size="large"
+            />
+          </a-form-item>
+          <a-form-item label="内容" required>
+            <a-textarea
+              v-model:value="editContentForm.content"
+              placeholder="请输入内容"
+              :rows="6"
+              size="large"
+            />
+          </a-form-item>
+        </a-form>
       </div>
     </a-modal>
   </div>
@@ -387,125 +211,70 @@ import { useRouter } from 'vue-router'
 import { message } from 'ant-design-vue'
 import {
   InfoCircleOutlined,
-  SettingOutlined,
-  QuestionCircleOutlined,
-  CloseOutlined,
   FileTextOutlined,
-  EditOutlined,
-  SaveOutlined,
   PlusOutlined,
-  ReloadOutlined,
-  ExpandOutlined
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined
 } from '@ant-design/icons-vue'
 import {
   getUnitDetails,
-  policyManagementAPI,
-  policySectionsAPI,
-  customFieldsAPI,
   type PolicyInfo,
   type UnitInfo
 } from '@/api/policies'
-import { useEditMode } from '@/composables/useEditMode'
-import FieldManagerDialog from './FieldManagerDialog.vue'
+import { 
+  dataQueryContentAPI,
+  getProvinceContent,
+  type DataQueryContent
+} from '@/api/data-query-content'
 
 // Props
 interface Props {
   unitId?: number | null
   unitInfo?: UnitInfo | null
   showEmptyState?: boolean
+  preloadedData?: any // 预加载的数据
 }
 
 const props = withDefaults(defineProps<Props>(), {
   unitId: null,
   unitInfo: null,
-  showEmptyState: false
+  showEmptyState: false,
+  preloadedData: null
 })
 
 // Emits
 const emit = defineEmits<{
   'policy-loaded': [policyInfo: PolicyInfo]
   'loading-change': [loading: boolean]
+  'content-updated': [] // 新增：通知父组件内容已更新
 }>()
 
 // 响应式数据
 const loading = ref(false)
-const refreshing = ref(false)
 const policyInfo = ref<PolicyInfo | null>(null)
 const provincePolicyInfo = ref<any>(null)
-const showFieldConfig = ref(false)
 const enabledFields = ref<string[]>([])
+const saving = ref(false)
 
-// 内容预览相关
-const contentPreviewVisible = ref(false)
-const previewFieldConfig = ref<any>(null)
+// 对话框状态
+const addDialogVisible = ref(false)
+const previewDialogVisible = ref(false)
+const isEditingContent = ref(false)
 
-// 编辑模式管理器
-const {
-  isEditing,
-  isSubmitting: saving,
-  hasChanges,
-  editData: editForm,
-  startEdit,
-  cancelEdit,
-  saveEdit,
-  setData,
-  getEditStatus
-} = useEditMode(
-  {},
-  {
-    autoSave: true,
-    autoSaveDelay: 5000,
-    onSave: async (data) => {
-      if (!props.unitId) {
-        throw new Error('缺少单位ID，无法保存')
-      }
-      
-      // 分离原有字段和自定义字段
-      const originalFieldsData: Record<string, any> = {}
-      const customFieldsData: Record<string, any> = {}
-      
-      Object.keys(data).forEach(fieldName => {
-        const value = data[fieldName] || ''
-        const fieldConfig = allFields[fieldName]
-        
-        if (fieldConfig?.is_custom) {
-          // 自定义字段
-          customFieldsData[fieldName] = value
-        } else {
-          // 原有字段
-          originalFieldsData[fieldName] = value
-        }
-      })
-      
-      console.log('🔄 开始分层保存数据')
-      console.log('📊 原有字段数据:', originalFieldsData)
-      console.log('🎨 自定义字段数据:', customFieldsData)
-      
-      // 保存原有字段
-      if (Object.keys(originalFieldsData).length > 0) {
-        console.log('💾 保存原有字段到省级政策表...')
-        await policySectionsAPI.updateBasicPolicy(props.unitId, originalFieldsData)
-        console.log('✅ 原有字段保存成功')
-      }
-      
-      // 保存自定义字段
-      if (Object.keys(customFieldsData).length > 0) {
-        console.log('💾 保存自定义字段...')
-        await saveCustomFieldsValues(customFieldsData)
-        console.log('✅ 自定义字段保存成功')
-      }
-      
-      // 保存成功后重新获取最新数据
-      await loadBasicPolicyData(props.unitId)
-      console.log('✅ 统一保存完成，已刷新最新数据')
-    },
-    validateData: (data) => {
-      // 不需要严格验证，用户想怎么填怎么填
-      return true
-    },
-    showMessages: true
-  }
-)
+// 表单数据
+const addForm = reactive({
+  title: '',
+  content: ''
+})
+
+const editContentForm = reactive({
+  title: '',
+  content: ''
+})
+
+const currentPreviewContent = ref<any>(null)
+const currentContentId = ref<number | null>(null)
 
 // 所有可能的政策字段 - 匹配province_policies表结构
 const allFields = reactive<Record<string, any>>({
@@ -732,367 +501,188 @@ const isContentLong = (value: any): boolean => {
   return str.length > 100 || str.includes('\n')
 }
 
-// 打开内容预览
-const openContentPreview = (fieldConfig: any) => {
-  previewFieldConfig.value = fieldConfig
-  contentPreviewVisible.value = true
+// 打开新增对话框
+const openAddDialog = () => {
+  addForm.title = ''
+  addForm.content = ''
+  addDialogVisible.value = true
 }
 
-// 关闭内容预览
-const closeContentPreview = () => {
-  contentPreviewVisible.value = false
-  previewFieldConfig.value = null
-}
-
-const router = useRouter()
-
-const handleEditPolicy = () => {
+// 处理新增内容
+const handleAddContent = async () => {
+  if (!addForm.title.trim() || !addForm.content.trim()) {
+    message.warning('请填写标题和内容')
+    return
+  }
+  
   if (!props.unitId) {
     message.warning('请先选择一个单位')
     return
   }
   
-  // 跳转到政策管理页面，并传递当前选中的单位信息
-  router.push({
-    name: 'PolicyManagement',
-    query: {
-      unitId: props.unitId,
-      unitName: props.unitInfo?.unit_name || ''
-    }
-  })
-}
-
-const handleRefresh = async () => {
-  if (!props.unitId) return
-  
   try {
-    refreshing.value = true
-    message.loading('正在刷新数据...', 0.5)
-    await loadPolicyInfo(props.unitId)
-    message.success('数据刷新成功')
-  } catch (error) {
-    console.error('刷新失败:', error)
-    message.error('数据刷新失败')
-  } finally {
-    refreshing.value = false
-  }
-}
-
-// 字段管理相关
-const fieldManagerDialogVisible = ref(false)
-
-// 计算省份名称
-const currentProvince = computed(() => {
-  if (!props.unitInfo?.unit_name) return ''
-  
-  // 从单位名称中提取省份信息
-  const unitName = props.unitInfo.unit_name
-  
-  // 处理包含"省"字的情况
-  if (unitName.includes('省')) {
-    const match = unitName.match(/([\u4e00-\u9fa5]+)省/)
-    if (match) {
-      return match[1] + '省'
-    }
-  }
-  
-  // 处理直辖市
-  if (unitName.includes('北京')) return '北京'
-  if (unitName.includes('上海')) return '上海'
-  if (unitName.includes('天津')) return '天津'
-  if (unitName.includes('重庆')) return '重庆'
-  
-  // 处理只有省份名没有"省"字的情况（如"四川"、"广东"等）
-  const provinceMapping: Record<string, string> = {
-    '四川': '四川省',
-    '广东': '广东省',
-    '江苏': '江苏省',
-    '浙江': '浙江省',
-    '山东': '山东省',
-    '河北': '河北省',
-    '河南': '河南省',
-    '湖北': '湖北省',
-    '湖南': '湖南省',
-    '安徽': '安徽省',
-    '福建': '福建省',
-    '江西': '江西省',
-    '山西': '山西省',
-    '辽宁': '辽宁省',
-    '吉林': '吉林省',
-    '黑龙江': '黑龙江省',
-    '海南': '海南省',
-    '贵州': '贵州省',
-    '云南': '云南省',
-    '陕西': '陕西省',
-    '甘肃': '甘肃省',
-    '青海': '青海省',
-    '内蒙古': '内蒙古自治区',
-    '广西': '广西壮族自治区',
-    '西藏': '西藏自治区',
-    '宁夏': '宁夏回族自治区',
-    '新疆': '新疆维吾尔自治区'
-  }
-  
-  // 尝试精确匹配省份名
-  if (provinceMapping[unitName]) {
-    return provinceMapping[unitName]
-  }
-  
-  // 尝试部分匹配
-  for (const [shortName, fullName] of Object.entries(provinceMapping)) {
-    if (unitName.includes(shortName)) {
-      return fullName
-    }
-  }
-  
-  return ''
-})
-
-// 打开字段管理对话框
-const openFieldManagerDialog = () => {
-  console.log('🔧 打开字段管理对话框:', {
-    'unitInfo': props.unitInfo,
-    'unitName': props.unitInfo?.unit_name,
-    'currentProvince': currentProvince.value,
-    'currentProvince类型': typeof currentProvince.value
-  })
-  fieldManagerDialogVisible.value = true
-}
-
-// 处理字段管理更新
-const handleFieldsUpdated = async () => {
-  console.log('🔄 [基本政策] 字段管理更新，开始清理和重新加载')
-  
-  // 清空现有数据和字段配置
-  policyInfo.value = null
-  provincePolicyInfo.value = null
-  enabledFields.value = []
-  
-  // 清除所有自定义字段
-  const customFieldKeys = Object.keys(allFields).filter(key => allFields[key].is_custom)
-  customFieldKeys.forEach(key => {
-    delete allFields[key]
-  })
-  console.log('🗑️ [基本政策] 清除自定义字段:', customFieldKeys)
-  
-  // 等待DOM更新
-  await nextTick()
-  
-  // 重新加载数据
-  if (props.unitId) {
-    try {
-      await loadPolicyInfo(props.unitId)
-      console.log('✅ [基本政策] 字段管理更新后重新加载完成')
-    } catch (error) {
-      console.error('❌ [基本政策] 字段管理更新后重新加载失败:', error)
-    }
-  }
-}
-
-// 加载自定义字段
-// 保存自定义字段值
-const saveCustomFieldsValues = async (customFieldsData: Record<string, any>) => {
-  if (!props.unitId) {
-    throw new Error('缺少单位ID，无法保存自定义字段')
-  }
-  
-  // 调用自定义字段值更新API
-  await customFieldsAPI.updateCustomFieldValues(props.unitId, {
-    section: 'basic',
-    field_values: customFieldsData
-  })
-  console.log('✅ 自定义字段值更新完成:', customFieldsData)
-}
-
-const loadCustomFields = async () => {
-  try {
-    const provinceToUse = currentProvince.value
-    console.log('🔍 加载自定义字段，使用省份:', provinceToUse)
+    saving.value = true
     
-    if (!provinceToUse) {
-      console.log('⚠️ 没有省份信息，跳过加载自定义字段')
+    // 获取省份名称
+    const provinceName = currentProvince.value
+    if (!provinceName) {
+      message.error('无法确定省份信息')
       return
     }
     
-    const section = 'basic' // 基本政策对应的section
-    // 使用合并接口获取字段定义和值
-    const result = await customFieldsAPI.getCustomFieldValues(
-      props.unitId, 
-      section, 
-      provinceToUse, 
-      true // includeDefinitions
-    )
+    // 调用API新增内容
+    await dataQueryContentAPI.createContent({
+      unit_id: props.unitId,
+      section: '基本政策信息',
+      title: addForm.title.trim(),
+      content: addForm.content.trim()
+    })
     
-    console.log('加载自定义字段:', result)
+    message.success('新增成功')
+    addDialogVisible.value = false
     
-    // 将自定义字段添加到allFields中并处理字段值
-    if (result.fields && Array.isArray(result.fields)) {
-      console.log('📋 获取到的字段数据:', result.fields.map(f => ({
-        field_name: f.field_name,
-        display_name: f.display_name,
-        is_visible: f.is_visible,
-        field_type: f.field_type,
-        field_value: f.field_value,
-        has_value: f.has_value
-      })))
-      
-      // 初始化 policyInfo 如果还没有
-      if (!policyInfo.value) {
-        policyInfo.value = {}
-      }
-      
-      // 首先清理旧的自定义字段（防止已删除/隐藏字段仍然显示）
-      const existingCustomFields = Object.keys(allFields).filter(key => allFields[key].is_custom)
-      existingCustomFields.forEach(fieldName => {
-        delete allFields[fieldName]
-        if (policyInfo.value && policyInfo.value[fieldName]) {
-          delete policyInfo.value[fieldName]
-        }
-        // 也要从启用列表中移除
-        const index = enabledFields.value.indexOf(fieldName)
-        if (index > -1) {
-          enabledFields.value.splice(index, 1)
-        }
-      })
-      console.log('🗑️ 清理了旧的自定义字段:', existingCustomFields)
-      
-      result.fields.forEach((field: any) => {
-        console.log(`🔍 处理字段: ${field.field_name}, is_visible: ${field.is_visible}, value: ${field.field_value}`)
-        
-        if (field.is_visible) {
-          // 添加字段定义到allFields
-          allFields[field.field_name] = {
-            display_name: field.display_name,
-            type: field.field_type || 'text',
-            description: field.field_content || field.display_name,
-            is_custom: true
-          }
-          
-          // 添加字段值到policyInfo
-          policyInfo.value[field.field_name] = {
-            value: field.field_value || '',
-            display_name: field.display_name,
-            type: field.field_type || 'text',
-            priority: 999, // 自定义字段放在最后
-            data_source: 'custom_fields'
-          }
-          
-          console.log(`✅ 字段 ${field.field_name} 已添加，值: ${field.field_value}`)
-        } else {
-          console.log(`⚠️ 字段 ${field.field_name} 不可见，已跳过`)
-        }
-      })
-      
-      // 更新启用的字段列表
-      const allFieldKeys = Object.keys(allFields)
-      console.log('🗂️ 当前allFields包含字段:', allFieldKeys)
-      
-      if (enabledFields.value.length === 0) {
-        // 初次加载，显示所有字段
-        enabledFields.value = allFieldKeys
-        console.log('📌 初次设置启用字段列表:', enabledFields.value)
-      } else {
-        // 更新启用列表：添加新字段，移除不存在的字段
-        result.fields.forEach((field: any) => {
-          if (field.is_visible && !enabledFields.value.includes(field.field_name)) {
-            enabledFields.value.push(field.field_name)
-            console.log(`📌 添加新字段到启用列表: ${field.field_name}`)
-          }
-        })
-        
-        // 确保启用列表与当前allFields保持一致
-        enabledFields.value = enabledFields.value.filter(fieldName => allFieldKeys.includes(fieldName))
-        console.log('📌 清理后的启用字段列表:', enabledFields.value)
-      }
-      
-      console.log('✅ 自定义字段已添加到allFields和policyInfo')
-      console.log('🔍 最终policyInfo:', policyInfo.value)
+    // 通知父组件内容已更新，需要刷新预加载数据
+    emit('content-updated')
+    
+    // 重新加载本地数据
+    if (props.unitId) {
+      await loadPolicyInfo(props.unitId)
     }
+    
   } catch (error) {
-    console.error('加载自定义字段失败:', error)
+    console.error('新增失败:', error)
+    message.error('新增失败，请重试')
+  } finally {
+    saving.value = false
   }
 }
 
-// 编辑相关方法
-const enterEditMode = () => {
-  // 准备编辑数据 - 包含所有字段，不仅仅是可见字段
-  const currentData: Record<string, any> = {}
+// 取消新增
+const handleCancelAdd = () => {
+  addDialogVisible.value = false
+}
+
+// 打开内容预览
+const openContentPreview = (fieldConfig: any) => {
+  currentPreviewContent.value = fieldConfig
   
-  // 包含所有已启用字段的数据
-  enabledFields.value.forEach(fieldName => {
-    if (allFields[fieldName]) {
-      // 优先从可见字段获取当前值
-      if (visibleFields.value[fieldName]) {
-        currentData[fieldName] = visibleFields.value[fieldName].value || ''
-      } else {
-        // 如果不在可见字段中，从原始数据获取
-        let fieldValue = ''
-        
-        // 先尝试从单位政策数据获取
-        if (policyInfo.value?.[fieldName]) {
-          fieldValue = policyInfo.value[fieldName].value || ''
-        }
-        // 再尝试从省级政策数据获取
-        else if (provincePolicyInfo.value?.[fieldName]) {
-          fieldValue = provincePolicyInfo.value[fieldName] || ''
-        }
-        
-        currentData[fieldName] = fieldValue
-      }
+  // 从fieldName中提取content ID
+  const fieldName = Object.keys(visibleFields.value).find(key => visibleFields.value[key] === fieldConfig)
+  if (fieldName && fieldName.startsWith('content_')) {
+    currentContentId.value = parseInt(fieldName.replace('content_', ''))
+  }
+  
+  previewDialogVisible.value = true
+  isEditingContent.value = false
+}
+
+// 复制内容到剪贴板
+const copyToClipboard = async (content: string) => {
+  const { copyWithMessage } = await import('@/utils/clipboard')
+  await copyWithMessage(content)
+}
+
+// 开始编辑内容
+const handleEditContent = () => {
+  if (currentPreviewContent.value) {
+    editContentForm.title = currentPreviewContent.value.display_name
+    editContentForm.content = currentPreviewContent.value.value
+    previewDialogVisible.value = false // 关闭预览对话框
+    isEditingContent.value = true // 打开编辑对话框
+  }
+}
+
+// 取消编辑
+const handleCancelEdit = () => {
+  isEditingContent.value = false
+}
+
+// 保存编辑
+const handleSaveEdit = async () => {
+  if (!editContentForm.title.trim() || !editContentForm.content.trim()) {
+    message.warning('请填写标题和内容')
+    return
+  }
+  
+  if (!currentContentId.value) {
+    message.error('无法确定要更新的内容')
+    return
+  }
+  
+  try {
+    saving.value = true
+    
+    await dataQueryContentAPI.updateContent(currentContentId.value, {
+      title: editContentForm.title.trim(),
+      content: editContentForm.content.trim()
+    })
+    
+    message.success('更新成功')
+    isEditingContent.value = false
+    
+    // 通知父组件内容已更新，需要刷新预加载数据
+    emit('content-updated')
+    
+    // 重新加载本地数据
+    if (props.unitId) {
+      await loadPolicyInfo(props.unitId)
     }
-  })
+    
+    previewDialogVisible.value = false
+    
+  } catch (error) {
+    console.error('更新失败:', error)
+    message.error('更新失败，请重试')
+  } finally {
+    saving.value = false
+  }
+}
+
+// 删除内容
+const handleDeleteContent = async () => {
+  if (!currentContentId.value) {
+    message.error('无法确定要删除的内容')
+    return
+  }
   
-  setData(currentData)
-  startEdit()
-}
-
-const saveChanges = async () => {
-  await saveEdit('手动保存')
-}
-
-const handleFormSubmit = async () => {
-  await saveEdit('表单提交')
-}
-
-const handleFormSubmitFailed = (errorInfo: any) => {
-  console.log('表单验证失败:', errorInfo)
-  message.error('请检查表单数据后再提交')
-}
-
-// 表单验证规则
-const formRules = computed(() => {
-  const rules: Record<string, any[]> = {}
-  
-  // 为必填字段添加验证规则
-  Object.keys(visibleFields.value).forEach(fieldName => {
-    const fieldConfig = visibleFields.value[fieldName]
-    if (isRequiredField(fieldName)) {
-      rules[fieldName] = [{
-        required: true,
-        message: `请输入${fieldConfig.display_name}`,
-        trigger: 'blur'
-      }]
+  try {
+    saving.value = true
+    
+    await dataQueryContentAPI.deleteContent(currentContentId.value)
+    
+    message.success('删除成功')
+    previewDialogVisible.value = false
+    
+    // 通知父组件内容已更新，需要刷新预加载数据
+    emit('content-updated')
+    
+    // 重新加载本地数据
+    if (props.unitId) {
+      await loadPolicyInfo(props.unitId)
     }
-  })
-  
-  return rules
+    
+  } catch (error) {
+    console.error('删除失败:', error)
+    message.error('删除失败，请重试')
+  } finally {
+    saving.value = false
+  }
+}
+
+
+// 计算当前单位名称（用于查询）
+const currentProvince = computed(() => {
+  // 直接返回单位名称，无论是省公司还是直属单位
+  if (!props.unitInfo?.unit_name) return ''
+  return props.unitInfo.unit_name
 })
 
-const isRequiredField = (fieldName: string): boolean => {
-  // 不需要必填字段，用户想怎么填怎么填
-  return false
-}
-
-const handleFieldConfigChange = (checkedValues: string[]) => {
-  enabledFields.value = checkedValues
-  // 不再保存字段配置到本地存储，因为用户希望始终显示所有字段
-}
 
 const loadBasicPolicyData = async (unitId: number) => {
   try {
     // 首先加载自定义字段定义，确保 allFields 包含自定义字段
     if (currentProvince.value) {
-      await loadCustomFields()
+      // loadCustomFields() 已移除，不再需要
     }
     
     // 使用新的统一API获取基本政策数据
@@ -1132,8 +722,7 @@ const loadBasicPolicyData = async (unitId: number) => {
       console.log('✅ 基本政策数据刷新成功')
     }
     
-    // 自定义字段数据已在 loadCustomFields() 中使用合并接口加载，避免重复请求
-    console.log('✅ 基本政策数据加载完成，自定义字段将由 loadCustomFields() 统一处理')
+    // 注：已改为直接使用 data-query-content API，不再需要 custom-fields 请求
     
   } catch (error) {
     console.error('❌ 获取基本政策数据失败:', error)
@@ -1147,96 +736,128 @@ const loadPolicyInfo = async (unitId: number) => {
     loading.value = true
     emit('loading-change', true)
     
-    // 首先加载自定义字段定义，确保 allFields 包含自定义字段
-    if (currentProvince.value) {
-      await loadCustomFields()
-    }
-    
-    // 直接使用新的统一API获取基本政策数据
+    // 使用新的data-query-content API获取基本政策信息
     try {
-      const basicPolicyResponse = await policySectionsAPI.getBasicPolicy(unitId)
-      
-      let basicPolicyData = null
-      
-      // 新API统一使用data.section_data格式
-      if (basicPolicyResponse?.data?.section_data) {
-        basicPolicyData = basicPolicyResponse.data.section_data
-        console.log('✅ 使用data.section_data格式，包含', Object.keys(basicPolicyData).length, '个字段')
-      } else if (basicPolicyResponse?.section_data) {
-        basicPolicyData = basicPolicyResponse.section_data
-        console.log('✅ 使用section_data格式，包含', Object.keys(basicPolicyData).length, '个字段')
-      } else if (basicPolicyResponse?.basic_policy_info) {
-        basicPolicyData = basicPolicyResponse.basic_policy_info
-        console.log('✅ 使用basic_policy_info格式')
+      // 先获取省份名称（从unitInfo或API获取）
+      let provinceName = ''
+      if (props.unitInfo?.unit_name) {
+        provinceName = props.unitInfo.unit_name
       } else {
-        console.warn('⚠️ 基本政策API响应中没有预期的数据字段，响应结构:', basicPolicyResponse)
-        console.warn('⚠️ 预期的字段: data.section_data, section_data 或 basic_policy_info')
-        // 即使没有数据，也要初始化空的policyInfo以避免组件错误（保留已有的自定义字段）
-        if (!policyInfo.value) {
-          policyInfo.value = {}
+        // 如果unitInfo没有，从API获取
+        try {
+          const unitDetails = await getUnitDetails(unitId)
+          provinceName = unitDetails.unit_name
+        } catch (error) {
+          console.warn('⚠️ 无法获取单位信息:', error)
+          provinceName = ''
         }
       }
       
-      if (basicPolicyData) {
-        // 初始化 policyInfo（如果还没有），保留已有的自定义字段数据
-        if (!policyInfo.value) {
-          policyInfo.value = {}
-        }
+      if (provinceName) {
+        console.log('🔍 开始加载基本政策信息，省份:', provinceName)
         
-        console.log('🔍 loadPolicyInfo - 处理基本政策数据前，当前policyInfo包含:', Object.keys(policyInfo.value))
+        // 使用新API获取基本政策信息内容
+        const basicPolicyContents = await getProvinceContent(provinceName, '基本政策信息')
+        console.log('📋 获取到基本政策信息内容:', basicPolicyContents)
         
-        // 将新API的数据格式转换为组件期望的格式
-        Object.keys(basicPolicyData).forEach(fieldName => {
-          const fieldData = basicPolicyData[fieldName]
-          if (policyInfo.value) {
-            policyInfo.value[fieldName] = {
-              value: fieldData.value,
-              display_name: fieldData.display_name,
-              type: fieldData.type,
-              priority: fieldData.priority,
-              data_source: fieldData.data_source || 'policy_sections'
-            }
-          }
-        })
+        // 初始化 policyInfo
+        policyInfo.value = {}
         
-        console.log('✅ 基本政策数据加载成功 (统一API):', basicPolicyData)
-        
-        // 尝试获取省级政策信息（如果需要）
-        if (props.unitInfo?.unit_name) {
-          const unitName = props.unitInfo.unit_name
-          if (unitName.includes('省')) {
-            const match = unitName.match(/([\u4e00-\u9fa5]+)省/)
-            if (match) {
-              const provinceName = match[1]
-              try {
-                const provincePolicyResponse = await policyManagementAPI.getProvincePolicies({
-                  province: provinceName,
-                  limit: 1
-                })
-                
-                if (provincePolicyResponse?.policies && provincePolicyResponse.policies.length > 0) {
-                  provincePolicyInfo.value = provincePolicyResponse.policies[0]
-                  console.log('✅ 省级政策信息加载成功:', provincePolicyInfo.value)
-                }
-              } catch (provincePolicyError) {
-                console.warn('⚠️ 获取省级政策失败:', provincePolicyError)
-                provincePolicyInfo.value = null
+        // 将新API的内容转换为组件期望的格式
+        if (basicPolicyContents.length > 0) {
+          // 将每个内容条目转换为字段格式
+          basicPolicyContents.forEach((contentItem: DataQueryContent, index: number) => {
+            const fieldName = `content_${contentItem.id}` // 使用内容ID作为字段名
+            if (policyInfo.value) {
+              policyInfo.value[fieldName] = {
+                value: contentItem.content,
+                display_name: contentItem.title,
+                type: 'textarea' as const,
+                priority: contentItem.display_order || index + 1,
+                data_source: 'data_query_content'
               }
             }
+          })
+          
+          console.log('✅ 基本政策数据转换完成，包含', basicPolicyContents.length, '个内容条目')
+        } else {
+          console.log('ℹ️ 该省份暂无基本政策信息内容')
+        }
+        
+        // 更新字段配置，显示所有新加载的字段
+        if (policyInfo.value && Object.keys(policyInfo.value).length > 0) {
+          enabledFields.value = Object.keys(policyInfo.value)
+        }
+        
+        // 尝试获取省级政策信息（如果需要，保留原有逻辑）
+        if (provinceName.includes('省')) {
+          const match = provinceName.match(/([\u4e00-\u9fa5]+)省/)
+          if (match) {
+            const provinceOnly = match[1]
+            try {
+              const provincePolicyResponse = await policyManagementAPI.getProvincePolicies({
+                province: provinceOnly,
+                limit: 1
+              })
+              
+              if (provincePolicyResponse?.policies && provincePolicyResponse.policies.length > 0) {
+                provincePolicyInfo.value = provincePolicyResponse.policies[0]
+                console.log('✅ 省级政策信息加载成功:', provincePolicyInfo.value)
+              }
+            } catch (provincePolicyError) {
+              console.warn('⚠️ 获取省级政策失败:', provincePolicyError)
+              provincePolicyInfo.value = null
+            }
           }
         }
+      } else {
+        console.warn('⚠️ 无法确定省份名称，无法加载基本政策信息')
+        // 初始化空的policyInfo
+        policyInfo.value = {}
+        enabledFields.value = []
       }
     } catch (newApiError) {
       console.error('❌ 新API获取基本政策失败:', newApiError)
-      throw newApiError // 不再回退到旧API，直接抛出错误
-    }
-    
-    // 自定义字段数据已在 loadCustomFields() 中使用合并接口加载，避免重复请求
-    console.log('✅ 政策信息加载完成，自定义字段将由 loadCustomFields() 统一处理')
-    
-    // 如果没有设置过字段配置，显示所有可用字段
-    if (enabledFields.value.length === 0) {
-      enabledFields.value = Object.keys(allFields)
+      // 如果新API失败，回退到原有API
+      console.log('🔄 回退到原有API获取基本政策数据')
+      try {
+        const basicPolicyResponse = await policySectionsAPI.getBasicPolicy(unitId)
+        
+        let basicPolicyData = null
+        
+        // 原有API格式处理逻辑
+        if (basicPolicyResponse?.data?.section_data) {
+          basicPolicyData = basicPolicyResponse.data.section_data
+        } else if (basicPolicyResponse?.section_data) {
+          basicPolicyData = basicPolicyResponse.section_data
+        } else if (basicPolicyResponse?.basic_policy_info) {
+          basicPolicyData = basicPolicyResponse.basic_policy_info
+        }
+        
+        if (basicPolicyData) {
+          policyInfo.value = {}
+          
+          // 转换原有API的数据格式
+          Object.keys(basicPolicyData).forEach(fieldName => {
+            const fieldData = basicPolicyData[fieldName]
+            if (policyInfo.value) {
+              policyInfo.value[fieldName] = {
+                value: fieldData.value,
+                display_name: fieldData.display_name,
+                type: fieldData.type,
+                priority: fieldData.priority,
+                data_source: fieldData.data_source || 'policy_sections'
+              }
+            }
+          })
+          
+          enabledFields.value = Object.keys(policyInfo.value)
+          console.log('✅ 回退到原有API，基本政策数据加载成功')
+        }
+      } catch (fallbackError) {
+        console.error('❌ 原有API也获取失败:', fallbackError)
+        throw fallbackError
+      }
     }
     
     emit('policy-loaded', policyInfo.value)
@@ -1252,29 +873,111 @@ const loadPolicyInfo = async (unitId: number) => {
   }
 }
 
+// 使用预加载数据
+const usePreloadedData = (preloadedContents: DataQueryContent[]) => {
+  try {
+    console.log('📋 开始处理预加载的基本政策数据:', preloadedContents)
+    
+    // 初始化 policyInfo
+    policyInfo.value = {}
+    
+    // 将预加载的内容转换为组件期望的格式
+    if (preloadedContents.length > 0) {
+      preloadedContents.forEach((contentItem: DataQueryContent, index: number) => {
+        const fieldName = `content_${contentItem.id}` // 使用内容ID作为字段名
+        
+        // 添加字段定义到 allFields（这很重要！）
+        allFields[fieldName] = {
+          display_name: contentItem.title,
+          type: 'textarea' as const,
+          description: `来自${contentItem.section}的内容`,
+          is_custom: false,
+          data_source: 'data_query_content'
+        }
+        
+        if (policyInfo.value) {
+          policyInfo.value[fieldName] = {
+            value: contentItem.content,
+            display_name: contentItem.title,
+            type: 'textarea' as const,
+            priority: contentItem.display_order || index + 1,
+            data_source: 'data_query_content'
+          }
+        }
+      })
+      
+      console.log('✅ 预加载基本政策数据转换完成，包含', preloadedContents.length, '个内容条目')
+    } else {
+      console.log('ℹ️ 预加载数据为空')
+    }
+    
+    // 更新字段配置，显示所有新加载的字段
+    if (policyInfo.value && Object.keys(policyInfo.value).length > 0) {
+      enabledFields.value = Object.keys(policyInfo.value)
+    } else {
+      enabledFields.value = []
+    }
+    
+    emit('policy-loaded', policyInfo.value)
+    console.log('✅ 预加载数据处理完成')
+    
+  } catch (error) {
+    console.error('❌ 处理预加载数据失败:', error)
+    policyInfo.value = {}
+    enabledFields.value = []
+  }
+}
+
 const initializeFieldConfig = () => {
-  // 清除旧的字段配置限制，始终显示所有字段
+  // 清除旧的字段配置限制
   try {
     // 清除本地存储的字段配置限制
     localStorage.removeItem('policyFieldsConfig')
     
-    // 默认显示所有可用字段
-    enabledFields.value = Object.keys(allFields)
+    // 初始状态不显示任何字段，只有加载到实际数据时才显示
+    enabledFields.value = []
   } catch (error) {
     console.error('字段配置初始化失败:', error)
-    enabledFields.value = Object.keys(allFields)
+    enabledFields.value = []
   }
 }
 
-// 监听单位ID变化
-watch(() => props.unitId, (newUnitId) => {
-  if (newUnitId) {
-    loadPolicyInfo(newUnitId)
-  } else {
+// 监听单位ID变化 - 优先使用预加载数据
+watch(() => props.unitId, (newUnitId, oldUnitId) => {
+  // 先清空旧数据（除非是初始加载）
+  if (oldUnitId !== undefined) {
     policyInfo.value = null
     provincePolicyInfo.value = null
+    currentPreviewContent.value = null
+    enabledFields.value = []
+  }
+  
+  if (newUnitId) {
+    // 如果有预加载数据，优先使用预加载数据
+    if (props.preloadedData && props.preloadedData.data && props.preloadedData.data.length > 0) {
+      console.log('🔍 使用预加载的基本政策数据:', props.preloadedData)
+      usePreloadedData(props.preloadedData.data)
+    } else {
+      // 如果没有预加载数据，才发起API请求
+      console.log('⚠️ 没有预加载数据，回退到API请求')
+      loadPolicyInfo(newUnitId)
+    }
+  } else {
+    // 清空所有相关数据
+    policyInfo.value = null
+    provincePolicyInfo.value = null
+    currentPreviewContent.value = null
+    enabledFields.value = []
   }
 }, { immediate: true })
+
+// 监听预加载数据变化
+watch(() => props.preloadedData, (newPreloadedData) => {
+  if (newPreloadedData && newPreloadedData.data && newPreloadedData.data.length > 0) {
+    console.log('🔄 预加载数据更新，使用新数据:', newPreloadedData)
+    usePreloadedData(newPreloadedData.data)
+  }
+}, { immediate: true, deep: true })
 
 // 监听省份变化，确保省份切换时清除旧数据并重新加载
 watch(() => currentProvince.value, async (newProvince, oldProvince) => {
@@ -1301,20 +1004,16 @@ watch(() => currentProvince.value, async (newProvince, oldProvince) => {
       })
     }
     
-    // 重新加载新省份的自定义字段
-    await loadCustomFields()
+    // 注：loadCustomFields() 已移除，不再需要
     
-    console.log('✅ 省份切换完成，已加载新省份的自定义字段')
+    console.log('✅ 省份切换完成')
   }
 })
 
 // 生命周期
 onMounted(async () => {
   initializeFieldConfig()
-  // 加载自定义字段
-  if (currentProvince.value) {
-    await loadCustomFields()
-  }
+  // 注：loadCustomFields() 已移除，不再需要
 })
 </script>
 
@@ -1338,7 +1037,7 @@ onMounted(async () => {
 
     .section-title {
       margin: 0;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 600;
       color: #333;
       display: flex;
@@ -1347,7 +1046,7 @@ onMounted(async () => {
 
       .section-icon {
         color: #1890ff;
-        font-size: 12px;
+        font-size: 14px;
       }
     }
 
@@ -1428,125 +1127,254 @@ onMounted(async () => {
     }
   }
 
-  // 政策字段展示 - 高密度布局
-  .policy-fields {
-    padding: 6px;
-
-    .fields-grid {
+  // 内容卡片展示 - 参考提前批组件的设计
+  .policy-content {
+    .content-grid {
+      padding: 16px;
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       gap: 8px;
+      min-height: 120px;
 
       @media (max-width: 768px) {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-      }
-      
-      @media (max-width: 480px) {
         grid-template-columns: 1fr;
-        gap: 6px;
+        gap: 8px;
+        padding: 12px;
       }
+
+      // 内容卡片样式 - 蓝色主题，参考农网板块
+      .content-card {
+        background: linear-gradient(145deg, #f9fcff 0%, #f0f9ff 100%);
+        border: 1px solid #bae7ff;
+        border-radius: 8px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #1890ff 0%, #40a9ff 100%);
+        }
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(24, 144, 255, 0.15);
+          border-color: #40a9ff;
+          background: linear-gradient(145deg, #f0f9ff 0%, #e6f7ff 100%);
+
+          &::before {
+            height: 4px;
+            background: linear-gradient(90deg, #1890ff 0%, #40a9ff 50%, #69c0ff 100%);
+          }
+        }
+
+        .card-header {
+          margin-bottom: 12px;
+
+          .card-title {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: #0958d9;
+            line-height: 1.4;
+          }
+        }
+
+        .card-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+
+          .content-preview {
+            margin: 0;
+            font-size: 12px;
+            color: #595959;
+            line-height: 1.5;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            flex: 1;
+          }
+        }
+      }
+
+      // 新增内容卡片
+      .add-content-card {
+        border: 2px dashed #d9d9d9;
+        border-radius: 8px;
+        background: #fafafa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-height: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          border-color: #52c41a;
+          background: #f6ffed;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(82, 196, 26, 0.1);
+        }
+
+        .add-content-inner {
+          text-align: center;
+          color: #8c8c8c;
+
+          .add-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: block;
+          }
+
+          .add-text {
+            font-size: 12px;
+            font-weight: 500;
+          }
+        }
+
+        &:hover .add-content-inner {
+          color: #52c41a;
+        }
+      }
+
     }
 
-    .field-item {
-      background: linear-gradient(145deg, #ffffff 0%, #fafbfc 100%);
-      border: 1px solid #e8e8e8;
-      border-radius: 8px;
-      padding: 10px 12px;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      min-height: 65px;
+    // 空状态卡片 - 美化版本（移出content-grid作用域）
+    .empty-state-card {
+      background: linear-gradient(135deg, #f6f8fb 0%, #f0f4f8 100%);
+      border: 2px solid #e1e8ed;
+      border-radius: 12px;
+      margin: 20px;
+      min-height: 240px;
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
       position: relative;
       overflow: hidden;
 
-      // 默认字段（基本字段）- 蓝色系
-      &.default-field {
-        border-color: #d1e7ff;
-        background: linear-gradient(145deg, #fafcff 0%, #f0f8ff 100%);
-        
-        &:hover {
-          border-color: #91caff;
-          background: linear-gradient(145deg, #f0f8ff 0%, #e6f4ff 100%);
-          box-shadow: 0 4px 12px rgba(24, 144, 255, 0.08), 0 2px 4px rgba(24, 144, 255, 0.04);
-        }
-      }
-
-      // 附加字段（自定义字段）- 紫色系
-      &.custom-field {
-        border-color: #d3adf7;
-        background: linear-gradient(145deg, #fdfaff 0%, #f9f0ff 100%);
-        
-        &:hover {
-          border-color: #b37feb;
-          background: linear-gradient(145deg, #f9f0ff 0%, #efdbff 100%);
-          box-shadow: 0 4px 12px rgba(114, 46, 209, 0.08), 0 2px 4px rgba(114, 46, 209, 0.04);
-        }
-      }
-
-      // 添加顶部装饰边框 - 根据字段类型区分颜色
-      &::after {
+      &::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        height: 2px;
-        transition: all 0.3s ease;
-      }
-
-      &.default-field::after {
-        background: linear-gradient(90deg, #1890ff 0%, #40a9ff 100%);
-      }
-
-      &.custom-field::after {
-        background: linear-gradient(90deg, #722ed1 0%, #9254de 100%);
+        height: 4px;
+        background: linear-gradient(90deg, #1890ff 0%, #40a9ff 50%, #69c0ff 100%);
       }
 
       &:hover {
         transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(24, 144, 255, 0.12);
+        border-color: #bae7ff;
+      }
 
-        &.default-field::after {
-          background: linear-gradient(90deg, #1890ff 0%, #40a9ff 50%, #52c41a 100%);
-          height: 3px;
+      .empty-content {
+        text-align: center;
+        color: #8c8c8c;
+        padding: 24px;
+
+        .empty-icon {
+          font-size: 48px;
+          color: #40a9ff;
+          margin-bottom: 16px;
+          display: block;
+          filter: drop-shadow(0 2px 4px rgba(64, 169, 255, 0.2));
         }
 
-        &.custom-field::after {
-          background: linear-gradient(90deg, #722ed1 0%, #9254de 50%, #b37feb 100%);
-          height: 3px;
+        .empty-title {
+          margin: 0 0 8px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #595959;
+        }
+
+        .empty-text {
+          margin: 0;
+          font-size: 14px;
+          color: #8c8c8c;
+          line-height: 1.5;
         }
       }
-      .field-label {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 6px;
-        padding: 2px 0;
-        position: relative;
+    }
+  }
 
-        // 添加左边的装饰条
+  .policy-fields {
+    padding: 16px;
+
+    .fields-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 8px;
+      min-height: 120px;
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 12px;
+      }
+    }
+
+    .field-item {
+      background: linear-gradient(145deg, #f6ffed 0%, #f0f9e8 100%);
+      border: 1px solid #d9f7be;
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+
+      // 添加顶部装饰边框
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+        transition: all 0.3s ease;
+      }
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(82, 196, 26, 0.15);
+        border-color: #73d13d;
+        background: linear-gradient(145deg, #f0f9e8 0%, #eaf5e3 100%);
+
         &::before {
-          content: '';
-          width: 3px;
-          height: 12px;
-          background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
-          border-radius: 2px;
-          flex-shrink: 0;
+          height: 4px;
+          background: linear-gradient(90deg, #52c41a 0%, #73d13d 50%, #95de64 100%);
         }
+      }
+
+      .field-label {
+        margin-bottom: 12px;
 
         .label-text {
-          font-size: 11px;
+          margin: 0;
+          font-size: 14px;
           font-weight: 600;
-          color: #1890ff;
-          line-height: 1.2;
-          letter-spacing: 0.3px;
-          text-transform: uppercase;
-          background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
-          padding: 2px 6px;
-          border-radius: 3px;
-          border: 1px solid #bae7ff;
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+          color: #389e0d;
+          line-height: 1.4;
         }
 
         .field-help {
@@ -1561,127 +1389,61 @@ onMounted(async () => {
       }
 
       .field-value {
-        padding: 6px 8px;
-        background: white;
-        border-radius: 4px;
-        border: 1px solid #f0f0f0;
-        min-height: 28px;
+        flex: 1;
         display: flex;
-        align-items: center;
-        position: relative;
-        transition: all 0.2s ease;
+        flex-direction: column;
 
-        &::before {
-          content: '';
-          position: absolute;
-          left: 0;
-          top: 0;
-          bottom: 0;
-          width: 2px;
-          background: linear-gradient(180deg, #52c41a 0%, #73d13d 100%);
-          border-radius: 0 1px 1px 0;
-        }
-
-        &:hover {
-          background: #fafafa;
-          border-color: #d9d9d9;
-          box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-        }
-
-        .value-text {
-          font-size: 13px;
-          color: #262626;
-          line-height: 1.4;
-          font-weight: 500;
-          margin-left: 6px;
-          flex: 1;
-          font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-          position: relative;
-          
-          &.expandable {
-            cursor: pointer;
-            transition: all 0.2s ease;
-            
-            &:hover {
-              color: #1890ff;
-            }
-            
-            .expand-indicator {
-              position: absolute;
-              right: 2px;
-              bottom: 2px;
-              font-size: 12px;
-              color: #1890ff;
-              opacity: 0.7;
-              transition: all 0.2s ease;
-            }
-            
-            &:hover .expand-indicator {
-              opacity: 1;
-              transform: scale(1.1);
-            }
-          }
-
-          &.multiline {
-            white-space: pre-wrap;
-            word-break: break-word;
-            max-height: 60px;
-            overflow: hidden;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-          }
-          
-          // 为所有文本内容设置固定高度和截断
-          max-height: 60px;
+        .content-preview {
+          margin: 0;
+          font-size: 12px;
+          color: #595959;
+          line-height: 1.5;
           overflow: hidden;
           display: -webkit-box;
-          -webkit-line-clamp: 3;
+          -webkit-line-clamp: 4;
           -webkit-box-orient: vertical;
-        }
-
-        .value-number {
-          font-size: 14px;
-          font-weight: 700;
-          color: #1890ff;
-          margin-left: 6px;
-          display: flex;
-          align-items: baseline;
-          font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-
-          .unit {
-            font-size: 11px;
-            font-weight: 500;
-            color: #8c8c8c;
-            margin-left: 3px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-          }
-        }
-
-        .value-select,
-        .value-boolean {
-          font-size: 12px;
-          font-weight: 500;
-          margin-left: 6px;
-          
-          :deep(.ant-tag) {
-            margin: 0;
-            font-size: 11px;
-            padding: 2px 8px;
-            line-height: 1.4;
-            border-radius: 4px;
-            font-weight: 500;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-          }
-        }
-
-        .value-default {
-          font-size: 13px;
-          color: #262626;
-          font-weight: 500;
-          margin-left: 6px;
           flex: 1;
-          font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', sans-serif;
+        }
+      }
+
+      // 新增内容卡片
+      .add-content-card {
+        border: 2px dashed #d9d9d9;
+        border-radius: 8px;
+        background: #fafafa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-height: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          border-color: #52c41a;
+          background: #f6ffed;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(82, 196, 26, 0.1);
+        }
+
+        .add-content-inner {
+          text-align: center;
+          color: #8c8c8c;
+
+          .add-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: block;
+          }
+
+          .add-text {
+            font-size: 12px;
+            font-weight: 500;
+          }
+        }
+
+        &:hover .add-content-inner {
+          color: #52c41a;
         }
       }
     }
@@ -1904,6 +1666,78 @@ onMounted(async () => {
   }
 }
 
+// 增强版话术详情样式 - 基本政策信息
+:deep(.content-preview-modal) {
+  .ant-modal-header {
+    border-bottom: 1px solid #f0f0f0;
+    padding: 16px 24px;
+    
+    .ant-modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #262626;
+    }
+  }
+  
+  .ant-modal-body {
+    padding: 24px;
+    
+    .script-detail-enhanced {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      
+      .question-section-enhanced,
+      .answer-section-enhanced {
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          
+          .anticon {
+            font-size: 16px;
+            color: #52c41a;
+          }
+          
+          .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #52c41a;
+          }
+        }
+        
+        .section-content-enhanced {
+          font-size: 16px;
+          line-height: 1.8;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #d9f7be;
+          
+          &.question-content {
+            background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%);
+            color: #389e0d;
+            font-style: italic;
+          }
+          
+          &.answer-content {
+            background: linear-gradient(135deg, #f6ffed 0%, #f0f9e8 100%);
+            color: #333;
+            font-weight: 500;
+          }
+        }
+      }
+
+      .action-buttons-enhanced {
+        display: flex;
+        justify-content: center;
+        padding-top: 8px;
+        border-top: 1px solid #f0f0f0;
+      }
+    }
+  }
+}
+
 // 响应式适配
 @media (max-width: 768px) {
   .unit-policy-display {
@@ -2105,4 +1939,96 @@ onMounted(async () => {
     }
   }
 }
+
+// 内容预览弹窗样式 - 简洁美化设计
+.content-preview-modal {
+  :deep(.ant-modal-header) {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+    border-bottom: 2px solid #91d5ff;
+    
+    .ant-modal-title {
+      color: #1890ff;
+      font-weight: 600;
+      font-size: 16px;
+    }
+  }
+  
+  :deep(.ant-modal-body) {
+    padding: 24px;
+  }
+}
+
+.content-preview {
+  .field-section {
+    margin-bottom: 20px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #1890ff;
+      font-weight: 600;
+      font-size: 14px;
+      
+      .section-icon {
+        font-size: 16px;
+      }
+    }
+    
+    .section-content {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border: 1px solid #f0f0f0;
+      background: #fafafa;
+      min-height: 60px;
+      
+      &.title-content {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+        border-color: #bae7ff;
+        color: #1890ff;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      
+      &.main-content {
+        background: linear-gradient(135deg, #f6ffed 0%, #f0f9e8 100%);
+        border-color: #d9f7be;
+        color: #262626;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 100px;
+      }
+    }
+  }
+  
+  .action-buttons {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    text-align: center;
+    
+    .ant-btn {
+      height: 36px;
+      border-radius: 6px;
+      font-weight: 500;
+      
+      .anticon {
+        font-size: 14px;
+      }
+      
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+    }
+  }
+}
+
 </style>

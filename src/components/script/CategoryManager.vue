@@ -8,13 +8,20 @@
           话术分类管理
         </h3>
         <div class="header-stats">
-          <a-badge :count="filteredTreeData.length" :offset="[10, -2]">
-            <span class="category-count">
-              显示{{ filteredTreeData.length }}个分类
+          <span class="stats-item">
+            <span class="stats-label">显示:</span>
+            <span class="stats-value">{{ filteredTreeData.length }}</span>
+          </span>
+          <span class="stats-item">
+            <span class="stats-label">总数:</span>
+            <span class="stats-value">{{ totalCategoryCount }}</span>
+          </span>
+          <a-tooltip title="拖拽分类节点可调整显示顺序">
+            <span class="drag-tip">
+              <drag-outlined />
+              拖拽排序
             </span>
-          </a-badge>
-          <a-divider type="vertical" />
-          <span class="total-count">共{{ totalCategoryCount }}个分类</span>
+          </a-tooltip>
         </div>
       </div>
       
@@ -57,6 +64,11 @@
           </template>
         </a-dropdown>
         
+        <a-button @click="initializeSortOrder" size="small" title="初始化排序">
+          <sort-ascending-outlined />
+          初始化排序
+        </a-button>
+        
         <a-button @click="refresh" size="small" :loading="loading" title="刷新数据">
           <reload-outlined />
         </a-button>
@@ -80,14 +92,17 @@
           <template #title="{ title, script_count, is_system, key }">
             <div class="tree-node" @contextmenu.prevent="(e) => showContextMenu(e, key, title, is_system)">
               <div class="node-content">
-                <span class="node-name">{{ title }}</span>
-                <div class="node-meta">
+                <div class="node-left">
+                  <span class="node-name">{{ title }}</span>
                   <a-tag v-if="is_system" color="blue" size="small">系统</a-tag>
-                  <span v-if="script_count" class="node-count">({{ script_count }})</span>
                 </div>
+                <span v-if="script_count" class="node-count">{{ script_count }}</span>
               </div>
               
               <div class="node-actions" v-if="!is_system">
+                <span class="drag-handle" title="拖拽调整顺序">
+                  <drag-outlined />
+                </span>
                 <a-button
                   type="text"
                   size="small"
@@ -214,14 +229,19 @@ import {
   DownOutlined,
   FolderAddOutlined,
   ImportOutlined,
-  ExportOutlined
+  ExportOutlined,
+  DragOutlined,
+  SortAscendingOutlined
 } from '@ant-design/icons-vue'
 import {
   getScriptCategoriesTree,
   createScriptCategory,
   updateScriptCategory,
   deleteScriptCategory,
-  type ScriptCategory
+  batchSortCategories,
+  type ScriptCategory,
+  type BatchSortRequest,
+  type CategorySortItem
 } from '@/api/script'
 
 // Props
@@ -293,17 +313,25 @@ const treeData = computed(() => {
       title: category.name,
       key: category.id,
       script_count: category.script_count,
-      is_system: category.is_system
+      is_system: category.is_system,
+      sort_order: category.sort_order || 0
     }
     
     if (category.children && category.children.length > 0) {
-      node.children = category.children.map(buildTreeNode)
+      // 子分类也按sort_order排序
+      const sortedChildren = [...category.children]
+        .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+      node.children = sortedChildren.map(buildTreeNode)
     }
     
     return node
   }
   
-  return categories.value.map(buildTreeNode)
+  // 根分类按sort_order排序
+  const sortedCategories = [...categories.value]
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+  
+  return sortedCategories.map(buildTreeNode)
 })
 
 const filteredTreeData = computed(() => {
@@ -406,11 +434,70 @@ const handleExportCategories = () => {
   }
 }
 
+// 初始化排序值
+const initializeSortOrder = async () => {
+  try {
+    const allCategories = flattenCategories(categories.value)
+    const needsUpdate: CategorySortItem[] = []
+    
+    // 检查是否需要初始化sort_order
+    const hasUnsortedCategories = allCategories.some(cat => !cat.sort_order || cat.sort_order === 0)
+    
+    if (hasUnsortedCategories) {
+      console.log('发现未排序的分类，正在初始化sort_order...')
+      
+      // 为根分类分配排序
+      const rootCategories = allCategories.filter(cat => !cat.parent_id)
+      rootCategories.forEach((cat, index) => {
+        const newSortOrder = (index + 1) * 10
+        if (cat.sort_order !== newSortOrder) {
+          needsUpdate.push({ id: cat.id!, sort_order: newSortOrder })
+        }
+      })
+      
+      // 为子分类分配排序
+      rootCategories.forEach(rootCat => {
+        const childCategories = allCategories.filter(cat => cat.parent_id === rootCat.id)
+        childCategories.forEach((child, index) => {
+          const newSortOrder = (index + 1) * 10
+          if (child.sort_order !== newSortOrder) {
+            needsUpdate.push({ id: child.id!, sort_order: newSortOrder })
+          }
+        })
+      })
+      
+      if (needsUpdate.length > 0) {
+        console.log('初始化排序:', needsUpdate)
+        await batchSortCategories({ categories: needsUpdate })
+        message.success('排序初始化完成')
+        
+        // 重新加载数据
+        await loadCategoriesData()
+      }
+    }
+  } catch (error) {
+    console.error('初始化排序失败:', error)
+    message.error('初始化排序失败')
+  }
+}
+
+const loadCategoriesData = async () => {
+  const response = await getScriptCategoriesTree({ include_stats: true })
+  categories.value = response.data || []
+  
+  // 调试：检查数据结构
+  console.log('分类原始数据:', categories.value)
+  console.log('构建的树数据:', treeData.value)
+}
+
 const loadCategories = async () => {
   loading.value = true
   try {
-    const response = await getScriptCategoriesTree()
-    categories.value = response.data || []
+    await loadCategoriesData()
+    
+    // 初始化排序（如果需要）
+    await initializeSortOrder()
+    
     emit('refresh')
   } catch (error) {
     console.error('获取分类失败:', error)
@@ -535,9 +622,202 @@ const handleSelect = (selectedKeys: number[]) => {
   // 处理节点选择
 }
 
-const handleDrop = (info: any) => {
-  // 处理拖拽排序
-  console.log('拖拽排序:', info)
+// 控制拖拽行为
+const allowDrop = (info: any) => {
+  try {
+    console.log('allowDrop被调用，info:', info)
+    
+    // 更详细的调试信息
+    if (!info) {
+      console.log('allowDrop: info为空')
+      return false
+    }
+    
+    // 检查info的所有属性
+    console.log('info的属性:', Object.keys(info))
+    
+    // 尝试不同的属性访问方式
+    const dragNode = info.dragNode || info.drag || info.dragging
+    const node = info.node || info.dropNode || info.drop
+    
+    console.log('解析的节点:', { dragNode, node })
+    
+    if (!dragNode || !node) {
+      console.log('allowDrop: 节点为空', { 
+        hasDragNode: !!dragNode, 
+        hasNode: !!node,
+        infoKeys: Object.keys(info)
+      })
+      return false
+    }
+    
+    console.log('allowDrop: 允许拖拽', {
+      dragKey: dragNode?.key,
+      dropKey: node?.key,
+      dragTitle: dragNode?.title,
+      dropTitle: node?.title
+    })
+    
+    return true
+  } catch (error) {
+    console.error('allowDrop函数出错:', error, info)
+    return false
+  }
+}
+
+const handleDrop = async (info: any) => {
+  console.log('拖拽排序事件:', info)
+  
+  // 检查参数完整性
+  if (!info || !info.dragNode || !info.node) {
+    console.error('handleDrop: 参数不完整', info)
+    return
+  }
+  
+  const { dragNode, node, dropPosition, dropToGap } = info
+  
+  // 检查节点数据完整性
+  if (!dragNode.key || !node.key) {
+    console.error('handleDrop: 节点key缺失', { dragNode, node })
+    return
+  }
+  
+  // 获取拖拽节点和目标节点信息
+  const dragKey = dragNode.key as number
+  const dropKey = node.key as number
+  
+  console.log('拖拽详情:', {
+    dragKey,
+    dropKey,
+    dropPosition,
+    dropToGap,
+    dragTitle: dragNode.title,
+    dropTitle: node.title
+  })
+  
+  try {
+    // 构建新的排序列表
+    const updatedCategories = await buildNewSortOrder(dragKey, dropKey, dropPosition, dropToGap)
+    
+    if (updatedCategories.length === 0) {
+      console.log('无需更新排序')
+      return
+    }
+    
+    // 调用批量排序API
+    console.log('准备更新排序:', updatedCategories)
+    await batchSortCategories({ categories: updatedCategories })
+    
+    message.success('排序更新成功')
+    
+    // 重新加载数据以反映排序变化
+    await loadCategoriesData()
+    
+  } catch (error) {
+    console.error('排序更新失败:', error)
+    message.error('排序更新失败，请重试')
+    
+    // 失败时重新加载原始数据
+    await loadCategoriesData()
+  }
+}
+
+// 构建新的排序顺序（简化版本）
+const buildNewSortOrder = async (dragKey: number, dropKey: number, dropPosition: number, dropToGap: boolean): Promise<CategorySortItem[]> => {
+  const updates: CategorySortItem[] = []
+  
+  // 找到拖拽节点和目标节点
+  const dragCategory = findCategoryById(categories.value, dragKey)
+  const dropCategory = findCategoryById(categories.value, dropKey)
+  
+  if (!dragCategory || !dropCategory) {
+    console.error('找不到拖拽或目标分类')
+    return []
+  }
+  
+  // 只处理同层级拖拽
+  if (dragCategory.parent_id !== dropCategory.parent_id) {
+    message.warning('请在同层级内调整顺序')
+    return []
+  }
+  
+  // 获取同级所有分类，按当前sort_order排序
+  const siblings = getSiblings(categories.value, dragCategory.parent_id)
+  console.log('同级分类:', siblings.map(s => ({ id: s.id, name: s.name, sort_order: s.sort_order })))
+  
+  if (siblings.length <= 1) {
+    console.log('只有一个同级分类，无需排序')
+    return []
+  }
+  
+  // 找到拖拽和目标在siblings中的索引
+  const dragIndex = siblings.findIndex(cat => cat.id === dragKey)
+  const dropIndex = siblings.findIndex(cat => cat.id === dropKey)
+  
+  if (dragIndex === -1 || dropIndex === -1) {
+    console.error('找不到分类索引')
+    return []
+  }
+  
+  // 创建新的排序数组
+  const newSiblings = [...siblings]
+  // 移除拖拽的项
+  const dragItem = newSiblings.splice(dragIndex, 1)[0]
+  
+  // 计算新的插入位置
+  let newIndex = dropIndex
+  if (dragIndex < dropIndex) {
+    newIndex = dropIndex - 1 // 因为移除了拖拽项，索引需要调整
+  }
+  
+  // 根据dropPosition微调插入位置
+  if (dropPosition > 0) {
+    newIndex = newIndex + 1
+  }
+  
+  // 插入到新位置
+  newSiblings.splice(newIndex, 0, dragItem)
+  
+  console.log('新排序:', newSiblings.map(s => ({ id: s.id, name: s.name })))
+  
+  // 重新分配sort_order
+  newSiblings.forEach((cat, index) => {
+    const newSortOrder = (index + 1) * 10
+    if (cat.sort_order !== newSortOrder) {
+      updates.push({
+        id: cat.id!,
+        sort_order: newSortOrder
+      })
+    }
+  })
+  
+  console.log('排序更新列表:', updates)
+  return updates
+}
+
+// 获取同级分类（同一parent_id的分类）
+const getSiblings = (cats: ScriptCategory[], parentId: number | null | undefined): ScriptCategory[] => {
+  const allCategories = flattenCategories(cats)
+  return allCategories
+    .filter(cat => cat.parent_id === parentId)
+    .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+}
+
+// 扁平化分类树
+const flattenCategories = (cats: ScriptCategory[]): ScriptCategory[] => {
+  const result: ScriptCategory[] = []
+  
+  const flatten = (categories: ScriptCategory[]) => {
+    categories.forEach(cat => {
+      result.push(cat)
+      if (cat.children && cat.children.length > 0) {
+        flatten(cat.children)
+      }
+    })
+  }
+  
+  flatten(cats)
+  return result
 }
 
 const showContextMenu = (e: MouseEvent, nodeId: number, nodeName: string, isSystem: boolean) => {
@@ -597,7 +877,7 @@ defineExpose({
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px;
+    padding: 12px 16px;
     border-bottom: 1px solid #f0f0f0;
     background: #fafafa;
     border-radius: 8px 8px 0 0;
@@ -625,17 +905,39 @@ defineExpose({
       .header-stats {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 16px;
         
-        .category-count {
+        .stats-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
           font-size: 12px;
-          color: #1890ff;
-          font-weight: 500;
+          
+          .stats-label {
+            color: #8c8c8c;
+          }
+          
+          .stats-value {
+            color: #1890ff;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+          }
         }
         
-        .total-count {
+        .drag-tip {
+          display: flex;
+          align-items: center;
+          gap: 4px;
           font-size: 12px;
-          color: #666;
+          color: #1890ff;
+          background: #f0f9ff;
+          padding: 2px 8px;
+          border-radius: 12px;
+          
+          .anticon {
+            font-size: 10px;
+          }
         }
       }
     }
@@ -649,7 +951,7 @@ defineExpose({
   
   .category-tree-wrapper {
     flex: 1;
-    padding: 16px;
+    padding: 8px 16px 16px;
     overflow-y: auto;
     
     .category-tree {
@@ -670,33 +972,52 @@ defineExpose({
           align-items: center;
           justify-content: space-between;
           
-          .node-name {
-            font-weight: 500;
-          }
-          
-          .node-meta {
+          .node-left {
             display: flex;
             align-items: center;
             gap: 8px;
             
-            .node-count {
-              font-size: 12px;
-              color: #8c8c8c;
+            .node-name {
+              font-weight: 500;
             }
+          }
+          
+          .node-count {
+            font-size: 12px;
+            color: #fff;
+            background: #1890ff;
+            padding: 1px 6px;
+            border-radius: 10px;
+            min-width: 16px;
+            text-align: center;
+            line-height: 16px;
           }
         }
         
         .node-actions {
           display: flex;
           align-items: center;
-          gap: 2px;
+          gap: 4px;
           opacity: 0;
           transition: all 0.2s;
           
-          .action-btn {
+          .drag-handle {
+            cursor: move;
+            color: #8c8c8c;
             padding: 4px;
-            width: 24px;
-            height: 24px;
+            border-radius: 4px;
+            transition: all 0.2s;
+            
+            &:hover {
+              color: #1890ff;
+              background: #f0f9ff;
+            }
+          }
+          
+          .action-btn {
+            padding: 2px;
+            width: 20px;
+            height: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -707,13 +1028,13 @@ defineExpose({
             &:hover {
               background-color: #f0f9ff;
               color: #1890ff;
-              transform: scale(1.1);
+              transform: scale(1.05);
             }
             
             &.delete-btn:hover {
               color: #ff4d4f;
               background-color: #fff2f0;
-              transform: scale(1.1);
+              transform: scale(1.05);
             }
           }
         }
@@ -800,6 +1121,28 @@ defineExpose({
   
   .ant-tree-treenode {
     padding: 2px 0;
+    
+    &.drag-over-gap-top {
+      border-top: 2px dashed #1890ff;
+    }
+    
+    &.drag-over-gap-bottom {
+      border-bottom: 2px dashed #1890ff;
+    }
+    
+    &.drag-over {
+      background-color: #e6f7ff;
+      border-radius: 4px;
+    }
+  }
+  
+  .ant-tree-draggable-icon {
+    color: #8c8c8c;
+    cursor: move;
+    
+    &:hover {
+      color: #1890ff;
+    }
   }
 }
 </style>

@@ -20,56 +20,44 @@ export interface Script {
   category?: string
   title?: string
   question?: string
-  answer: string
+  answer: string  // 保持兼容，作为主回复/默认回复
   keywords?: string
   usage_count?: number
   effectiveness?: number
   is_active?: boolean
   is_pinned?: boolean
   is_favorited?: boolean
+  is_pending_revision?: boolean  // 新增：是否标记为待修改
   created_at?: string
   // 新分类系统字段
+  project_category_id?: number | null // 项目分类ID
   category_id?: number | null
   category_info?: ScriptCategory  // 关联的分类信息
-  // 新增字段 - 数据清洗后添加
-  type?: 'grid_exam' | 'postgrad_consult' | 'sales_conversation' | 'social_media_reply'  // 话术类型
-  source?: string       // 数据来源：话术库, 最新电网术库, 小红书回复话术, 考研话术库
-  platform?: string     // 适用平台：小红书 (其他为空)
-  customer_info?: string // 客户信息
   // v2.0新分类体系字段
   primary_category?: 'power_grid' | 'electrical_exam' | 'product_intro' | 'marketing' | 'faq' | 'learning_guidance' | 'study_planning' // 主分类
   secondary_category?: 'application_guide' | 'review_planning' | 'consultation' | string // 子分类
-  // 三维分类字段（保持兼容）
-  script_type_new?: 'consultation' | 'sales_promotion' | 'service_support' | 'content_marketing' | 'expert_guidance' // 话术类型
-  content_type_new?: 'exam_guidance' | 'course_introduction' | 'career_planning' | 'application_process' | 'company_service' | 'general_support' // 内容类型
-  platform_new?: 'wechat' | 'xiaohongshu' | 'qq' | 'phone' | 'universal' // 适用平台
-  keywords_new?: string // 关键词标签
-  classification_meta?: string // 分类元数据
-  classification_status?: 'pending' | 'processing' | 'completed' | 'failed' // 分类处理状态
-  classification_version?: string // 分类体系版本
+  // 一问多答功能字段
+  answers?: string[]  // 多回复数组（最多5个）
+  answer_count?: number  // 回复数量
+  recommended_answer_index?: number  // 推荐回复索引（0-4）
 }
 
 export interface ScriptQuery {
   keyword?: string
   category?: string
   // 新分类系统筛选参数
-  category_id?: number | null  // 新分类系统筛选
-  type?: string          // 旧：话术类型筛选
-  source?: string        // 旧：数据来源筛选  
-  platform?: string      // 旧：平台筛选
+  category_id?: number | string | null  // 新分类系统筛选，支持单个ID或多个ID的逗号分隔字符串
   // v2.0新分类体系筛选参数
   primary_category?: string   // 主分类筛选
   secondary_category?: string // 子分类筛选
-  // 三维分类筛选参数（保持兼容）
-  script_type_new?: string // 话术类型筛选
-  content_type_new?: string // 内容类型筛选
-  platform_new?: string    // 平台筛选
   // 分页参数
   page?: number
   per_page?: number
   // 排序参数
   sort_by?: string    // 排序字段: usage, date, updated
   sort_order?: string // 排序方向: asc, desc
+  // 待修改话术筛选
+  pending_revision?: boolean  // 筛选待修改话术
 }
 
 export interface ScriptListResponse {
@@ -119,20 +107,8 @@ export const getScriptStats = (): Promise<{
   return request.get('/api/v1/scripts/stats')
 }
 
-// 获取话术类型统计（新）
-export const getScriptTypeNewStats = (): Promise<Array<{ value: string; label: string; count: number }>> => {
-  return request.get('/api/v1/scripts/script-type-new-stats')
-}
 
-// 获取内容类型统计
-export const getContentTypeStats = (): Promise<Array<{ value: string; label: string; count: number }>> => {
-  return request.get('/api/v1/scripts/content-type-stats')
-}
 
-// 获取平台统计（新）
-export const getPlatformNewStats = (): Promise<Array<{ value: string; label: string; count: number }>> => {
-  return request.get('/api/v1/scripts/platform-new-stats')
-}
 
 // 置顶话术
 export const pinScript = (id: number): Promise<ScriptResponse> => {
@@ -159,25 +135,8 @@ export const getUserFavorites = (params?: { page?: number; per_page?: number }):
   return request.get('/api/v1/scripts/favorites', { params })
 }
 
-// 获取三维分类综合统计
-export const getThreeDimensionStats = (): Promise<{
-  script_types: Array<{ value: string; label: string; count: number }>
-  content_types: Array<{ value: string; label: string; count: number }>
-  platforms: Array<{ value: string; label: string; count: number }>
-  total_classified: number
-}> => {
-  return request.get('/api/v1/scripts/three-dimension-stats')
-}
 
-// 获取话术类型统计（旧，兼容）
-export const getScriptTypeStats = (): Promise<Array<{ value: string; label: string; count: number }>> => {
-  return request.get('/api/v1/scripts/type-stats')
-}
 
-// 获取数据来源统计（旧，兼容）
-export const getScriptSourceStats = (): Promise<Array<{ value: string; label: string; count: number }>> => {
-  return request.get('/api/v1/scripts/source-stats')
-}
 
 // v2.0新分类体系API
 // 获取主分类统计
@@ -233,8 +192,8 @@ export const getScriptCategoriesManage = (params?: {
 }
 
 // 获取分类树状结构
-export const getScriptCategoriesTree = (): Promise<{ data: ScriptCategory[] }> => {
-  return request.get('/api/v1/scripts/categories/tree')
+export const getScriptCategoriesTree = (params?: { include_stats?: boolean }): Promise<{ data: ScriptCategory[] }> => {
+  return request.get('/api/v1/scripts/categories/tree', { params })
 }
 
 // 创建新分类
@@ -281,4 +240,117 @@ export const initDefaultScriptCategories = (): Promise<{
   categories: ScriptCategory[] 
 }> => {
   return request.post('/api/v1/scripts/categories/init-default')
+}
+
+// 项目分类相关接口
+export interface ProjectCategory {
+  id: number   // ID字段为必需，用于动态分类系统
+  value: string
+  label: string
+  count: number
+  description?: string
+}
+
+// 获取项目分类列表
+export const getProjectCategories = (): Promise<{code: number; data: ProjectCategory[]}> => {
+  return request.get('/api/v1/scripts/project-categories')
+}
+
+// 批量排序API接口
+export interface CategorySortItem {
+  id: number
+  sort_order: number
+}
+
+export interface BatchSortRequest {
+  categories: CategorySortItem[]
+}
+
+// 批量更新分类排序
+export const batchSortCategories = (data: BatchSortRequest): Promise<{ 
+  message: string; 
+  updated_count: number 
+}> => {
+  return request.post('/api/v1/scripts/categories/batch-sort', data)
+}
+
+// ====== 待修改话术相关API ======
+
+// 标记话术为待修改
+export const markScriptPending = (id: number): Promise<{
+  code: number;
+  message: string;
+  data: {
+    script_id: number;
+    is_pending_revision: boolean;
+    marked_at: string;
+  }
+}> => {
+  return request.post(`/api/v1/scripts/${id}/mark-pending`)
+}
+
+// 取消待修改标记
+export const unmarkScriptPending = (id: number): Promise<{ 
+  code: number;
+  message: string 
+}> => {
+  return request.delete(`/api/v1/scripts/${id}/mark-pending`)
+}
+
+// 获取用户待修改话术列表
+export const getUserPendingScripts = (params?: { page?: number; per_page?: number }): Promise<ScriptListResponse> => {
+  return request.get('/api/v1/scripts/pending', { params })
+}
+
+// ====== 一问多答功能API ======
+
+// 为指定问题添加新回复
+export const addScriptAnswer = (id: number, answer: string): Promise<{
+  code: number;
+  message: string;
+  data: {
+    script_id: number;
+    answer_index: number;
+    answer_count: number;
+  }
+}> => {
+  return request.post(`/api/v1/scripts/${id}/answers`, { answer })
+}
+
+// 更新指定索引的回复
+export const updateScriptAnswer = (id: number, index: number, answer: string): Promise<{
+  code: number;
+  message: string;
+  data: {
+    script_id: number;
+    answer_index: number;
+    updated_answer: string;
+  }
+}> => {
+  return request.put(`/api/v1/scripts/${id}/answers/${index}`, { answer })
+}
+
+// 删除指定索引的回复
+export const deleteScriptAnswer = (id: number, index: number): Promise<{
+  code: number;
+  message: string;
+  data: {
+    script_id: number;
+    deleted_index: number;
+    answer_count: number;
+  }
+}> => {
+  return request.delete(`/api/v1/scripts/${id}/answers/${index}`)
+}
+
+// 设置推荐回复
+export const setRecommendedAnswer = (id: number, index: number): Promise<{
+  code: number;
+  message: string;
+  data: {
+    script_id: number;
+    recommended_answer_index: number;
+  }
+}> => {
+  return request.put(`/api/v1/scripts/${id}/recommend/${index}`)
 }

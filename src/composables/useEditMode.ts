@@ -100,7 +100,7 @@ export function useEditMode<T extends Record<string, any>>(
       // 数据验证
       if (validateData && !validateData(editData)) {
         if (showMessages) {
-          message.error('数据验证失败，请检查输入')
+          message.error('📋 数据验证失败，请检查您的输入内容')
         }
         return false
       }
@@ -108,7 +108,7 @@ export function useEditMode<T extends Record<string, any>>(
       // 检查表单错误
       if (hasErrors.value) {
         if (showMessages) {
-          message.error('请修正表单错误')
+          message.error('⚠️ 请先修正表单中的验证错误')
         }
         return false
       }
@@ -155,7 +155,7 @@ export function useEditMode<T extends Record<string, any>>(
       
       if (showMessages) {
         const errorMessage = error instanceof Error ? error.message : '保存失败'
-        message.error(errorMessage)
+        message.error(`😔 ${errorMessage}，请稍后重试`)
       }
       
       return false
@@ -343,7 +343,7 @@ export function useFieldEditor<T>(
       error.value = errorMessage
       
       if (showMessages) {
-        message.error(errorMessage)
+        message.error(`😔 ${errorMessage}，请检查后重试`)
       }
       
       return false

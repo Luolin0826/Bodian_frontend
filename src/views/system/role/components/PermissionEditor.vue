@@ -126,7 +126,7 @@
                       <span>仅可查看本部门及下级部门的数据</span>
                     </div>
                   </a-radio>
-                  <a-radio value="self" class="scope-option">
+                  <a-radio value="own" class="scope-option">
                     <div class="option-content">
                       <strong>个人数据</strong>
                       <span>仅可查看自己创建或分配的数据</span>
@@ -139,6 +139,107 @@
                     </div>
                   </a-radio>
                 </a-radio-group>
+              </div>
+              
+              <!-- 区域权限配置 -->
+              <div class="config-group">
+                <h4>区域数据权限</h4>
+                <div class="permission-group">
+                  <a-checkbox-group v-model:value="permissions.data.regional_permissions">
+                    <a-row :gutter="[16, 12]">
+                      <a-col :span="6" v-for="region in regionalData" :key="region.code">
+                        <a-checkbox :value="region.code" class="data-checkbox">
+                          <div class="checkbox-info">
+                            <span class="checkbox-name">{{ region.name }}</span>
+                            <span class="checkbox-desc">{{ region.type }}</span>
+                          </div>
+                        </a-checkbox>
+                      </a-col>
+                    </a-row>
+                  </a-checkbox-group>
+                </div>
+              </div>
+              
+              <!-- 部门权限配置 -->
+              <div class="config-group">
+                <h4>部门数据权限</h4>
+                <div class="permission-group">
+                  <a-checkbox-group v-model:value="permissions.data.department_permissions">
+                    <a-row :gutter="[16, 12]">
+                      <a-col :span="8" v-for="dept in departmentData" :key="dept.id">
+                        <a-checkbox :value="dept.id.toString()" class="data-checkbox">
+                          <div class="checkbox-info">
+                            <span class="checkbox-name">{{ dept.name }}</span>
+                            <span class="checkbox-desc">{{ dept.type }}</span>
+                          </div>
+                        </a-checkbox>
+                      </a-col>
+                    </a-row>
+                  </a-checkbox-group>
+                </div>
+              </div>
+              
+              <!-- 项目分类权限配置 -->
+              <div class="config-group">
+                <h4>项目分类权限</h4>
+                <div class="section-description">
+                  <InfoCircleOutlined />
+                  <span>配置用户可以访问的话术项目分类，限制用户只能查看指定分类下的话术内容</span>
+                </div>
+                <div class="permission-group">
+                  <!-- 临时调试：显示当前状态 -->
+                  <div style="margin-bottom: 12px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px;">
+                    <strong>调试状态:</strong> 项目分类数量: {{ projectCategoryData.length }} | 
+                    权限数组: {{ permissions.data.project_category_permissions }}
+                  </div>
+                  
+                  <!-- 项目分类权限配置区域 - 始终显示 -->
+                  <div>
+                    <div v-if="projectCategoryData.length === 0" style="margin-bottom: 16px; color: #666;">
+                      <a-spin size="small" />
+                      <span style="margin-left: 8px;">正在加载项目分类选项...</span>
+                    </div>
+                    
+                    <a-checkbox-group v-model:value="permissions.data.project_category_permissions">
+                      <a-row :gutter="[16, 12]">
+                        <a-col :span="6" v-for="category in projectCategoryData" :key="category.id">
+                          <a-checkbox :value="category.id.toString()" class="data-checkbox">
+                            <div class="checkbox-info">
+                              <span class="checkbox-name">{{ category.label }}</span>
+                              <span class="checkbox-desc">{{ category.count }}个话术</span>
+                            </div>
+                          </a-checkbox>
+                        </a-col>
+                      </a-row>
+                    </a-checkbox-group>
+                    
+                    <!-- 如果没有分类数据，显示提示 -->
+                    <div v-if="projectCategoryData.length === 0" style="margin-top: 16px; text-align: center; color: #999; padding: 20px; border: 1px dashed #d9d9d9; border-radius: 4px;">
+                      <InfoCircleOutlined style="font-size: 20px; margin-bottom: 8px;" />
+                      <div>暂无项目分类可配置</div>
+                      <div style="font-size: 12px; margin-top: 4px;">请先在话术管理中创建项目分类，或联系管理员配置分类数据</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- 数据类型权限配置 -->
+              <div class="config-group">
+                <h4>数据类型权限</h4>
+                <div class="permission-group">
+                  <a-checkbox-group v-model:value="permissions.data.data_types">
+                    <a-row :gutter="[16, 12]">
+                      <a-col :span="6" v-for="dataType in dataTypeOptions" :key="dataType.key">
+                        <a-checkbox :value="dataType.key" class="data-checkbox">
+                          <div class="checkbox-info">
+                            <span class="checkbox-name">{{ dataType.name }}</span>
+                            <span class="checkbox-desc">{{ dataType.description }}</span>
+                          </div>
+                        </a-checkbox>
+                      </a-col>
+                    </a-row>
+                  </a-checkbox-group>
+                </div>
               </div>
               
               <div v-if="permissions.data.scope === 'custom'" class="config-group">
@@ -258,7 +359,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   InfoCircleOutlined,
@@ -268,7 +369,7 @@ import {
 } from '@ant-design/icons-vue'
 import PermissionTree from './PermissionTree.vue'
 import type { Role, RolePermissions, PermissionNode } from '@/api/system'
-import { getPermissionTree, getPermissionTemplates, validatePermissions, updateRolePermissions, getRolePermissions } from '@/api/system'
+import { getPermissionTree, getPermissionTemplates, validatePermissions, updateRolePermissions, getRolePermissions, getProjectCategoryPermissionOptions } from '@/api/system'
 
 interface Props {
   role: Role | null
@@ -291,9 +392,14 @@ const permissions = reactive<RolePermissions>({
   menu: [] as string[],
   operation: {} as Record<string, string[]>,
   data: {
-    scope: 'department' as 'all' | 'department' | 'self' | 'custom',
-    custom_scopes: [] as string[],
-    sensitive: [] as string[]
+    scope: 'department' as 'all' | 'department' | 'own' | 'custom',
+    regional_permissions: [] as string[],
+    department_permissions: [] as string[],
+    customer_permissions: [] as string[],
+    data_types: [] as string[],
+    sensitive: [] as string[],
+    custom_scopes: [] as string[],  // 兼容字段
+    project_category_permissions: [] as string[]  // 项目分类权限
   },
   time: {
     enable_login_time: false,
@@ -310,27 +416,138 @@ const operationModules = ref<any[]>([])
 const dataScopes = ref<any[]>([])
 const sensitiveData = ref<any[]>([])
 
+// 新增数据权限相关数据
+const regionalData = ref<any[]>([])
+const departmentData = ref<any[]>([])
+const projectCategoryData = ref<any[]>([])
+const dataTypeOptions = ref([  
+  { key: 'customer_data', name: '客户数据', description: '客户信息、联系方式等' },
+  { key: 'sales_data', name: '销售数据', description: '销售记录、业绩统计等' },
+  { key: 'financial_data', name: '财务数据', description: '收入、支出、提成等' },
+  { key: 'system_data', name: '系统数据', description: '用户信息、角色配置等' },
+  { key: 'log_data', name: '日志数据', description: '操作日志、登录记录等' },
+  { key: 'report_data', name: '报表数据', description: '各类统计报表数据' }
+])
+
 // 加载权限树数据
 const loadPermissionTree = async () => {
+  console.log('🔄 开始加载权限树数据...')
   try {
     const data = await getPermissionTree()
-    menuTreeData.value = data.menu
-    operationModules.value = data.operation_modules
-    dataScopes.value = data.data_scopes
-    sensitiveData.value = data.sensitive_data
+    console.log('✅ 权限树API调用成功:', data)
+    menuTreeData.value = data.menu || []
+    operationModules.value = data.operation_modules || []
+    dataScopes.value = data.data_scopes || []
+    sensitiveData.value = data.sensitive_data || []
+    
+    // 加载区域和部门数据
+    await loadRegionalData()
+    await loadDepartmentData()
+    await loadProjectCategoryData()
   } catch (error) {
     console.error('加载权限树失败:', error)
     message.error('加载权限配置失败')
   }
 }
 
+// 加载区域数据
+const loadRegionalData = async () => {
+  try {
+    // 这里假设有区域数据接口，实际应根据后端接口调整
+    regionalData.value = [
+      { code: 'north_china', name: '华北地区', type: '大区' },
+      { code: 'east_china', name: '华东地区', type: '大区' },
+      { code: 'south_china', name: '华南地区', type: '大区' },
+      { code: 'beijing', name: '北京市', type: '省市' },
+      { code: 'shanghai', name: '上海市', type: '省市' },
+      { code: 'guangdong', name: '广东省', type: '省市' }
+    ]
+  } catch (error) {
+    console.error('加载区域数据失败:', error)
+  }
+}
+
+// 加载部门数据  
+const loadDepartmentData = async () => {
+  try {
+    // 这里假设有部门数据接口，实际应根据后端接口调整
+    departmentData.value = [
+      { id: 1, name: '销售部', type: '销售团队' },
+      { id: 2, name: '技术部', type: '技术支持' },
+      { id: 3, name: '市场部', type: '市场推广' },
+      { id: 4, name: '人事部', type: '管理部门' },
+      { id: 5, name: '财务部', type: '管理部门' }
+    ]
+  } catch (error) {
+    console.error('加载部门数据失败:', error)
+  }
+}
+
+// 加载项目分类数据
+const loadProjectCategoryData = async () => {
+  try {
+    console.log('🔄 开始加载项目分类数据...')
+    
+    // 优先尝试从script API获取项目分类（这个接口已经存在且可用）
+    const { getProjectCategories } = await import('@/api/script')
+    const scriptResponse = await getProjectCategories()
+    
+    if (scriptResponse && scriptResponse.data && scriptResponse.data.length > 0) {
+      projectCategoryData.value = scriptResponse.data
+      console.log('✅ 项目分类数据加载成功:', scriptResponse.data.length, '个分类')
+      console.log('📋 分类详情:', scriptResponse.data)
+      return
+    }
+  } catch (scriptError) {
+    console.warn('脚本API接口失败:', scriptError)
+  }
+  
+  try {
+    // 备选方案：尝试权限系统专用接口
+    const response = await getProjectCategoryPermissionOptions()
+    
+    if (response && response.categories && response.categories.length > 0) {
+      projectCategoryData.value = response.categories
+      console.log('✅ 项目分类权限选项加载成功:', response.categories.length, '个分类')
+      return
+    }
+  } catch (permissionError) {
+    console.warn('权限系统接口失败:', permissionError)
+  }
+  
+  // 如果所有API都失败，使用默认数据确保UI能正常显示
+  console.log('⚠️ 所有API都失败，使用默认项目分类数据')
+  projectCategoryData.value = [
+    { id: 1, label: '电网知识', count: 0, description: '电力系统相关知识话术' },
+    { id: 2, label: '电工考试', count: 0, description: '电工考试辅导话术' },
+    { id: 3, label: '产品介绍', count: 0, description: '产品相关介绍话术' },
+    { id: 4, label: '市场营销', count: 0, description: '营销推广话术' },
+    { id: 5, label: '常见问题', count: 0, description: 'FAQ问答话术' }
+  ]
+  
+  console.log('📋 使用默认项目分类:', projectCategoryData.value)
+}
+
 // 监听角色变化，加载权限数据
 watch(() => props.role, async (newRole) => {
   if (newRole) {
-    await loadPermissionTree()
+    console.log('🔄 开始为角色加载权限配置:', newRole.name)
+    try {
+      await loadPermissionTree()
+    } catch (error) {
+      console.error('权限树加载失败，但继续加载项目分类数据:', error)
+      // 即使权限树加载失败，也要确保项目分类数据能加载
+      await loadProjectCategoryData()
+    }
     await loadRolePermissions(newRole.name)
   }
 }, { immediate: true })
+
+// 组件挂载时加载基础数据
+onMounted(async () => {
+  console.log('🔄 PermissionEditor组件已挂载，开始预加载项目分类数据')
+  await loadProjectCategoryData()
+})
 
 // 加载角色权限数据
 const loadRolePermissions = async (roleName: string) => {
@@ -346,13 +563,20 @@ const loadRolePermissions = async (roleName: string) => {
 // 加载权限数据
 const loadPermissions = (rolePermissions: RolePermissions) => {
   console.log('🔍 加载权限数据:', rolePermissions)
+  console.log('🔍 数据权限部分:', rolePermissions.data)
+  console.log('🔍 项目分类权限:', rolePermissions.data?.project_category_permissions)
   
   permissions.menu = rolePermissions.menu || []
   permissions.operation = rolePermissions.operation || {}
   permissions.data = {
     scope: rolePermissions.data?.scope || 'department',
+    regional_permissions: rolePermissions.data?.regional_permissions || [],
+    department_permissions: rolePermissions.data?.department_permissions || [],
+    customer_permissions: rolePermissions.data?.customer_permissions || [],
+    data_types: rolePermissions.data?.data_types || [],
+    sensitive: rolePermissions.data?.sensitive || [],
     custom_scopes: rolePermissions.data?.custom_scopes || [],
-    sensitive: rolePermissions.data?.sensitive || []
+    project_category_permissions: rolePermissions.data?.project_category_permissions || []
   }
   permissions.time = {
     enable_login_time: rolePermissions.time?.enable_login_time || false,
@@ -365,7 +589,8 @@ const loadPermissions = (rolePermissions: RolePermissions) => {
   console.log('✅ 权限数据加载完成:')
   console.log('  - 菜单权限:', permissions.menu.length, '项')
   console.log('  - 操作权限:', Object.keys(permissions.operation).length, '个模块')
-  console.log('  - 数据权限:', permissions.data.custom_scopes.length + permissions.data.sensitive.length, '项')
+  console.log('  - 数据权限:', permissions.data.custom_scopes.length + permissions.data.sensitive.length + permissions.data.project_category_permissions.length, '项')
+  console.log('  - 项目分类权限:', permissions.data.project_category_permissions.length, '项')
 }
 
 // 获取角色颜色
@@ -629,6 +854,39 @@ const exportConfig = () => {
   }
   
   .data-permission-config {
+    .permission-group {
+      margin-bottom: 20px;
+      
+      .data-checkbox {
+        width: 100%;
+        margin-bottom: 8px;
+        
+        .checkbox-info {
+          display: flex;
+          flex-direction: column;
+          margin-left: 8px;
+          
+          .checkbox-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: #262626;
+            margin-bottom: 2px;
+          }
+          
+          .checkbox-desc {
+            font-size: 12px;
+            color: #8c8c8c;
+          }
+        }
+        
+        &:hover {
+          .checkbox-info .checkbox-name {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+    
     .config-group {
       margin-bottom: 32px;
       
@@ -637,6 +895,8 @@ const exportConfig = () => {
         font-weight: 600;
         color: #262626;
         margin-bottom: 16px;
+        border-left: 3px solid #1890ff;
+        padding-left: 12px;
       }
       
       .scope-options {

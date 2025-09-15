@@ -41,7 +41,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
     path: '/customer',
     children: [
       {
-        key: 'customer-list',
+        key: 'customer.list',
         title: '客户列表',
         description: '查看和管理客户信息',
         path: '/customer/list',
@@ -49,7 +49,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'customer-follow',
+        key: 'customer.follow',
         title: '跟进管理',
         description: '客户跟进记录管理',
         path: '/customer/follow',
@@ -57,7 +57,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'customer-reminders',
+        key: 'customer.reminders',
         title: '跟进提醒',
         description: '客户跟进提醒设置',
         path: '/customer/reminders',
@@ -65,7 +65,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'customer-analytics',
+        key: 'customer.analytics',
         title: '跟进分析',
         description: '客户跟进数据分析',
         path: '/customer/analytics',
@@ -85,7 +85,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
     path: '/sales',
     children: [
       {
-        key: 'sales-record',
+        key: 'sales.record',
         title: '销售记录',
         description: '销售记录查看和管理',
         path: '/sales/record',
@@ -93,7 +93,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'sales-stats',
+        key: 'sales.stats',
         title: '销售统计',
         description: '销售数据统计分析',
         path: '/sales/stats',
@@ -133,6 +133,16 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
     path: '/data-query'
   },
   {
+    key: 'advance-batch',
+    title: '提前批信息',
+    description: '电网提前批信息管理和查看',
+    icon: 'ScheduleOutlined',
+    level: 'medium',
+    risk: 'safe',
+    category: '业务管理',
+    path: '/advance-batch'
+  },
+  {
     key: 'user-center',
     title: '用户中心',
     description: '个人信息和设置管理',
@@ -143,7 +153,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
     path: '/user-center',
     children: [
       {
-        key: 'user-profile',
+        key: 'user-center.profile',
         title: '个人信息',
         description: '查看和编辑个人信息',
         path: '/user-center/profile',
@@ -151,7 +161,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'user-preferences',
+        key: 'user-center.preferences',
         title: '偏好设置',
         description: '个人偏好和界面设置',
         path: '/user-center/preferences',
@@ -159,7 +169,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'user-notifications',
+        key: 'user-center.notifications',
         title: '消息通知',
         description: '系统消息和通知管理',
         path: '/user-center/notifications',
@@ -167,7 +177,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'user-security',
+        key: 'user-center.security',
         title: '安全设置',
         description: '账户安全和密码管理',
         path: '/user-center/security',
@@ -175,7 +185,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'warning'
       },
       {
-        key: 'user-login-logs',
+        key: 'user-center.logs',
         title: '登录日志',
         description: '账户登录记录查看',
         path: '/user-center/login-logs',
@@ -183,7 +193,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'safe'
       },
       {
-        key: 'user-devices',
+        key: 'user-center.devices',
         title: '设备管理',
         description: '登录设备管理',
         path: '/user-center/devices',
@@ -203,7 +213,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
     path: '/system',
     children: [
       {
-        key: 'system-user',
+        key: 'system.user',
         title: '用户管理',
         description: '系统用户管理和维护',
         path: '/system/user',
@@ -211,7 +221,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'danger'
       },
       {
-        key: 'system-department',
+        key: 'system.department',
         title: '部门管理',
         description: '组织架构管理',
         path: '/system/department',
@@ -219,7 +229,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'warning'
       },
       {
-        key: 'system-role',
+        key: 'system.role',
         title: '角色权限',
         description: '角色和权限管理',
         path: '/system/role',
@@ -227,7 +237,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'danger'
       },
       {
-        key: 'system-region',
+        key: 'system.region',
         title: '区域管理',
         description: '地区和区域信息管理',
         path: '/system/region',
@@ -235,7 +245,7 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
         risk: 'warning'
       },
       {
-        key: 'system-log',
+        key: 'system.log',
         title: '操作日志',
         description: '系统操作日志查看',
         path: '/system/log',
@@ -248,44 +258,84 @@ export const DEFAULT_MENU_PERMISSIONS: MenuPermissionNode[] = [
 
 /**
  * 角色默认权限配置
+ * 适配后端新格式：使用点号分隔层级，去除路径前缀
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, string[]> = {
   super_admin: [
-    'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders', 'customer-analytics',
-    'sales', 'sales-record', 'sales-stats', 'script', 'data-query',
-    'user-center', 'user-profile', 'user-preferences', 'user-notifications', 'user-security', 'user-login-logs', 'user-devices',
-    'system', 'system-user', 'system-department', 'system-role', 'system-region', 'system-log'
+    'dashboard', 'customer', 'customer.list', 'customer.follow', 'customer.reminders', 'customer.analytics',
+    'sales', 'sales.record', 'sales.stats', 'script', 'data-query', 'advance-batch',
+    'user-center', 'user-center.profile', 'user-center.preferences', 'user-center.notifications', 'user-center.security', 'user-center.logs', 'user-center.devices',
+    'system', 'system.user', 'system.department', 'system.role', 'system.region', 'system.log'
   ],
   admin: [
-    'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders', 'customer-analytics',
-    'sales', 'sales-record', 'sales-stats', 'script', 'data-query',
-    'user-center', 'user-profile', 'user-preferences', 'user-notifications', 'user-security', 'user-login-logs', 'user-devices',
-    'system', 'system-user', 'system-department', 'system-role', 'system-region', 'system-log'
+    'dashboard', 'customer', 'customer.list', 'customer.follow', 'customer.reminders', 'customer.analytics',
+    'sales', 'sales.record', 'sales.stats', 'script', 'data-query', 'advance-batch',
+    'user-center', 'user-center.profile', 'user-center.preferences', 'user-center.notifications', 'user-center.security', 'user-center.logs', 'user-center.devices',
+    'system', 'system.user', 'system.department', 'system.role', 'system.region', 'system.log'
   ],
   manager: [
-    'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders', 'customer-analytics',
-    'sales', 'sales-record', 'sales-stats', 'script', 'data-query',
-    'user-center', 'user-profile', 'user-preferences', 'user-notifications', 'user-security', 'user-login-logs'
+    'dashboard', 'customer', 'customer.list', 'customer.follow', 'customer.reminders', 'customer.analytics',
+    'sales', 'sales.record', 'sales.stats', 'script', 'data-query', 'advance-batch',
+    'user-center', 'user-center.profile', 'user-center.preferences', 'user-center.notifications', 'user-center.security', 'user-center.logs'
   ],
   sales: [
-    'dashboard', 'customer', 'customer-list', 'customer-follow', 'customer-reminders',
-    'sales', 'sales-record', 'script', 'data-query',
-    'user-center', 'user-profile', 'user-preferences', 'user-notifications'
+    'dashboard', 'customer', 'customer.list', 'customer.follow', 'customer.reminders',
+    'sales', 'sales.record', 'script', 'data-query', 'advance-batch',
+    'user-center', 'user-center.profile', 'user-center.preferences', 'user-center.notifications'
   ],
   teacher: [
-    'dashboard', 'customer', 'customer-list', 'script', 'data-query',
-    'user-center', 'user-profile', 'user-preferences', 'user-notifications'
+    'dashboard', 'script', 'data-query', 'advance-batch',
+    'user-center', 'user-center.profile', 'user-center.preferences', 'user-center.notifications'
   ],
   viewer: [
-    'dashboard', 'script', 'data-query',
-    'user-center', 'user-profile', 'user-preferences'
+    'dashboard', 'script', 'data-query', 'advance-batch',
+    'user-center', 'user-center.profile', 'user-center.preferences'
   ]
+}
+
+/**
+ * 路径到权限key的映射表
+ * 适配后端新权限格式
+ */
+const PATH_TO_PERMISSION_KEY_MAP: Record<string, string> = {
+  '/dashboard': 'dashboard',
+  '/customer': 'customer',
+  '/customer/list': 'customer.list',
+  '/customer/follow': 'customer.follow',
+  '/customer/reminders': 'customer.reminders',
+  '/customer/analytics': 'customer.analytics',
+  '/sales': 'sales',
+  '/sales/record': 'sales.record',
+  '/sales/stats': 'sales.stats',
+  '/script': 'script',
+  '/knowledge': 'knowledge',
+  '/data-query': 'data-query',
+  '/advance-batch': 'advance-batch',
+  '/user-center': 'user-center',
+  '/user-center/profile': 'user-center.profile',
+  '/user-center/preferences': 'user-center.preferences',
+  '/user-center/notifications': 'user-center.notifications',
+  '/user-center/security': 'user-center.security',
+  '/user-center/login-logs': 'user-center.logs',
+  '/user-center/devices': 'user-center.devices',
+  '/system': 'system',
+  '/system/user': 'system.user',
+  '/system/department': 'system.department',
+  '/system/role': 'system.role',
+  '/system/region': 'system.region',
+  '/system/log': 'system.log'
 }
 
 /**
  * 根据路由路径获取对应的权限key
  */
 export const getPermissionKeyByPath = (path: string): string | null => {
+  // 优先使用映射表检查
+  if (PATH_TO_PERMISSION_KEY_MAP[path]) {
+    return PATH_TO_PERMISSION_KEY_MAP[path]
+  }
+  
+  // 后备方案：遍历权限树
   const findKey = (nodes: MenuPermissionNode[], targetPath: string): string | null => {
     for (const node of nodes) {
       if (node.path === targetPath) {
@@ -306,6 +356,14 @@ export const getPermissionKeyByPath = (path: string): string | null => {
  * 根据权限key获取路径
  */
 export const getPathByPermissionKey = (key: string): string | null => {
+  // 使用映射表反向查找
+  for (const [path, permissionKey] of Object.entries(PATH_TO_PERMISSION_KEY_MAP)) {
+    if (permissionKey === key) {
+      return path
+    }
+  }
+  
+  // 后备方案：遍历权限树
   const findPath = (nodes: MenuPermissionNode[], targetKey: string): string | null => {
     for (const node of nodes) {
       if (node.key === targetKey) {

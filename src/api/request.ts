@@ -16,8 +16,19 @@ const service: AxiosInstance = axios.create({
 service.interceptors.request.use(
   (config: AxiosRequestConfig | any) => {
     const token = localStorage.getItem('token')
+    const sessionId = localStorage.getItem('sessionId')
+    
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
+    }
+    
+    if (sessionId) {
+      config.headers['X-Session-ID'] = sessionId
+    }
+    
+    // 为请求添加重试计数器
+    if (!config.retryCount) {
+      config.retryCount = 0
     }
     
     console.log('Request:', config.method?.toUpperCase(), config.url, 'params:', config.params, 'data:', config.data)
@@ -53,6 +64,8 @@ service.interceptors.response.use(
     
     if (error.response) {
       const isLoginRequest = error.config?.url?.includes('/auth/login')
+      const errorData = error.response.data as any
+      const errorMessage = errorData?.message || ''
       
       switch (error.response.status) {
         case 401:
@@ -60,32 +73,68 @@ service.interceptors.response.use(
             // 登录接口的401错误，不做统一处理，让具体页面处理
             break
           } else {
-            // 其他接口的401错误，说明token过期
-            localStorage.removeItem('token')
-            localStorage.removeItem('userInfo')
-            message.error('登录已过期，请重新登录')
-            router.push('/login')
+            // 根据错误消息进行细致的401处理
+            if (errorMessage.includes('Token已被撤销') || errorMessage.includes('token已被撤销')) {
+              localStorage.removeItem('token')
+              localStorage.removeItem('userInfo')
+              localStorage.removeItem('sessionId')
+              message.error('🚫 您的登录令牌已被管理员撤销，请重新登录')
+              router.push('/login')
+            } else if (errorMessage.includes('会话已过期') || errorMessage.includes('session已过期')) {
+              localStorage.removeItem('token')
+              localStorage.removeItem('userInfo') 
+              localStorage.removeItem('sessionId')
+              message.error('⏰ 您的登录会话已过期，为了保障账户安全，请重新登录')
+              router.push('/login')
+            } else if (errorMessage.includes('账号已被禁用') || errorMessage.includes('用户已被禁用')) {
+              localStorage.removeItem('token')
+              localStorage.removeItem('userInfo')
+              localStorage.removeItem('sessionId')
+              // 跳转到账号禁用页面
+              router.push('/error/account-disabled')
+            } else {
+              // 通用的401处理
+              localStorage.removeItem('token')
+              localStorage.removeItem('userInfo')
+              localStorage.removeItem('sessionId')
+              message.error('⏰ 您的登录状态已失效，请重新登录以继续使用')
+              router.push('/login')
+            }
           }
           break
         case 403:
-          message.error('没有权限访问')
+          // 对于403错误，如果是因为缓存导致的短暂权限验证失败，尝试重试
+          const config = error.config as any
+          if (config && config.retryCount < 1 && !isLoginRequest) {
+            config.retryCount += 1
+            console.log(`权限验证失败，正在重试第${config.retryCount}次...`)
+            return service.request(config)
+          }
+          
+          // 重试失败或不需要重试的情况
+          if (errorMessage) {
+            message.error(`⚠️ 权限不足：${errorMessage}`)
+          } else {
+            message.error('🚫 您没有访问此资源的权限，如有需要请联系管理员')
+          }
+          // 可选：跳转到403页面
+          // router.push('/error/403')
           break
         case 404:
-          message.error('请求的资源不存在')
+          message.error('🔍 请求的资源不存在，请检查请求地址是否正确')
           break
         case 500:
-          message.error('服务器错误')
+          message.error('😱 服务器出现了一些问题，请稍后重试或联系技术支持')
           break
         default:
           if (!isLoginRequest) {
-            const errorData = error.response.data as any
-            message.error(errorData?.message || '请求失败')
+            message.error(errorMessage || '😔 请求处理失败，请稍后重试')
           }
       }
     } else if (error.request) {
-      message.error('网络错误，请检查您的网络连接')
+      message.error('🌐 网络连接异常，请检查您的网络设置并重试')
     } else {
-      message.error('请求配置错误')
+      message.error('⚙️ 请求配置出现错误，请联系技术支持')
     }
     
     return Promise.reject(error)

@@ -36,18 +36,6 @@
             </a-button>
           </a-tooltip>
           
-          <a-tooltip title="导出数据">
-            <a-button
-              type="text"
-              size="small"
-              @click="handleExport"
-              :loading="exportLoading"
-              class="export-btn"
-              v-if="!isEditMode"
-            >
-              <download-outlined />
-            </a-button>
-          </a-tooltip>
           <a-tooltip title="刷新数据">
             <a-button
               type="text"

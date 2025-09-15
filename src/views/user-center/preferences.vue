@@ -17,7 +17,7 @@
       <a-tabs>
         <!-- 界面设置 -->
         <a-tab-pane key="appearance" tab="界面设置">
-          <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+          <a-form :label-col="{ xs: { span: 24 }, sm: { span: 6 }, md: { span: 4 } }" :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 }, md: { span: 20 } }">
             <a-form-item label="主题模式" name="theme_mode">
               <a-radio-group v-model:value="preferences.appearance.theme_mode">
                 <a-radio value="light">浅色主题</a-radio>
@@ -60,7 +60,7 @@
 
         <!-- 通知设置 -->
         <a-tab-pane key="notification" tab="通知设置">
-          <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+          <a-form :label-col="{ xs: { span: 24 }, sm: { span: 6 }, md: { span: 4 } }" :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 }, md: { span: 20 } }">
             <a-form-item label="系统通知" name="system_notification">
               <a-switch 
                 v-model:checked="preferences.notification.system_notification"
@@ -101,7 +101,7 @@
 
         <!-- 安全设置 -->
         <a-tab-pane key="security" tab="安全设置">
-          <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+          <a-form :label-col="{ xs: { span: 24 }, sm: { span: 6 }, md: { span: 4 } }" :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 }, md: { span: 20 } }">
             <a-form-item label="自动登出时间" name="auto_logout_time">
               <a-select v-model:value="preferences.security.auto_logout_time" style="width: 200px">
                 <a-select-option :value="30">30分钟</a-select-option>
@@ -128,7 +128,7 @@
                 v-model:checked="preferences.security.enable_two_factor"
                 checked-children="启用"
                 un-checked-children="禁用"
-                @change="(checked: boolean) => handleTwoFactorChange(checked)"
+                @change="handleTwoFactorChange"
               />
               <div class="setting-desc">增强账户安全性</div>
             </a-form-item>
@@ -137,7 +137,7 @@
 
         <!-- 工作区设置 -->
         <a-tab-pane key="workspace" tab="工作区设置">
-          <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+          <a-form :label-col="{ xs: { span: 24 }, sm: { span: 6 }, md: { span: 4 } }" :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 }, md: { span: 20 } }">
             <a-form-item label="默认首页" name="default_page">
               <a-select v-model:value="preferences.workspace.default_page" style="width: 300px">
                 <a-select-option value="/dashboard">仪表盘</a-select-option>
@@ -343,8 +343,9 @@ const handleReset = async () => {
   }
 }
 
-const handleTwoFactorChange = async (enabled: boolean) => {
-  if (enabled) {
+const handleTwoFactorChange = async (enabled: boolean | string | number) => {
+  const isEnabled = Boolean(enabled)
+  if (isEnabled) {
     try {
       const response = await enableTwoFactor()
       if (response.code === 0) {
@@ -424,5 +425,126 @@ onMounted(() => {
 
 .step-content {
   min-height: 200px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .user-preferences {
+    padding: 16px;
+  }
+  
+  /* 移动端下标签垂直排列 */
+  :deep(.ant-form-item-label) {
+    text-align: left !important;
+    padding-bottom: 4px !important;
+  }
+  
+  /* 移动端下按钮组适配 */
+  :deep(.ant-card-extra) {
+    margin-top: 16px;
+  }
+  
+  :deep(.ant-space) {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  :deep(.ant-space-item) {
+    flex: 1;
+  }
+  
+  :deep(.ant-btn) {
+    width: 100%;
+    min-height: 44px;
+  }
+  
+  /* 标签页适配 */
+  :deep(.ant-tabs-tab) {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+  
+  /* 表单项间距调整 */
+  :deep(.ant-form-item) {
+    margin-bottom: 20px;
+  }
+  
+  /* 选择框宽度适配 */
+  :deep(.ant-select) {
+    width: 100% !important;
+  }
+  
+  /* 描述文字适配 */
+  .setting-desc {
+    font-size: 12px;
+    margin-top: 6px;
+  }
+  
+  /* 双因素认证模态框适配 */
+  :deep(.ant-modal) {
+    margin: 0;
+    max-width: calc(100vw - 32px);
+  }
+  
+  .two-factor-setup {
+    padding: 8px 0;
+  }
+  
+  .qr-code-container {
+    padding: 16px;
+    margin: 12px 0;
+  }
+  
+  .backup-codes {
+    padding: 12px;
+    max-height: 150px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-preferences {
+    padding: 12px;
+  }
+  
+  /* 标签页适配小屏幕 */
+  :deep(.ant-tabs-tab) {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  /* 按钮高度增加便于触摸 */
+  :deep(.ant-btn) {
+    min-height: 48px;
+    font-size: 15px;
+  }
+  
+  /* 输入框高度增加 */
+  :deep(.ant-input) {
+    min-height: 44px;
+  }
+  
+  /* 开关组件适配 */
+  :deep(.ant-switch) {
+    min-width: 48px;
+    height: 24px;
+  }
+  
+  /* 单选按钮组适配 */
+  :deep(.ant-radio-group) {
+    width: 100%;
+  }
+  
+  :deep(.ant-radio-wrapper) {
+    display: block;
+    margin-bottom: 8px;
+    padding: 8px 0;
+  }
+  
+  /* 验证码输入框适配 */
+  :deep(.ant-input[maxlength="6"]) {
+    width: 100% !important;
+    max-width: 200px;
+    font-size: 16px;
+  }
 }
 </style>

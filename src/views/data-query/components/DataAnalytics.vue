@@ -7,22 +7,13 @@
         <span class="title-text">数据概览</span>
       </div>
       <div class="header-actions">
-        <!-- 刷新按钮 -->
-        <a-button
-          type="text"
-          size="small"
-          @click="handleRefresh"
-          :loading="loading"
-          class="refresh-btn"
-        >
-          <reload-outlined />
-        </a-button>
+        <!-- 重置按钮已移至PolicyQueryPanel统一管理 -->
       </div>
     </div>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
-      <a-spin size="large" tip="正在分析数据...">
+      <a-spin size="large" :tip="loadingTip">
         <div class="loading-placeholder"></div>
       </a-spin>
     </div>
@@ -75,52 +66,11 @@
       <!-- 学校数据表格 -->
       <div class="schools-table-section">
         <div class="table-header">
-          <h5>学校录取统计</h5>
+          <div class="header-left">
+            <h5>学校录取统计</h5>
+          </div>
           <div class="table-actions">
-            <!-- 批次筛选器 -->
-            <div class="batch-filter">
-              <a-select
-                v-model:value="selectedBatch"
-                placeholder="选择批次"
-                allow-clear
-                size="small"
-                @change="handleBatchChange"
-                class="batch-select"
-              >
-                <a-select-option value="一批">一批</a-select-option>
-                <a-select-option value="二批">二批</a-select-option>
-                <a-select-option value="三批">三批</a-select-option>
-                <a-select-option value="南网">南网</a-select-option>
-                <a-select-option value="提前批">提前批</a-select-option>
-              </a-select>
-            </div>
-            
-            <!-- 学校搜索框 -->
-            <div class="school-search-container">
-              <a-input
-                v-model:value="searchKeyword"
-                placeholder="搜索学校名称..."
-                size="small"
-                allow-clear
-                @input="handleSearchInput"
-                @clear="clearSearch"
-                class="school-search-input"
-              >
-                <template #prefix>
-                  <search-outlined />
-                </template>
-                <template #suffix v-if="searchLoading">
-                  <a-spin size="small" />
-                </template>
-              </a-input>
-              
-              <!-- 搜索结果提示 -->
-              <div v-if="showSearchResults && searchResults.length > 0" class="search-results-tip">
-                找到 {{ searchResults.length }} 个匹配结果
-              </div>
-            </div>
-            
-            <span class="sort-tip">点击表头可排序</span>
+            <!-- 表头点击排序已集成，此处移除冗余的排序控制 -->
           </div>
         </div>
         
@@ -135,6 +85,36 @@
           @change="handleTableChange"
           size="small"
         >
+          <template #emptyText>
+            <div class="table-empty-state-enhanced">
+              <div class="empty-container">
+                <div class="empty-visual">
+                  <team-outlined class="empty-icon" />
+                </div>
+                <div class="empty-content">
+                  <h4 class="empty-title">暂无学校录取数据</h4>
+                  <p class="empty-description">
+                    <span v-if="!props.unitId">请先选择一个单位查看对应的录取统计信息</span>
+                    <span v-else-if="selectedBatch">该批次暂无录取数据</span>
+                    <span v-else>暂无相关数据，可尝试选择不同的批次或搜索条件</span>
+                  </p>
+                  <div class="empty-suggestions">
+                    <a-tag color="blue" v-if="!props.unitId">
+                      <filter-outlined />
+                      等待选择单位
+                    </a-tag>
+                    <a-tag color="green" v-else-if="!selectedBatch">
+                      <search-outlined />
+                      可选择批次筛选
+                    </a-tag>
+                  </div>
+                  <div class="empty-hint-text">
+                    <p>💡 使用上方筛选器可以快速定位数据</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
           <template #bodyCell="{ column, record }">
             <template v-if="column.key === 'school_name'">
               <span 
@@ -142,6 +122,9 @@
                 :class="{ 'search-highlight': record.isSearchResult }"
               >
                 {{ record.school_name }}
+                <a-tooltip title="电力院校" v-if="record.power_feature === 1">
+                  <span class="power-icon">⚡</span>
+                </a-tooltip>
               </span>
             </template>
             <template v-if="column.key === 'school_level'">
@@ -193,7 +176,11 @@ import {
   CheckCircleOutlined,
   ReloadOutlined,
   SearchOutlined,
-  CloseCircleOutlined
+  CloseCircleOutlined,
+  FilterOutlined,
+  ClearOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined
 } from '@ant-design/icons-vue'
 import type { AnalyticsResponse, AdmissionOverviewResponse, SchoolsByBatchResponse } from '@/api/recruitment'
 import { recruitmentAPI } from '@/api/recruitment'
@@ -216,7 +203,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 // Emits
-const emit = defineEmits(['drill-down', 'school-detail', 'data-refresh', 'batch-change', 'school-search'])
+const emit = defineEmits(['drill-down', 'school-detail', 'data-refresh', 'batch-change', 'school-search', 'global-reset', 'update-analytics-data'])
 
 // 响应式数据 - 简化版本
 const currentPage = ref(1)
@@ -224,6 +211,8 @@ const selectedBatch = ref<string | null>(null)
 const selectedSortBy = ref<string>('admission_count') // 默认按录取数量排序
 const selectedSortOrder = ref<string | null>(null) // 保存当前的排序方向
 const internalLoading = ref(false)
+// 快捷筛选相关状态
+const quickFilterType = ref<string | null>(null)
 
 // 搜索相关状态
 const searchKeyword = ref<string>('')
@@ -234,6 +223,17 @@ const showSearchResults = ref(false)
 // 辅助函数：判断数据结构类型
 const isSchoolsByBatchData = computed(() => {
   return props.data && 'schools' in props.data && 'pagination' in props.data
+})
+
+// 加载状态提示文本
+const loadingTip = computed(() => {
+  if (searchLoading.value) {
+    return '正在搜索学校...'
+  }
+  if (showSearchResults.value) {
+    return '正在分析搜索结果...'
+  }
+  return '正在分析数据...'
 })
 
 // 计算属性 - 适配新的后端数据结构
@@ -280,12 +280,18 @@ const keySchoolCount = computed(() => {
   
   if (isSchoolsByBatchData.value) {
     const batchData = props.data as SchoolsByBatchResponse['data']
-    // 从schools数组中统计重点学校录取人数
-    batchData.schools.forEach((school: any) => {
-      if (['985工程', '211工程', '双一流'].includes(school.university_type)) {
-        keyCount += school.admission_count || 0
-      }
-    })
+    
+    // 优先从 summary 中获取重点学校统计（如果后端提供）
+    if (batchData.summary && batchData.summary.key_schools_count !== undefined) {
+      keyCount = batchData.summary.key_schools_count
+      console.log('✅ 从summary获取重点学校录取人数:', keyCount)
+    } else {
+      // 由于后端summary暂时没有提供key_schools_count字段
+      // 这里暂时返回0，避免使用不准确的分页数据计算
+      // 建议后端在summary中添加key_schools_count字段
+      console.log('⚠️ 后端summary暂未提供key_schools_count字段，暂时显示0')
+      keyCount = 0
+    }
   } else {
     const overviewData = props.data as AdmissionOverviewResponse['data']
     if (overviewData.school_type_distribution) {
@@ -350,18 +356,21 @@ const genderRatio = computed(() => {
 
 // 学校层次优先级映射 - 用于排序
 const getSchoolLevelPriority = (level: string): number => {
+  // 按学历优先级排序：985工程>211工程>双一流>海外高校>普通本科>科研院所>民办本科>专科院校
   const priorityMap: Record<string, number> = {
-    '985工程': 1,
-    '211工程': 2, 
-    '双一流': 3,
-    '海外高校': 4,
-    '重点大学': 5,
-    '普通本科': 6,
-    '独立学院': 7,
-    '专科院校': 8,
-    '其他': 9
+    '985工程': 1,     // 最高级
+    '211工程': 2,     // 次高级
+    '双一流': 3,      // 第三级
+    '海外高校': 4,    // 第四级
+    '普通本科': 5,    // 第五级
+    '科研院所': 6,    // 第六级
+    '民办本科': 7,    // 第七级
+    '专科院校': 8,    // 第八级
+    '独立学院': 9,    // 其他
+    '重点大学': 10,   // 其他
+    '其他': 99        // 默认最低级
   }
-  return priorityMap[level] || 10
+  return priorityMap[level] || 100
 }
 
 // 学校表格配置 - 后端排序
@@ -411,7 +420,7 @@ const schoolTableColumnsWithSort = computed(() => {
     const newColumn = { ...column }
     
     // 根据当前排序状态设置列的排序状态
-    if (column.key && selectedSortBy.value && selectedSortOrder.value) {
+    if (column.key && selectedSortBy.value) {
       // 将后端排序字段映射回前端列key
       const backendToFrontendMap: { [key: string]: string } = {
         'university_name': 'school_name',
@@ -424,15 +433,24 @@ const schoolTableColumnsWithSort = computed(() => {
       const frontendKey = backendToFrontendMap[selectedSortBy.value] || selectedSortBy.value
       
       if (column.key === frontendKey) {
-        // 对于school_level_desc，虽然后端参数是desc，但前端应该显示为descend排序状态
-        if (selectedSortBy.value === 'school_level_desc') {
-          newColumn.sortOrder = 'descend'
-        } else {
+        // 根据实际的后端排序字段设置排序状态
+        if (selectedSortBy.value === 'school_level') {
+          newColumn.sortOrder = 'descend'  // school_level对应前端的descend（高到低）
+        } else if (selectedSortBy.value === 'school_level_desc') {
+          newColumn.sortOrder = 'ascend'   // school_level_desc对应前端的ascend（低到高）
+        } else if (selectedSortOrder.value) {
+          // 其他字段按实际排序方向显示
           newColumn.sortOrder = selectedSortOrder.value === 'ascend' ? 'ascend' : 'descend'
+        } else {
+          // 默认排序，不显示排序图标
+          newColumn.sortOrder = false
         }
       } else {
         newColumn.sortOrder = false
       }
+    } else {
+      // 没有排序状态时，清除所有列的排序标识
+      newColumn.sortOrder = false
     }
     
     return newColumn
@@ -441,14 +459,16 @@ const schoolTableColumnsWithSort = computed(() => {
 
 // 学校统计表格数据 - 支持两种数据结构和搜索结果
 const schoolTableData = computed(() => {
-  if (!props.data) return []
-  
-  console.log('🔍 schoolTableData - isSchoolsByBatchData:', isSchoolsByBatchData.value)
-  console.log('🔍 schoolTableData - complete data structure:', props.data)
+  console.log('🔍 schoolTableData - 计算开始:', {
+    hasPropsData: !!props.data,
+    showSearchResults: showSearchResults.value,
+    searchResultsLength: searchResults.value.length,
+    isSchoolsByBatchData: isSchoolsByBatchData.value
+  })
   
   let tableData: any[] = []
   
-  // 如果有搜索结果，优先显示搜索结果
+  // 如果有搜索结果，优先显示搜索结果（不依赖props.data）
   if (showSearchResults.value && searchResults.value.length > 0) {
     console.log('🔍 schoolTableData - 使用搜索结果:', searchResults.value)
     tableData = searchResults.value.map((school: any) => ({
@@ -456,51 +476,63 @@ const schoolTableData = computed(() => {
       school_level: school.school_level,
       recruitment_count: school.admission_count,
       percentage: school.admission_ratio.toFixed(2),
+      power_feature: school.power_feature || 0,
       // 标记为搜索结果，用于高亮显示
       isSearchResult: true
     }))
+    
+    console.log('🔍 schoolTableData - 搜索结果映射完成:', tableData)
+    return tableData
+  }
+  
+  // 如果没有props.data且没有搜索结果，返回空
+  if (!props.data) return []
+  
+  console.log('🔍 schoolTableData - isSchoolsByBatchData:', isSchoolsByBatchData.value)
+  console.log('🔍 schoolTableData - complete data structure:', props.data)
+  
+  // 如果是批次学校数据结构
+  if (isSchoolsByBatchData.value) {
+    const batchData = props.data as SchoolsByBatchResponse['data']
+    console.log('🔍 schoolTableData - batch schools:', batchData.schools)
+    console.log('🔍 schoolTableData - batch summary:', batchData.summary)
+    
+    tableData = batchData.schools.map((school: any) => {
+      // 计算该学校在总数中的百分比
+      const totalAdmissions = batchData.summary?.total_admissions || 1
+      const percentage = (school.admission_count / totalAdmissions * 100).toFixed(2)
+      
+      return {
+        school_name: school.university_name,
+        school_level: school.school_level,
+        recruitment_count: school.admission_count,
+        percentage: percentage,
+        power_feature: school.power_feature || 0
+      }
+    })
   } else {
-    // 如果是批次学校数据结构
-    if (isSchoolsByBatchData.value) {
-      const batchData = props.data as SchoolsByBatchResponse['data']
-      console.log('🔍 schoolTableData - batch schools:', batchData.schools)
-      console.log('🔍 schoolTableData - batch summary:', batchData.summary)
+    // 如果是概览数据结构
+    const overviewData = props.data as AdmissionOverviewResponse['data']
+    if (!overviewData.top_schools) return []
+    
+    console.log('🔍 schoolTableData - overview top_schools:', overviewData.top_schools)
+    
+    tableData = overviewData.top_schools.map((school: any) => {
+      let percentageValue = 0
+      if (typeof school.percentage === 'string') {
+        percentageValue = parseFloat(school.percentage) || 0
+      } else if (typeof school.percentage === 'number') {
+        percentageValue = school.percentage
+      }
       
-      tableData = batchData.schools.map((school: any) => {
-        // 计算该学校在总数中的百分比
-        const totalAdmissions = batchData.summary?.total_admissions || 1
-        const percentage = (school.admission_count / totalAdmissions * 100).toFixed(2)
-        
-        return {
-          school_name: school.university_name,
-          school_level: school.university_type,
-          recruitment_count: school.admission_count,
-          percentage: percentage
-        }
-      })
-    } else {
-      // 如果是概览数据结构
-      const overviewData = props.data as AdmissionOverviewResponse['data']
-      if (!overviewData.top_schools) return []
-      
-      console.log('🔍 schoolTableData - overview top_schools:', overviewData.top_schools)
-      
-      tableData = overviewData.top_schools.map((school: any) => {
-        let percentageValue = 0
-        if (typeof school.percentage === 'string') {
-          percentageValue = parseFloat(school.percentage) || 0
-        } else if (typeof school.percentage === 'number') {
-          percentageValue = school.percentage
-        }
-        
-        return {
-          school_name: school.university_name,
-          school_level: school.university_type,
-          recruitment_count: school.admission_count,
-          percentage: percentageValue.toFixed(2)
-        }
-      })
-    }
+      return {
+        school_name: school.university_name,
+        school_level: school.school_level,
+        recruitment_count: school.admission_count,
+        percentage: percentageValue.toFixed(2),
+        power_feature: school.power_feature || 0
+      }
+    })
   }
   
   return tableData
@@ -611,47 +643,75 @@ const handleTableChange = async (pagination: any, filters: any, sorter: any) => 
   // 更新当前页
   currentPage.value = pagination.current
   
-  // 如果有排序，清除前端排序状态并重新加载数据
-  if (sorter && sorter.order) {
-    // 将前端排序转换为后端排序参数 - 根据API接口支持的字段
-    let sortBy = 'admission_count' // 默认排序
-    if (sorter.columnKey === 'school_name') {
-      sortBy = 'university_name'
-    } else if (sorter.columnKey === 'school_level') {
-      // 学校层次排序支持正序和倒序两种不同的API参数
-      sortBy = sorter.order === 'ascend' ? 'school_level' : 'school_level_desc'
-    } else if (sorter.columnKey === 'recruitment_count') {
-      sortBy = 'admission_count'
-    } else if (sorter.columnKey === 'percentage') {
-      sortBy = 'admission_ratio' // 使用后端新支持的占比排序参数
-    }
-    
-    // 更新本地排序状态
-    selectedSortBy.value = sortBy
-    selectedSortOrder.value = sorter.order // 保存排序方向
-    
-    console.log('🔄 发送排序请求:', {
-      unitId: props.unitId,
-      batch: selectedBatch.value,
-      sortBy: sortBy,
-      page: pagination.current,
-      sortOrder: sorter.order
-    })
-    
-    // 发送排序请求
-    if (props.unitId) {
-      try {
-        emit('batch-change', {
-          unitId: props.unitId,
-          batch: selectedBatch.value, // 可以为null，表示所有批次
-          sortBy: sortBy,
-          page: pagination.current,
-          limit: 50, // 修改为50，与分页配置保持一致
-          sortOrder: sorter.order // 'ascend' 或 'descend'
-        })
-        return // 等待新数据加载，不再执行下面的分页逻辑
-      } catch (error) {
-        console.error('❌ 排序加载失败:', error)
+  // 处理排序变化（包括清除排序）
+  if (sorter && sorter.columnKey) {
+    if (sorter.order) {
+      // 有排序方向，应用排序
+      let sortBy = 'admission_count' // 默认排序
+      if (sorter.columnKey === 'school_name') {
+        sortBy = 'university_name'
+      } else if (sorter.columnKey === 'school_level') {
+        // 学校层次排序：ascend=从低到高层次，descend=从高到低层次（默认）
+        sortBy = sorter.order === 'ascend' ? 'school_level_desc' : 'school_level'
+      } else if (sorter.columnKey === 'recruitment_count') {
+        sortBy = 'admission_count'
+      } else if (sorter.columnKey === 'percentage') {
+        sortBy = 'admission_ratio' // 使用后端新支持的占比排序参数
+      }
+      
+      // 更新本地排序状态
+      selectedSortBy.value = sortBy
+      selectedSortOrder.value = sorter.order // 保存排序方向
+      
+      console.log('🔄 发送排序请求:', {
+        unitId: props.unitId,
+        batch: selectedBatch.value,
+        sortBy: sortBy,
+        page: pagination.current,
+        sortOrder: sorter.order
+      })
+      
+      // 发送排序请求 - 只要有单位ID、快捷筛选，或批次发生变化（包括清空），就发送排序请求
+      if (props.unitId || quickFilterType.value || selectedBatch.value !== undefined) {
+        try {
+          emit('batch-change', {
+            unitId: props.unitId,
+            batch: selectedBatch.value, // 可以为null，表示所有批次
+            quickFilter: quickFilterType.value, // 添加快捷筛选参数
+            sortBy: sortBy,
+            page: pagination.current,
+            limit: 50, // 修改为50，与分页配置保持一致
+            sortOrder: sorter.order // 'ascend' 或 'descend'
+          })
+          return // 等待新数据加载，不再执行下面的分页逻辑
+        } catch (error) {
+          console.error('❌ 排序加载失败:', error)
+        }
+      }
+    } else {
+      // 没有排序方向，清除排序
+      console.log('🔄 清除排序，恢复默认状态')
+      
+      // 清除本地排序状态
+      selectedSortBy.value = 'admission_count'
+      selectedSortOrder.value = null
+      
+      // 发送清除排序请求 - 只要有单位ID、快捷筛选，或批次发生变化（包括清空），就发送请求
+      if (props.unitId || quickFilterType.value || selectedBatch.value !== undefined) {
+        try {
+          emit('batch-change', {
+            unitId: props.unitId,
+            batch: selectedBatch.value,
+            quickFilter: quickFilterType.value,
+            sortBy: 'admission_count', // 恢复默认排序
+            page: 1, // 重置到第一页
+            limit: 50,
+            sortOrder: 'desc' // 默认降序
+          })
+          return
+        } catch (error) {
+          console.error('❌ 清除排序失败:', error)
+        }
       }
     }
   } else {
@@ -667,12 +727,13 @@ const handleTableChange = async (pagination: any, filters: any, sorter: any) => 
       }
     })
     
-    // 纯分页变化（保持当前排序状态）
-    if (props.unitId) {
+    // 纯分页变化（保持当前排序状态） - 只要有单位ID、快捷筛选，或批次发生变化（包括清空），就发送分页请求
+    if (props.unitId || quickFilterType.value || selectedBatch.value !== undefined) {
       try {
         const requestParams: any = {
           unitId: props.unitId,
           batch: selectedBatch.value, // 可以为null，表示所有批次
+          quickFilter: quickFilterType.value, // 添加快捷筛选参数
           sortBy: selectedSortBy.value,
           page: pagination.current,
           limit: 50, // 修改为50，与分页配置保持一致
@@ -712,13 +773,22 @@ const handleBatchChange = async (batchValue: string | null) => {
   // 批次变化时重置分页到第一页，但保持排序状态
   currentPage.value = 1
   
-  // 清空学校搜索状态
-  clearSearch()
+  // 如果当前有搜索关键词，则重新执行搜索以应用新的批次筛选
+  if (searchKeyword.value.trim()) {
+    console.log('📊 批次变化且有搜索关键词，重新执行联立搜索')
+    performSchoolSearch(searchKeyword.value.trim())
+    return // 搜索会处理数据加载，不需要再执行下面的batch-change
+  }
+  
+  // 如果没有搜索关键词，清空搜索结果状态并执行正常的批次筛选
+  showSearchResults.value = false
+  searchResults.value = []
   
   // 触发事件，让父组件处理数据刷新
   const requestParams: any = {
     unitId: props.unitId,
     batch: batchValue,
+    quickFilter: quickFilterType.value, // 添加快捷筛选参数
     sortBy: selectedSortBy.value,
     page: 1, // 重置到第一页
     limit: 50, // 修改为50，与分页配置保持一致
@@ -728,6 +798,44 @@ const handleBatchChange = async (batchValue: string | null) => {
   emit('batch-change', requestParams)
 }
 
+// 快捷筛选方法
+const handleQuickFilter = (filterType: 'guowang' | 'nanwang') => {
+  console.log('快捷筛选:', filterType)
+  
+  // 切换快捷筛选状态
+  if (quickFilterType.value === filterType) {
+    // 如果已经选中，则取消选择
+    quickFilterType.value = null
+    message.info('已清除快捷筛选')
+  } else {
+    quickFilterType.value = filterType
+    const filterName = filterType === 'guowang' ? '国网' : '南网'
+    message.success(`已启用${filterName}快捷筛选`)
+  }
+  
+  // 重置分页
+  currentPage.value = 1
+  
+  // 如果当前有搜索关键词，重新执行搜索以应用快捷筛选
+  if (searchKeyword.value.trim()) {
+    console.log('📊 快捷筛选变化且有搜索关键词，重新执行联立搜索')
+    performSchoolSearch(searchKeyword.value.trim())
+    return
+  }
+  
+  // 没有搜索关键词时，触发数据刷新
+  const requestParams: any = {
+    unitId: props.unitId,
+    batch: selectedBatch.value,
+    quickFilter: quickFilterType.value, // 添加快捷筛选参数
+    sortBy: selectedSortBy.value,
+    page: 1,
+    limit: 50,
+    sortOrder: selectedSortOrder.value
+  }
+  
+  emit('batch-change', requestParams)
+}
 
 // 刷新数据
 const handleRefresh = async () => {
@@ -742,6 +850,7 @@ const handleRefresh = async () => {
   const requestParams: any = {
     unitId: props.unitId,
     batch: selectedBatch.value,
+    quickFilter: quickFilterType.value, // 添加快捷筛选参数
     sortBy: selectedSortBy.value,
     page: currentPage.value,
     limit: 50, // 修改为50，与分页配置保持一致
@@ -751,6 +860,93 @@ const handleRefresh = async () => {
   emit('batch-change', requestParams)
 }
 
+// 排序相关方法
+const handleSortChange = (value: string) => {
+  selectedSortBy.value = value
+  console.log('🔄 排序方式变更:', value)
+  
+  // 触发数据重新加载
+  const requestParams: any = {
+    unitId: props.unitId,
+    batch: selectedBatch.value,
+    quickFilter: quickFilterType.value,
+    sortBy: value,
+    page: currentPage.value,
+    limit: 50,
+    sortOrder: selectedSortOrder.value
+  }
+  
+  emit('batch-change', requestParams)
+}
+
+const toggleSortOrder = () => {
+  selectedSortOrder.value = selectedSortOrder.value === 'desc' ? 'asc' : 'desc'
+  console.log('🔄 排序顺序变更:', selectedSortOrder.value)
+  
+  // 触发数据重新加载
+  const requestParams: any = {
+    unitId: props.unitId,
+    batch: selectedBatch.value,
+    quickFilter: quickFilterType.value,
+    sortBy: selectedSortBy.value,
+    page: currentPage.value,
+    limit: 50,
+    sortOrder: selectedSortOrder.value
+  }
+  
+  emit('batch-change', requestParams)
+}
+
+// 重置筛选条件（内部使用）
+const handleReset = async () => {
+  console.log('🔄 重置所有筛选条件')
+  
+  // 先清空搜索状态（但不触发重新加载）
+  searchKeyword.value = ''
+  searchResults.value = []
+  showSearchResults.value = false
+  searchLoading.value = false
+  
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
+    searchTimeout = null
+  }
+  
+  // 重置所有筛选状态
+  selectedBatch.value = null
+  quickFilterType.value = null
+  selectedSortBy.value = 'admission_count'
+  selectedSortOrder.value = null
+  currentPage.value = 1
+  
+  // 重置时不自动重新加载数据，等待外部传入新数据
+  // 注释掉自动重新加载逻辑，避免在全局重置时触发不必要的API请求
+  /*
+  if (props.unitId) {
+    const requestParams: any = {
+      unitId: props.unitId,
+      batch: null,
+      quickFilter: null,
+      sortBy: 'admission_count',
+      page: 1,
+      limit: 50,
+      sortOrder: null
+    }
+    
+    emit('batch-change', requestParams)
+  }
+  */
+  
+  console.log('✅ 重置完成，等待外部传入新数据')
+}
+
+// 全局重置（触发父组件的全局重置）
+const handleGlobalReset = () => {
+  console.log('🔄 触发全局重置')
+  // 通知父组件进行全局重置，包括清空单位选择
+  emit('global-reset')
+}
+
 // 学校搜索相关方法
 let searchTimeout: NodeJS.Timeout | null = null
 
@@ -758,6 +954,8 @@ let searchTimeout: NodeJS.Timeout | null = null
 const handleSearchInput = (e: Event) => {
   const target = e.target as HTMLInputElement
   const value = target.value?.trim()
+  
+  console.log('🔍 搜索输入:', { value, unitId: props.unitId, quickFilter: quickFilterType.value })
   
   // 清除之前的定时器
   if (searchTimeout) {
@@ -778,20 +976,49 @@ const handleSearchInput = (e: Event) => {
 
 // 执行学校搜索
 const performSchoolSearch = async (keyword: string) => {
-  if (!props.unitId || !keyword) {
+  console.log('🔍 开始执行搜索:', { keyword, unitId: props.unitId, quickFilter: quickFilterType.value })
+  
+  if (!keyword) {
+    console.log('❌ 搜索关键词为空')
+    return
+  }
+  
+  // 搜索需要至少有单位ID或快捷筛选条件
+  if (!props.unitId && !quickFilterType.value) {
+    console.log('❌ 没有单位ID且没有快捷筛选')
+    message.warning('请先选择单位或使用快捷筛选，再进行学校搜索')
     return
   }
   
   try {
     searchLoading.value = true
     
-    const searchParams = {
-      unit_id: props.unitId,
-      batch_type: selectedBatch.value || undefined,
+    const searchParams: any = {
       school_name: keyword
     }
     
-    console.log('🔍 执行学校搜索:', searchParams)
+    // 如果有单位ID，添加到参数中
+    if (props.unitId) {
+      searchParams.unit_id = props.unitId
+    }
+    
+    // 如果选择了批次，加入批次参数实现联立搜索
+    if (selectedBatch.value) {
+      searchParams.batch_type = selectedBatch.value
+    }
+    
+    // 如果启用了快捷筛选，加入快捷筛选参数
+    if (quickFilterType.value) {
+      searchParams.quick_filter = quickFilterType.value
+    }
+    
+    // 打印搜索参数以便调试
+    const searchDescriptions = []
+    if (selectedBatch.value) searchDescriptions.push(`批次: ${selectedBatch.value}`)
+    if (quickFilterType.value) searchDescriptions.push(`快捷筛选: ${quickFilterType.value === 'guowang' ? '国网' : '南网'}`)
+    searchDescriptions.push(`学校名称: ${keyword}`)
+    
+    console.log(`🔍 执行联立搜索 (${searchDescriptions.join(' + ')})`, searchParams)
     
     // 发送搜索事件给父组件
     emit('school-search', searchParams)
@@ -804,11 +1031,36 @@ const performSchoolSearch = async (keyword: string) => {
   }
 }
 
-// 处理搜索结果
-const handleSearchResults = (results: any[]) => {
-  searchResults.value = results
-  showSearchResults.value = results.length > 0
-  console.log('🔍 收到搜索结果:', results)
+// 处理搜索结果 - 支持完整响应对象或仅学校数组
+const handleSearchResults = (results: any[] | { schools: any[], summary?: any, pagination?: any }) => {
+  // 判断传入的是完整响应对象还是仅学校数组
+  if (Array.isArray(results)) {
+    // 如果是数组，按旧逻辑处理
+    searchResults.value = results
+    showSearchResults.value = results.length > 0
+    console.log('🔍 收到搜索结果(数组):', results)
+    console.log('🔍 设置搜索状态:', {
+      searchResultsLength: results.length,
+      showSearchResults: showSearchResults.value,
+      searchResultsValue: searchResults.value
+    })
+  } else if (results && results.schools) {
+    // 如果是完整响应对象，提取学校数组并更新props数据
+    searchResults.value = results.schools
+    showSearchResults.value = results.schools.length > 0
+    
+    // 将完整响应数据设置为props.data，这样totalCount等计算属性才能正确工作
+    // 通过emit通知父组件更新数据
+    emit('update-analytics-data', results)
+    
+    console.log('🔍 收到搜索结果(完整对象):', results)
+    console.log('🔍 设置搜索状态:', {
+      searchResultsLength: results.schools.length,
+      showSearchResults: showSearchResults.value,
+      searchResultsValue: searchResults.value,
+      hasSummary: !!results.summary
+    })
+  }
 }
 
 // 清空搜索
@@ -821,6 +1073,21 @@ const clearSearch = () => {
   if (searchTimeout) {
     clearTimeout(searchTimeout)
     searchTimeout = null
+  }
+  
+  // 清空搜索后，如果有批次选择，重新加载该批次的数据
+  if (selectedBatch.value && props.unitId) {
+    console.log('🔄 清空搜索后重新加载批次数据:', selectedBatch.value)
+    const requestParams: any = {
+      unitId: props.unitId,
+      batch: selectedBatch.value,
+      quickFilter: quickFilterType.value, // 添加快捷筛选参数
+      sortBy: selectedSortBy.value,
+      page: 1,
+      limit: 50,
+      sortOrder: selectedSortOrder.value
+    }
+    emit('batch-change', requestParams)
   }
 }
 
@@ -850,16 +1117,26 @@ const loadAnalyticsData = async (unitId: number | null, batch: string | null = n
   }
 }
 
+// 判断是否有数据可以展示 - 用于控制重置按钮显示
+const hasDataToDisplay = computed(() => {
+  return !!(props.data && (totalCount.value > 0 || schoolTableData.value.length > 0))
+})
+
 // 工具方法：获取学校层次颜色
 const getSchoolLevelColor = (level: string) => {
+  // 按学历优先级设置颜色：985工程>211工程>双一流>海外高校>普通本科>科研院所>民办本科>专科院校
   const colorMap: Record<string, string> = {
-    '985工程': 'red',
-    '211工程': 'orange', 
-    '双一流': 'gold',
-    '重点大学': 'blue',
-    '普通本科': 'green',
-    '专科院校': 'cyan',
-    '其他': 'default'
+    '985工程': 'red',        // 最高级：红色
+    '211工程': 'volcano',    // 次高级：火山红
+    '双一流': 'orange',      // 第三级：橙色
+    '海外高校': 'gold',      // 第四级：金色
+    '普通本科': 'lime',      // 第五级：柠檬绿
+    '科研院所': 'green',     // 第六级：绿色
+    '民办本科': 'cyan',      // 第七级：青色
+    '专科院校': 'blue',      // 第八级：蓝色
+    '独立学院': 'geekblue',  // 其他：蓝紫色
+    '重点大学': 'purple',    // 其他：紫色
+    '其他': 'default'        // 默认：灰色
   }
   return colorMap[level] || 'default'
 }
@@ -893,6 +1170,29 @@ watch(() => props.unitId, (newUnitId, oldUnitId) => {
   }
 })
 
+// 监听单位信息变化，自动设置快捷筛选状态
+watch(() => props.unitInfo, (newUnitInfo) => {
+  if (newUnitInfo && newUnitInfo.org_type) {
+    const orgType = newUnitInfo.org_type
+    console.log('🔄 单位信息变化，自动设置快捷筛选:', { orgType })
+    
+    if (orgType === '国网省公司' || orgType === '国网直属单位') {
+      if (quickFilterType.value !== 'guowang') {
+        quickFilterType.value = 'guowang'
+        console.log('✅ 自动激活国网快捷筛选')
+      }
+    } else if (orgType === '南网省公司' || orgType === '南网直属单位') {
+      if (quickFilterType.value !== 'nanwang') {
+        quickFilterType.value = 'nanwang'
+        console.log('✅ 自动激活南网快捷筛选')
+      }
+    }
+  } else if (!newUnitInfo) {
+    // 清空单位时，检查是否应该保持快捷筛选状态
+    console.log('🧹 单位信息清空')
+  }
+}, { deep: true })
+
 // 监听数据变化，同步分页状态
 watch(() => props.data, (newData) => {
   if (newData && isSchoolsByBatchData.value) {
@@ -908,10 +1208,19 @@ watch(() => props.data, (newData) => {
   }
 }, { deep: true })
 
-// 暴露给父组件的方法
+// 暴露给父组件的方法和状态
 defineExpose({
   handleSearchResults,
-  clearSearch
+  clearSearch,
+  handleReset,
+  handleGlobalReset,
+  quickFilterType,
+  selectedBatch,
+  selectedSortBy,
+  selectedSortOrder,
+  currentPage,
+  searchKeyword,
+  showSearchResults
 })
 </script>
 
@@ -960,6 +1269,25 @@ defineExpose({
           height: 28px;
           line-height: 26px;
         }
+      }
+    }
+
+    .reset-btn {
+      color: #666;
+      height: 28px;
+      width: 28px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        color: #ff4d4f;
+        background: #fff2f0;
+      }
+
+      &:focus {
+        color: #ff4d4f;
       }
     }
 
@@ -1308,92 +1636,58 @@ defineExpose({
     align-items: center;
     margin-bottom: 8px;
     
-    h5 {
-      margin: 0;
-      font-size: 12px;
-      font-weight: 600;
-      color: #333;
+    .header-left {
+      h5 {
+        margin: 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+      }
     }
     
     .table-actions {
       display: flex;
       align-items: center;
       gap: 12px;
+      justify-content: flex-end;
       
-      .batch-filter {
-        .batch-select {
-          width: 100px;
+      .sort-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        
+        .sort-select {
+          min-width: 120px;
           
           :deep(.ant-select-selector) {
-            height: 24px;
+            height: 32px;
+            border-radius: 4px;
             font-size: 12px;
-            
-            .ant-select-selection-placeholder {
-              font-size: 11px;
-              color: #bfbfbf;
-            }
-          }
-        }
-      }
-      
-      .school-search-container {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        position: relative;
-        
-        .school-search-input {
-          width: 180px;
-          
-          :deep(.ant-input) {
-            font-size: 12px;
-            height: 24px;
-            
-            &::placeholder {
-              font-size: 11px;
-              color: #bfbfbf;
-            }
-          }
-          
-          :deep(.ant-input-prefix) {
-            color: #8c8c8c;
           }
         }
         
-        .search-results-tip {
-          position: absolute;
-          top: 26px;
-          left: 0;
-          font-size: 10px;
-          color: #52c41a;
-          background: #f6ffed;
-          border: 1px solid #b7eb8f;
-          border-radius: 3px;
-          padding: 2px 6px;
-          white-space: nowrap;
-          z-index: 10;
+        .sort-order-btn {
+          height: 32px;
+          padding: 0 12px;
+          border-radius: 4px;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          transition: all 0.3s;
           
-          &::before {
-            content: '';
-            position: absolute;
-            top: -4px;
-            left: 8px;
-            width: 0;
-            height: 0;
-            border-left: 4px solid transparent;
-            border-right: 4px solid transparent;
-            border-bottom: 4px solid #b7eb8f;
+          &:hover {
+            background: #f0f9ff;
+            border-color: #1890ff;
+            color: #1890ff;
+          }
+          
+          .anticon {
+            font-size: 12px;
           }
         }
-      }
-      
-      .sort-tip {
-        font-size: 11px;
-        color: #666;
-        font-style: italic;
       }
     }
-  }
   
   :deep(.ant-table) {
     .clickable-row {
@@ -1431,11 +1725,9 @@ defineExpose({
       
       .ant-table-column-sorter {
         color: #bfbfbf;
-        
-        &.ant-table-column-sorter-up.active,
-        &.ant-table-column-sorter-down.active {
-          color: #1890ff;
-        }
+      }
+      .ant-table-column-sorter.active {
+        color: #1890ff;
       }
     }
     
@@ -1452,8 +1744,19 @@ defineExpose({
         color: inherit;
         font-weight: normal;
       }
+      
+      .power-icon {
+        margin-left: 4px;
+        color: #faad14;
+        font-size: 12px;
+        transition: all 0.2s ease;
+        
+        &:hover {
+          color: #ffc53d;
+          transform: scale(1.1);
+        }
+      }
     }
-    
     
     .unit-name-cell {
       font-weight: 500;
@@ -1518,4 +1821,114 @@ defineExpose({
     }
   }
 }
+
+// 增强的表格空状态样式
+.table-empty-state-enhanced {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 450px; // 调整最小高度到450px
+  padding: 50px 20px;
+  
+  .empty-container {
+    max-width: 400px;
+    text-align: center;
+    
+    .empty-visual {
+      margin-bottom: 24px;
+      
+      .empty-icon {
+        font-size: 64px;
+        color: #d9d9d9;
+        display: block;
+        margin: 0 auto;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          color: #bfbfbf;
+          transform: scale(1.05);
+        }
+      }
+    }
+    
+    .empty-content {
+      .empty-title {
+        margin: 0 0 16px 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: #595959;
+        line-height: 1.4;
+      }
+      
+      .empty-description {
+        margin: 0 0 20px 0;
+        font-size: 14px;
+        color: #8c8c8c;
+        line-height: 1.6;
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      
+      .empty-suggestions {
+        margin-bottom: 20px;
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        
+        .ant-tag {
+          margin: 0;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          
+          .anticon {
+            font-size: 12px;
+          }
+        }
+      }
+      
+      .empty-hint-text {
+        p {
+          margin: 0;
+          font-size: 13px;
+          color: #bfbfbf;
+          font-style: italic;
+          
+          &:hover {
+            color: #1890ff;
+          }
+        }
+      }
+    }
+  }
+  
+  // 响应式适配
+  @media (max-width: 768px) {
+    min-height: 350px;
+    padding: 40px 16px;
+    
+    .empty-container {
+      .empty-visual .empty-icon {
+        font-size: 48px;
+      }
+      
+      .empty-content {
+        .empty-title {
+          font-size: 16px;
+        }
+        
+        .empty-description {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+}
+}
+
 </style>

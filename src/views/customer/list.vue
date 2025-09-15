@@ -155,7 +155,13 @@
               <filter-outlined />
             </a-button>
             
-            <a-button type="primary" @click="showCreateModal" size="large" class="add-btn">
+            <a-button 
+              v-if="canPerformOperation('customer', 'create')"
+              type="primary" 
+              @click="showCreateModal" 
+              size="large" 
+              class="add-btn"
+            >
               <plus-outlined />
               <span class="desktop-only">新增客户</span>
             </a-button>
@@ -226,7 +232,9 @@
                 </a-avatar>
                 <div class="customer-details">
                   <div class="customer-name">{{ record.wechat_name }}</div>
-                  <div class="customer-phone">{{ record.phone }}</div>
+                  <div class="customer-phone">
+                    <MaskedText :value="record.phone" data-type="phone" />
+                  </div>
                 </div>
               </div>
             </template>
@@ -292,7 +300,9 @@
                   </a-avatar>
                   <div class="customer-details">
                     <div class="customer-name">{{ customer.wechat_name }}</div>
-                    <div class="customer-phone">{{ customer.phone }}</div>
+                    <div class="customer-phone">
+                      <MaskedText :value="customer.phone" data-type="phone" />
+                    </div>
                   </div>
                 </div>
                 <a-tag :color="getStatusColor(customer.status)" class="status-tag">
@@ -627,9 +637,23 @@ import {
 import {
   createFollowUpRecord
 } from '@/api/follow-up'
+import { 
+  filterDataList, 
+  processSensitiveDataList,
+  useDataPermission 
+} from '@/utils/dataPermissions'
+import MaskedText from '@/components/common/MaskedText.vue'
 
 // 响应式工具
 const { isMobile } = useResponsive()
+
+// 数据权限工具
+const { 
+  canPerformOperation, 
+  hasDataPermission,
+  hasSensitiveAccess,
+  getDataScopeDescription 
+} = useDataPermission()
 
 // 响应式数据
 const loading = ref(false)
@@ -876,7 +900,19 @@ const loadCustomers = async () => {
     }
     
     const response = await getCustomers(params)
-    customerList.value = response.data
+    
+    // 使用数据权限过滤和敏感数据处理
+    const filteredData = filterDataList(response.data, {
+      dataType: 'customer_data',
+      regionField: 'region',
+      departmentField: 'department_id',
+      creatorField: 'creator_id'
+    })
+    
+    // 处理敏感数据脫敏
+    const sensitiveFields = ['phone', 'email', 'wechat', 'qq']
+    customerList.value = processSensitiveDataList(filteredData, sensitiveFields)
+    
     pagination.total = response.total
     pagination.current = response.page
   } catch (error) {

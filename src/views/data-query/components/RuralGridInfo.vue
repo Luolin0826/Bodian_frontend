@@ -1,106 +1,15 @@
 <template>
   <div class="rural-grid-info">
     <div class="info-section">
-      <div class="section-header" @click="toggleExpanded">
+      <div class="section-header">
         <h4 class="section-title">
           <thunderbolt-outlined class="section-icon" />
           农网板块
-          <a-tag v-if="hasData" color="green" size="small" class="data-tag">
-            有数据
-          </a-tag>
-          <a-tag v-else color="orange" size="small" class="data-tag">
-            暂无数据
-          </a-tag>
         </h4>
-        <div class="section-actions">
-          <!-- 编辑状态指示 -->
-          <div v-if="isEditing || hasChanges" class="edit-status">
-            <a-tag v-if="saving" color="blue" class="status-tag">
-              <save-outlined spin />
-              自动保存中...
-            </a-tag>
-            <a-tag v-else-if="hasChanges && isEditing" color="orange" class="status-tag">
-              有未保存更改
-            </a-tag>
-            <a-tag v-else-if="isEditing" color="green" class="status-tag">
-              编辑模式
-            </a-tag>
-          </div>
-          
-          <!-- 非编辑模式按钮组 -->
-          <template v-if="!isEditing">
-            <a-tooltip title="刷新数据">
-              <a-button
-                type="text"
-                size="small"
-                @click.stop="handleRefresh"
-                :loading="refreshing"
-                class="refresh-btn"
-              >
-                <reload-outlined />
-              </a-button>
-            </a-tooltip>
-
-            <a-tooltip title="编辑农网信息">
-              <a-button
-                type="text"
-                size="small"
-                @click.stop="enterEditMode"
-                class="edit-btn"
-              >
-                <edit-outlined />
-              </a-button>
-            </a-tooltip>
-
-            <a-tooltip title="管理字段 (添加/编辑/删除/排序)">
-              <a-button
-                type="text"
-                size="small"
-                @click.stop="openFieldManagerDialog"
-                class="manage-fields-btn"
-              >
-                <setting-outlined />
-              </a-button>
-            </a-tooltip>
-          </template>
-          
-          <!-- 编辑模式按钮组 -->
-          <template v-if="isEditing">
-            <a-tooltip title="保存更改">
-              <a-button
-                type="text"
-                size="small"
-                @click.stop="saveChanges"
-                :loading="saving"
-                class="save-btn"
-              >
-                <save-outlined />
-              </a-button>
-            </a-tooltip>
-            <a-tooltip title="取消编辑">
-              <a-button
-                type="text"
-                size="small"
-                @click.stop="cancelEdit"
-                class="cancel-btn"
-              >
-                <close-outlined />
-              </a-button>
-            </a-tooltip>
-          </template>
-          <a-button
-            type="text"
-            size="small"
-            class="expand-btn"
-            :class="{ expanded: isExpanded }"
-          >
-            <down-outlined />
-          </a-button>
-        </div>
       </div>
 
-      <!-- 展开内容 -->
-      <div v-if="isExpanded" class="section-content">
+      <!-- 内容区域 -->
+      <div class="section-content">
         <!-- 加载状态 -->
         <div v-if="loading" class="loading-container">
           <a-spin size="default" tip="正在加载农网信息...">
@@ -108,289 +17,186 @@
           </a-spin>
         </div>
 
-        <!-- 显示模式 -->
-        <div v-else-if="ruralGridInfo && hasData && !isEditing" class="grid-info-layout">
+        <!-- 内容卡片展示 -->
+        <div v-if="ruralGridInfo && hasData" class="content-grid">
+          <!-- 内容卡片 -->
           <div
             v-for="(fieldConfig, fieldName) in visibleFields"
             :key="fieldName"
-            class="info-item"
-            :class="[fieldConfig.type, allFields[fieldName]?.is_custom ? 'custom-field' : 'default-field']"
+            class="content-card"
+            @click="openContentPreview(fieldConfig)"
           >
-            <div class="info-label">
-              <span class="label-text">{{ fieldConfig.display_name }}</span>
-              <a-tooltip v-if="fieldConfig.description" :title="fieldConfig.description">
-                <question-circle-outlined class="field-help" />
-              </a-tooltip>
+            <div class="card-header">
+              <h4 class="card-title">{{ fieldConfig.display_name }}</h4>
             </div>
-            <div class="info-value">
-              <!-- 文本和文本域 -->
-              <div
-                v-if="fieldConfig.type === 'text' || fieldConfig.type === 'textarea'"
-                class="value-text"
-                :class="{ 
-                  'multiline': fieldConfig.type === 'textarea',
-                  'expandable': isContentLong(fieldConfig.value)
-                }"
-                @click="isContentLong(fieldConfig.value) ? openContentPreview(fieldConfig) : null"
-                :title="isContentLong(fieldConfig.value) ? '点击查看完整内容' : ''"
-              >
-                {{ formatValue(fieldConfig.value) }}
-                <!-- 长内容指示器 -->
-                <expand-outlined 
-                  v-if="isContentLong(fieldConfig.value)" 
-                  class="expand-indicator"
-                />
-              </div>
-              
-              <!-- 布尔值 -->
-              <a-tag
-                v-else-if="fieldConfig.type === 'boolean'"
-                :color="fieldConfig.value ? 'green' : 'red'"
-                class="value-boolean"
-              >
-                {{ fieldConfig.value ? '是' : '否' }}
-              </a-tag>
-              
-              <!-- 选择类型 -->
-              <a-tag
-                v-else-if="fieldConfig.type === 'select'"
-                :color="getSelectColor(fieldConfig.value)"
-                class="value-select"
-              >
-                {{ fieldConfig.value || '-' }}
-              </a-tag>
-              
-              <!-- 时间类型 -->
-              <div
-                v-else-if="fieldConfig.type === 'time'"
-                class="value-time"
-              >
-                <calendar-outlined class="time-icon" />
-                <span>{{ formatValue(fieldConfig.value) }}</span>
-              </div>
-              
-              <!-- 默认显示 -->
-              <span v-else class="value-default">
-                {{ formatValue(fieldConfig.value) }}
-              </span>
+            <div class="card-content">
+              <p class="content-preview">{{ formatValue(fieldConfig.value) }}</p>
+            </div>
+          </div>
+          
+          <!-- 新增内容按钮 -->
+          <div v-if="unitId" class="add-content-card" @click="openAddDialog">
+            <div class="add-content-inner">
+              <plus-outlined class="add-icon" />
+              <span class="add-text">新增内容</span>
             </div>
           </div>
         </div>
         
-        <!-- 编辑模式 -->
-        <div v-else-if="isEditing" class="edit-form">
-          <a-form
-            ref="formRef"
-            :model="editForm"
-            :rules="formRules"
-            layout="vertical"
-            @finish="handleFormSubmit"
-            @finishFailed="handleFormSubmitFailed"
-          >
-            <a-row :gutter="[16, 16]">
-              <a-col
-                v-for="(fieldConfig, fieldName) in visibleFields"
-                :key="fieldName"
-                :xs="24"
-                :sm="12"
-                :md="12"
-              >
-                <a-form-item
-                  :label="fieldConfig.display_name"
-                  :name="fieldName"
-                  :required="isRequiredField(fieldName)"
-                >
-                  <!-- 文本输入 -->
-                  <a-input
-                    v-if="fieldConfig.type === 'text' || fieldConfig.type === 'time'"
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-input"
-                  />
-                  
-                  <!-- 文本域 -->
-                  <a-textarea
-                    v-else-if="fieldConfig.type === 'textarea'"
-                    v-model:value="editForm[fieldName]"
-                    :rows="4"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-textarea"
-                    :auto-size="{ minRows: 4, maxRows: 8 }"
-                  />
-                  
-                  <!-- 选择器 -->
-                  <a-select
-                    v-else-if="fieldConfig.type === 'select'"
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请选择${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-select"
-                  >
-                    <a-select-option value="高">高</a-select-option>
-                    <a-select-option value="中">中</a-select-option>
-                    <a-select-option value="低">低</a-select-option>
-                    <a-select-option value="优">优</a-select-option>
-                    <a-select-option value="良">良</a-select-option>
-                    <a-select-option value="中等">中等</a-select-option>
-                    <a-select-option value="差">差</a-select-option>
-                    <a-select-option value="必须">必须</a-select-option>
-                    <a-select-option value="建议">建议</a-select-option>
-                    <a-select-option value="可选">可选</a-select-option>
-                  </a-select>
-                  
-                  <!-- 布尔选择 -->
-                  <a-radio-group
-                    v-else-if="fieldConfig.type === 'boolean'"
-                    v-model:value="editForm[fieldName]"
-                    size="large"
-                    class="uniform-radio-group"
-                  >
-                    <a-radio :value="true">是</a-radio>
-                    <a-radio :value="false">否</a-radio>
-                  </a-radio-group>
-                  
-                  <!-- 默认文本输入 -->
-                  <a-input
-                    v-else
-                    v-model:value="editForm[fieldName]"
-                    :placeholder="`请输入${fieldConfig.display_name}`"
-                    size="large"
-                    class="uniform-input"
-                  />
-                </a-form-item>
-              </a-col>
-            </a-row>
-          </a-form>
-        </div>
-        
-        <!-- 原有的农网信息展示（保留但隐藏） -->
-        <div v-else-if="false" class="grid-info-layout-original" style="display: none;">
-          <div
-            v-for="(fieldConfig, fieldName) in visibleFields"
-            :key="fieldName"
-            class="info-item"
-            :class="[fieldConfig.type, allFields[fieldName]?.is_custom ? 'custom-field' : 'default-field']"
-          >
-            <div class="info-label">
-              <span class="label-text">{{ fieldConfig.display_name }}</span>
-              <a-tooltip v-if="fieldConfig.description" :title="fieldConfig.description">
-                <question-circle-outlined class="field-help" />
-              </a-tooltip>
-            </div>
-            <div class="info-value">
-              <!-- 文本和文本域 -->
-              <div
-                v-if="fieldConfig.type === 'text' || fieldConfig.type === 'textarea'"
-                class="value-text"
-                :class="{ 
-                  'multiline': fieldConfig.type === 'textarea',
-                  'expandable': isContentLong(fieldConfig.value)
-                }"
-                @click="isContentLong(fieldConfig.value) ? openContentPreview(fieldConfig) : null"
-                :title="isContentLong(fieldConfig.value) ? '点击查看完整内容' : ''"
-              >
-                {{ formatValue(fieldConfig.value) }}
-                <!-- 长内容指示器 -->
-                <expand-outlined 
-                  v-if="isContentLong(fieldConfig.value)" 
-                  class="expand-indicator"
-                />
-              </div>
-              
-              <!-- 布尔值 -->
-              <a-tag
-                v-else-if="fieldConfig.type === 'boolean'"
-                :color="fieldConfig.value ? 'green' : 'red'"
-                class="value-boolean"
-              >
-                {{ fieldConfig.value ? '是' : '否' }}
-              </a-tag>
-              
-              <!-- 选择类型 -->
-              <a-tag
-                v-else-if="fieldConfig.type === 'select'"
-                :color="getSelectColor(fieldConfig.value)"
-                class="value-select"
-              >
-                {{ fieldConfig.value || '-' }}
-              </a-tag>
-              
-              <!-- 时间类型 -->
-              <div
-                v-else-if="fieldConfig.type === 'time'"
-                class="value-time"
-              >
-                <calendar-outlined class="time-icon" />
-                <span>{{ formatValue(fieldConfig.value) }}</span>
-              </div>
-              
-              <!-- 默认显示 -->
-              <span v-else class="value-default">
-                {{ formatValue(fieldConfig.value) }}
-              </span>
+        <!-- 选中单位但无数据状态 -->
+        <div v-else-if="unitId && !hasData" class="content-grid">
+          <!-- 新增内容按钮 -->
+          <div class="add-content-card" @click="openAddDialog">
+            <div class="add-content-inner">
+              <plus-outlined class="add-icon" />
+              <span class="add-text">新增内容</span>
             </div>
           </div>
         </div>
-
-        <!-- 无数据状态 -->
-        <div v-else class="no-data-state">
-          <div class="no-data-content">
-            <thunderbolt-outlined class="no-data-icon" />
-            <p class="no-data-text">该单位暂无农网相关信息</p>
-            <div class="no-data-tips">
-              <p>⚡ 农网信息包括：</p>
-              <ul>
-                <li>农网待遇和薪资结构</li>
-                <li>考试时间和报名安排</li>
-                <li>年龄要求和学历限制</li>
-                <li>网申情况和通过率</li>
-                <li>线上测评和考核内容</li>
-                <li>性格测试和面试环节</li>
-                <li>资格审查和材料要求</li>
-                <li>笔试内容和难度分析</li>
-              </ul>
-            </div>
+        
+        <!-- 空状态 -->
+        <div v-else-if="showEmptyState" class="empty-state-card">
+          <div class="empty-content">
+            <thunderbolt-outlined class="empty-icon" />
+            <h4 class="empty-title">农网板块</h4>
+            <p class="empty-text">请先选择一个单位查看对应的农网信息</p>
           </div>
         </div>
       </div>
     </div>
-    
-    <!-- 字段管理对话框 -->
-    <FieldManagerDialog
-      v-model:open="fieldManagerDialogVisible"
-      module-type="rural-grid"
-      :module-info="{ sectionName: '农网板块' }"
-      :unit-id="unitId"
-      :unit-info="unitInfo"
-      :province="currentProvince"
-      @fields-updated="handleFieldsUpdated"
-    />
-    
-    <!-- 内容预览对话框 -->
+
+    <!-- 新增内容对话框 -->
     <a-modal
-      v-model:open="contentPreviewVisible"
-      :title="previewFieldConfig?.display_name || '内容预览'"
-      width="80%"
-      :max-width="800"
+      v-model:open="addDialogVisible"
+      title="新增农网内容"
+      width="600px"
+      @ok="handleAddContent"
+      @cancel="cancelAddContent"
+      :confirm-loading="addLoading"
+    >
+      <a-form :model="addForm" layout="vertical">
+        <a-form-item
+          label="标题"
+          name="title"
+          :rules="[{ required: true, message: '请输入标题' }]"
+        >
+          <a-input 
+            v-model:value="addForm.title" 
+            placeholder="请输入内容标题"
+            class="uniform-input"
+          />
+        </a-form-item>
+        <a-form-item
+          label="内容"
+          name="content"
+          :rules="[{ required: true, message: '请输入内容' }]"
+        >
+          <a-textarea 
+            v-model:value="addForm.content" 
+            placeholder="请输入具体内容"
+            :rows="6"
+            class="uniform-textarea"
+          />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 内容预览对话框 - 简洁美化设计 -->
+    <a-modal
+      v-model:open="previewDialogVisible"
+      title="农网内容详情"
+      width="650px"
       :footer="null"
       class="content-preview-modal"
     >
-      <div class="preview-content" v-if="previewFieldConfig">
-        <div class="field-info">
-          <a-tag 
-            :color="allFields[Object.keys(visibleFields).find(key => visibleFields[key] === previewFieldConfig)]?.is_custom ? 'purple' : 'green'"
-            class="field-type-indicator"
-          >
-            {{ allFields[Object.keys(visibleFields).find(key => visibleFields[key] === previewFieldConfig)]?.is_custom ? '附加字段' : '基本字段' }}
-          </a-tag>
-          <span class="field-name">{{ previewFieldConfig.display_name }}</span>
+      <div v-if="previewContent" class="content-preview">
+        <!-- 标题区域 -->
+        <div class="field-section">
+          <div class="section-label">
+            <thunderbolt-outlined class="section-icon" />
+            <span>标题</span>
+          </div>
+          <div class="section-content title-content">
+            {{ previewContent.title }}
+          </div>
         </div>
-        <div class="content-text">
-          {{ formatValue(previewFieldConfig.value) }}
+        
+        <!-- 内容区域 -->
+        <div class="field-section">
+          <div class="section-label">
+            <edit-outlined class="section-icon" />
+            <span>内容详情</span>
+          </div>
+          <div class="section-content main-content">
+            {{ previewContent.content }}
+          </div>
+        </div>
+        
+        <!-- 操作按钮区域 -->
+        <div class="action-buttons">
+          <a-space size="middle">
+            <!-- 复制按钮 -->
+            <a-button @click="copyToClipboard(previewContent.content)">
+              <copy-outlined />
+              复制内容
+            </a-button>
+            <!-- 编辑按钮 -->
+            <a-button 
+              type="primary" 
+              @click="startEditContent"
+            >
+              <edit-outlined />
+              编辑内容
+            </a-button>
+            <!-- 删除按钮 -->
+            <a-button 
+              type="primary" 
+              danger 
+              @click="handleDeleteContent"
+              :loading="deleteLoading"
+            >
+              <delete-outlined />
+              删除内容
+            </a-button>
+          </a-space>
         </div>
       </div>
+    </a-modal>
+
+    <!-- 编辑内容对话框 -->
+    <a-modal
+      v-model:open="editDialogVisible"
+      title="编辑农网内容"
+      width="600px"
+      @ok="handleUpdateContent"
+      @cancel="cancelEditContent"
+      :confirm-loading="editLoading"
+    >
+      <a-form :model="editForm" layout="vertical">
+        <a-form-item
+          label="标题"
+          name="title"
+          :rules="[{ required: true, message: '请输入标题' }]"
+        >
+          <a-input 
+            v-model:value="editForm.title" 
+            placeholder="请输入内容标题"
+            class="uniform-input"
+          />
+        </a-form-item>
+        <a-form-item
+          label="内容"
+          name="content"
+          :rules="[{ required: true, message: '请输入内容' }]"
+        >
+          <a-textarea 
+            v-model:value="editForm.content" 
+            placeholder="请输入具体内容"
+            :rows="6"
+            class="uniform-textarea"
+          />
+        </a-form-item>
+      </a-form>
     </a-modal>
   </div>
 </template>
@@ -400,23 +206,23 @@ import { ref, reactive, computed, watch, onMounted, nextTick } from 'vue'
 import { message } from 'ant-design-vue'
 import {
   ThunderboltOutlined,
-  DownOutlined,
-  QuestionCircleOutlined,
-  CalendarOutlined,
-  EditOutlined,
-  SaveOutlined,
-  CloseOutlined,
   PlusOutlined,
-  SettingOutlined,
-  ReloadOutlined,
-  ExpandOutlined
+  EditOutlined,
+  DeleteOutlined,
+  CopyOutlined
 } from '@ant-design/icons-vue'
 import {
   policySectionsAPI,
   customFieldsAPI,
+  getUnitDetails,
   type RuralGridInfo,
   type RuralGridResponse
 } from '@/api/policies'
+import { 
+  dataQueryContentAPI,
+  getProvinceContent,
+  type DataQueryContent
+} from '@/api/data-query-content'
 import type { FormInstance, Rule } from 'ant-design-vue/es/form'
 import { useEditMode } from '@/composables/useEditMode'
 import FieldManagerDialog from './FieldManagerDialog.vue'
@@ -425,108 +231,55 @@ import FieldManagerDialog from './FieldManagerDialog.vue'
 interface Props {
   unitId?: number | null
   unitInfo?: any
-  defaultExpanded?: boolean
   showEmptyState?: boolean
+  preloadedData?: any // 预加载的数据
 }
 
 const props = withDefaults(defineProps<Props>(), {
   unitId: null,
   unitInfo: null,
-  defaultExpanded: false,
-  showEmptyState: false
+  showEmptyState: false,
+  preloadedData: null
 })
 
 // Emits
 const emit = defineEmits<{
   'data-loaded': [data: RuralGridResponse['data']]
   'loading-change': [loading: boolean]
-  'expanded-change': [expanded: boolean]
+  'content-updated': [] // 新增：通知父组件内容已更新
 }>()
 
 // 响应式数据
 const loading = ref(false)
-const refreshing = ref(false)
-const isExpanded = ref(props.defaultExpanded)
 const ruralGridInfo = ref<RuralGridInfo | null>(null)
 const hasData = ref(false)
 const enabledFields = ref<string[]>([])
 
-// 内容预览相关
-const contentPreviewVisible = ref(false)
-const previewFieldConfig = ref<any>(null)
+// 新增内容相关
+const addDialogVisible = ref(false)
+const addLoading = ref(false)
+const addForm = reactive({
+  title: '',
+  content: ''
+})
 
-// 编辑模式管理器
-const {
-  isEditing,
-  isSubmitting: saving,
-  hasChanges,
-  editData: editForm,
-  startEdit,
-  cancelEdit,
-  saveEdit,
-  setData,
-  getEditStatus
-} = useEditMode(
-  {},
-  {
-    autoSave: true,
-    autoSaveDelay: 5000,
-    onSave: async (data) => {
-      if (!props.unitId) {
-        throw new Error('缺少单位ID，无法保存')
-      }
-      
-      // 分离原有字段和自定义字段
-      const originalFieldsData: Record<string, any> = {}
-      const customFieldsData: Record<string, any> = {}
-      
-      Object.keys(data).forEach(fieldName => {
-        const value = data[fieldName] || ''
-        const fieldConfig = allFields[fieldName]
-        
-        if (fieldConfig?.is_custom) {
-          // 自定义字段
-          customFieldsData[fieldName] = value
-        } else {
-          // 原有字段
-          if (value !== null && value !== undefined && value !== '') {
-            originalFieldsData[fieldName] = value
-          }
-        }
-      })
-      
-      console.log('💾 [农网] 分离字段数据:', {
-        originalFields: originalFieldsData,
-        customFields: customFieldsData
-      })
-      
-      // 保存原有字段
-      if (Object.keys(originalFieldsData).length > 0) {
-        console.log('💾 [农网] 保存原有字段...')
-        await policySectionsAPI.updateRuralGridPolicy(props.unitId, originalFieldsData)
-        console.log('✅ [农网] 原有字段保存成功')
-      }
-      
-      // 保存自定义字段
-      if (Object.keys(customFieldsData).length > 0) {
-        console.log('💾 [农网] 保存自定义字段...')
-        await saveCustomFieldsValues(customFieldsData)
-        console.log('✅ [农网] 自定义字段保存成功')
-      }
-      
-      // 保存成功后重新获取最新数据（包括基本字段和自定义字段）
-      await loadRuralGridData(props.unitId)
-      console.log('✅ [农网] 统一保存完成，已刷新最新数据')
-    },
-    validateData: (data) => {
-      // 基本验证
-      return true
-    },
-    showMessages: true
-  }
-)
+// 预览内容相关
+const previewDialogVisible = ref(false)
+const previewContent = ref<any>(null)
 
-const formRef = ref<FormInstance>()
+
+// 编辑内容相关
+const editDialogVisible = ref(false)
+const editLoading = ref(false)
+const editForm = reactive({
+  id: null,
+  title: '',
+  content: ''
+})
+
+// 删除相关
+const deleteLoading = ref(false)
+
 
 // 所有可能的农网字段 - 匹配API返回的字段名
 const allFields = reactive({
@@ -628,41 +381,183 @@ const isContentLong = (value: any): boolean => {
   return str.length > 100 || str.includes('\n')
 }
 
-// 打开内容预览
-const openContentPreview = (fieldConfig: any) => {
-  previewFieldConfig.value = fieldConfig
-  contentPreviewVisible.value = true
+// 打开新增对话框
+const openAddDialog = () => {
+  addForm.title = ''
+  addForm.content = ''
+  addDialogVisible.value = true
 }
 
-// 关闭内容预览
-const closeContentPreview = () => {
-  contentPreviewVisible.value = false
-  previewFieldConfig.value = null
+// 取消新增
+const cancelAddContent = () => {
+  addDialogVisible.value = false
+  addForm.title = ''
+  addForm.content = ''
 }
 
-const toggleExpanded = () => {
-  isExpanded.value = !isExpanded.value
-  emit('expanded-change', isExpanded.value)
-}
-
-const handleRefresh = async () => {
-  if (!props.unitId) return
+// 新增内容
+const handleAddContent = async () => {
+  if (!addForm.title.trim() || !addForm.content.trim()) {
+    message.error('请输入标题和内容')
+    return
+  }
+  
+  if (!props.unitId) {
+    message.error('缺少单位信息')
+    return
+  }
   
   try {
-    refreshing.value = true
-    message.loading('正在刷新农网数据...', 0.5)
+    addLoading.value = true
     
-    // 清空现有数据，强制重新加载
-    ruralGridInfo.value = null
-    hasData.value = false
+    // 获取省份名称
+    const provinceName = currentProvince.value
+    if (!provinceName) {
+      message.error('无法确定省份信息')
+      return
+    }
     
-    await loadRuralGridData(props.unitId)
-    message.success('农网数据刷新成功')
+    await dataQueryContentAPI.createContent({
+      unit_id: props.unitId,
+      section: '农网',
+      title: addForm.title.trim(),
+      content: addForm.content.trim(),
+      province: provinceName
+    })
+    
+    message.success('新增内容成功')
+    addDialogVisible.value = false
+    addForm.title = ''
+    addForm.content = ''
+    
+    // 通知父组件内容已更新，需要刷新预加载数据
+    emit('content-updated')
+    
+    // 重新加载本地数据
+    if (props.unitId) {
+      await loadRuralGridData(props.unitId)
+    }
   } catch (error) {
-    console.error('刷新失败:', error)
-    message.error('农网数据刷新失败')
+    console.error('新增内容失败:', error)
+    message.error('新增内容失败，请重试')
   } finally {
-    refreshing.value = false
+    addLoading.value = false
+  }
+}
+
+// 复制内容到剪贴板
+const copyToClipboard = async (content: string) => {
+  const { copyWithMessage } = await import('@/utils/clipboard')
+  await copyWithMessage(content)
+}
+
+// 打开内容预览
+const openContentPreview = (fieldConfig: any) => {
+  const fieldName = Object.keys(visibleFields.value).find(key => visibleFields.value[key] === fieldConfig)
+  if (fieldName && fieldName.startsWith('content_')) {
+    const contentId = fieldName.replace('content_', '')
+    previewContent.value = {
+      id: contentId,
+      title: fieldConfig.display_name,
+      content: fieldConfig.value
+    }
+  } else {
+    previewContent.value = {
+      title: fieldConfig.display_name,
+      content: fieldConfig.value
+    }
+  }
+  previewDialogVisible.value = true
+}
+
+// 开始编辑内容
+const startEditContent = () => {
+  if (previewContent.value) {
+    editForm.id = previewContent.value.id
+    editForm.title = previewContent.value.title
+    editForm.content = previewContent.value.content
+    previewDialogVisible.value = false
+    editDialogVisible.value = true
+  }
+}
+
+// 取消编辑
+const cancelEditContent = () => {
+  editDialogVisible.value = false
+  editForm.id = null
+  editForm.title = ''
+  editForm.content = ''
+}
+
+// 更新内容
+const handleUpdateContent = async () => {
+  if (!editForm.title.trim() || !editForm.content.trim()) {
+    message.error('请输入标题和内容')
+    return
+  }
+  
+  if (!editForm.id) {
+    message.error('缺少内容ID')
+    return
+  }
+  
+  try {
+    editLoading.value = true
+    
+    await dataQueryContentAPI.updateContent(editForm.id, {
+      title: editForm.title.trim(),
+      content: editForm.content.trim()
+    })
+    
+    message.success('更新内容成功')
+    editDialogVisible.value = false
+    editForm.id = null
+    editForm.title = ''
+    editForm.content = ''
+    
+    // 通知父组件内容已更新，需要刷新预加载数据
+    emit('content-updated')
+    
+    // 重新加载本地数据
+    if (props.unitId) {
+      await loadRuralGridData(props.unitId)
+    }
+  } catch (error) {
+    console.error('更新内容失败:', error)
+    message.error('更新内容失败，请重试')
+  } finally {
+    editLoading.value = false
+  }
+}
+
+// 删除内容
+const handleDeleteContent = async () => {
+  if (!previewContent.value?.id) {
+    message.error('缺少内容ID')
+    return
+  }
+  
+  try {
+    deleteLoading.value = true
+    
+    await dataQueryContentAPI.deleteContent(previewContent.value.id)
+    
+    message.success('删除内容成功')
+    previewDialogVisible.value = false
+    previewContent.value = null
+    
+    // 通知父组件内容已更新，需要刷新预加载数据
+    emit('content-updated')
+    
+    // 重新加载本地数据
+    if (props.unitId) {
+      await loadRuralGridData(props.unitId)
+    }
+  } catch (error) {
+    console.error('删除内容失败:', error)
+    message.error('删除内容失败，请重试')
+  } finally {
+    deleteLoading.value = false
   }
 }
 
@@ -670,71 +565,11 @@ const handleRefresh = async () => {
 const unitId = computed(() => props.unitId)
 const unitInfo = computed(() => props.unitInfo)
 
-// 计算当前省份
+// 计算当前单位名称（用于查询）
 const currentProvince = computed(() => {
+  // 直接返回单位名称，无论是省公司还是直属单位
   if (!props.unitInfo?.unit_name) return ''
-  
-  // 从单位名称中提取省份信息
-  const unitName = props.unitInfo.unit_name
-  
-  // 处理包含"省"字的情况
-  if (unitName.includes('省')) {
-    const match = unitName.match(/([\u4e00-\u9fa5]+)省/)
-    if (match) {
-      return match[1] + '省'
-    }
-  }
-  
-  // 处理直辖市
-  if (unitName.includes('北京')) return '北京'
-  if (unitName.includes('上海')) return '上海'
-  if (unitName.includes('天津')) return '天津'
-  if (unitName.includes('重庆')) return '重庆'
-  
-  // 处理只有省份名没有"省"字的情况
-  const provinceMapping: Record<string, string> = {
-    '四川': '四川省',
-    '广东': '广东省',
-    '江苏': '江苏省',
-    '浙江': '浙江省',
-    '山东': '山东省',
-    '河北': '河北省',
-    '河南': '河南省',
-    '湖北': '湖北省',
-    '湖南': '湖南省',
-    '江西': '江西省',
-    '安徽': '安徽省',
-    '福建': '福建省',
-    '山西': '山西省',
-    '辽宁': '辽宁省',
-    '吉林': '吉林省',
-    '黑龙江': '黑龙江省',
-    '海南': '海南省',
-    '贵州': '贵州省',
-    '云南': '云南省',
-    '陕西': '陕西省',
-    '甘肃': '甘肃省',
-    '青海': '青海省',
-    '内蒙古': '内蒙古自治区',
-    '广西': '广西壮族自治区',
-    '西藏': '西藏自治区',
-    '宁夏': '宁夏回族自治区',
-    '新疆': '新疆维吾尔自治区'
-  }
-  
-  // 尝试精确匹配省份名
-  if (provinceMapping[unitName]) {
-    return provinceMapping[unitName]
-  }
-  
-  // 尝试部分匹配
-  for (const [shortName, fullName] of Object.entries(provinceMapping)) {
-    if (unitName.includes(shortName)) {
-      return fullName
-    }
-  }
-  
-  return ''
+  return props.unitInfo.unit_name
 })
 
 // 保存自定义字段值
@@ -752,131 +587,52 @@ const saveCustomFieldsValues = async (customFieldsData: Record<string, any>) => 
 }
 
 // 加载自定义字段
-const loadCustomFields = async () => {
-  if (!props.unitId || !currentProvince.value) return
-  
-  try {
-    console.log('🔄 [农网] 开始加载自定义字段:', {
-      unitId: props.unitId,
-      province: currentProvince.value,
-      section: 'rural_grid'
-    })
-    
-    const result = await customFieldsAPI.getCustomFieldValues(
-      props.unitId,
-      'rural_grid',
-      currentProvince.value,
-      true // includeDefinitions
-    )
-    
-    console.log('✅ [农网] 自定义字段加载结果:', result)
-    
-    // 清除之前的自定义字段
-    const customFieldKeys = Object.keys(allFields).filter(key => allFields[key].is_custom)
-    customFieldKeys.forEach(key => {
-      delete allFields[key]
-      // 同时清除ruralGridInfo中对应的数据
-      if (ruralGridInfo.value && ruralGridInfo.value[key]) {
-        delete ruralGridInfo.value[key]
-      }
-    })
-    console.log('🗑️ [农网] 清除之前的自定义字段:', customFieldKeys)
-    
-    // 处理自定义字段定义和值
-    result.fields?.forEach((field: any) => {
-      if (field.is_visible) {
-        // 添加自定义字段定义到 allFields
-        allFields[field.field_name] = {
-          display_name: field.display_name,
-          type: field.field_type || 'text',
-          description: field.description || `自定义字段: ${field.display_name}`,
-          is_custom: true,
-          priority: field.display_order || 999,
-          data_source: 'custom_fields'
-        }
-        
-        console.log(`📝 [农网] 添加自定义字段定义: ${field.field_name} = ${field.display_name}`)
-        
-        // 如果字段有值，设置到ruralGridInfo中（使用正确的数据格式）
-        if (field.field_value !== null && field.field_value !== undefined) {
-          if (!ruralGridInfo.value) {
-            ruralGridInfo.value = {}
-          }
-          ruralGridInfo.value[field.field_name] = {
-            value: field.field_value,
-            display_name: field.display_name,
-            type: field.field_type || 'text'
-          }
-          console.log(`📝 [农网] 设置字段值: ${field.field_name} = ${field.field_value}`)
-        }
-      }
-    })
-    
-    console.log('✅ [农网] 自定义字段加载完成')
-    
-  } catch (error) {
-    console.error('❌ [农网] 加载自定义字段失败:', error)
-    // 不抛出错误，让主要数据加载继续进行
-  }
-}
+// 注：原 loadCustomFields 函数已移除，直接使用 data-query-content API
 
 const loadRuralGridData = async (unitId: number) => {
   try {
     loading.value = true
     emit('loading-change', true)
     
-    // 首先加载自定义字段
-    await loadCustomFields()
+    // 注：loadCustomFields() 已移除，不再需要
     
-    // 优先尝试使用新的统一API获取数据
+    // 使用新的data-query-content API获取农网信息
     try {
-      const response = await policySectionsAPI.getRuralGridPolicy(unitId)
-      
-      // 检查API响应结构，优先使用 rural_grid_info
-      let sectionData = null
-      let dataSource = ''
-      
-      if (response?.data?.rural_grid_info) {
-        sectionData = response.data.rural_grid_info
-        dataSource = 'data.rural_grid_info'
-      } else if (response?.rural_grid_info) {
-        sectionData = response.rural_grid_info
-        dataSource = 'rural_grid_info'
-      } else if (response?.data?.section_data) {
-        sectionData = response.data.section_data
-        dataSource = 'data.section_data'
-      } else if (response?.section_data) {
-        sectionData = response.section_data
-        dataSource = 'section_data'
-      } else if (response?.data) {
-        // 检查data下是否直接是数据
-        sectionData = response.data
-        dataSource = 'data'
+      // 先获取省份名称
+      let provinceName = ''
+      if (props.unitInfo?.unit_name) {
+        provinceName = props.unitInfo.unit_name
+      } else {
+        try {
+          const unitDetails = await getUnitDetails(unitId)
+          provinceName = unitDetails.unit_name
+        } catch (error) {
+          console.warn('⚠️ 无法获取单位信息:', error)
+          provinceName = ''
+        }
       }
       
-      if (sectionData && Object.keys(sectionData).length > 0) {
+      if (provinceName) {
+        console.log('🔍 开始加载农网信息，省份:', provinceName)
+        
+        // 使用新API获取农网内容
+        const ruralGridContents = await getProvinceContent(provinceName, '农网')
+        console.log('📋 获取到农网内容:', ruralGridContents)
         
         // 转换为组件期望的格式
         const convertedData = {}
-        Object.keys(sectionData).forEach(fieldName => {
-          const fieldData = sectionData[fieldName]
-          // 支持多种数据结构格式
-          let value = null
+        if (ruralGridContents.length > 0) {
+          ruralGridContents.forEach((contentItem: DataQueryContent, index: number) => {
+            const fieldName = `content_${contentItem.id}`
+            convertedData[fieldName] = {
+              value: contentItem.content,
+              display_name: contentItem.title,
+              type: 'textarea' as const
+            }
+          })
           
-          if (fieldData && typeof fieldData === 'object' && fieldData.value !== undefined) {
-            // 新格式：{ value: "xxx", display_name: "xxx", type: "xxx" }
-            value = fieldData.value
-          } else if (fieldData !== null && fieldData !== undefined) {
-            // 直接值格式
-            value = fieldData
-          }
-          
-          convertedData[fieldName] = {
-            value: value,
-            display_name: fieldData?.display_name || allFields[fieldName]?.display_name || fieldName,
-            type: fieldData?.type || allFields[fieldName]?.type || 'text'
-          }
-        })
+          console.log('✅ 农网数据转换完成，包含', ruralGridContents.length, '个内容条目')
+        }
         
         // 合并基本字段数据和自定义字段数据
         if (!ruralGridInfo.value) {
@@ -894,40 +650,90 @@ const loadRuralGridData = async (unitId: number) => {
           })
         }
         ruralGridInfo.value = { ...convertedData, ...existingCustomFields }
-        hasData.value = Object.keys(convertedData).some(key => {
-          const itemValue = convertedData[key]?.value
-          return itemValue && itemValue !== '' && itemValue !== null && itemValue !== undefined
-        })
+        hasData.value = Object.keys(convertedData).length > 0 || Object.keys(existingCustomFields).length > 0
         
-        // 如果没有设置过字段配置，显示所有可用字段
-        if (enabledFields.value.length === 0) {
-          enabledFields.value = Object.keys(allFields)
-          console.log('📌 初始化农网启用字段列表:', enabledFields.value)
-        } else {
-          // 添加新的自定义字段到启用列表中
-          Object.keys(allFields).forEach(fieldName => {
-            if (!enabledFields.value.includes(fieldName)) {
-              enabledFields.value.push(fieldName)
-              console.log(`📌 添加新字段到农网启用列表: ${fieldName}`)
-            }
-          })
-        }
+        // 只显示实际有数据的字段
+        const fieldsWithData = Object.keys(convertedData).concat(Object.keys(existingCustomFields))
+        enabledFields.value = fieldsWithData
+        console.log('📌 农网启用字段列表（仅显示有数据的字段）:', enabledFields.value)
 
         emit('data-loaded', { rural_grid_info: convertedData, has_data: hasData.value })
         console.log('✅ 农网信息加载成功')
-        return
       } else {
-        console.warn('⚠️ 农网API响应中没有预期的数据字段，响应结构:', response)
-        console.warn('⚠️ 预期的字段: data.section_data, section_data 或 rural_grid_info')
-        // 新版API应该始终返回有效数据，如果没有则说明可能存在配置问题
+        console.warn('⚠️ 无法确定省份名称，无法加载农网信息')
         ruralGridInfo.value = null
         hasData.value = false
         emit('data-loaded', { rural_grid_info: null, has_data: false })
-        return
       }
-    } catch (apiError) {
-      console.error('❌ 获取农网数据失败:', apiError)
-      throw apiError // 直接抛出错误，由外层统一处理
+    } catch (newApiError) {
+      console.error('❌ 新API获取农网数据失败:', newApiError)
+      // 如果新API失败，回退到原有API
+      console.log('🔄 回退到原有API获取农网数据')
+      try {
+        const response = await policySectionsAPI.getRuralGridPolicy(unitId)
+        
+        // 检查API响应结构，优先使用 rural_grid_info
+        let sectionData = null
+        
+        if (response?.data?.rural_grid_info) {
+          sectionData = response.data.rural_grid_info
+        } else if (response?.rural_grid_info) {
+          sectionData = response.rural_grid_info
+        } else if (response?.data?.section_data) {
+          sectionData = response.data.section_data
+        } else if (response?.section_data) {
+          sectionData = response.section_data
+        } else if (response?.data) {
+          sectionData = response.data
+        }
+        
+        if (sectionData && Object.keys(sectionData).length > 0) {
+          // 转换为组件期望的格式
+          const convertedData = {}
+          Object.keys(sectionData).forEach(fieldName => {
+            const fieldData = sectionData[fieldName]
+            let value = null
+            
+            if (fieldData && typeof fieldData === 'object' && fieldData.value !== undefined) {
+              value = fieldData.value
+            } else if (fieldData !== null && fieldData !== undefined) {
+              value = fieldData
+            }
+            
+            convertedData[fieldName] = {
+              value: value,
+              display_name: fieldData?.display_name || allFields[fieldName]?.display_name || fieldName,
+              type: fieldData?.type || allFields[fieldName]?.type || 'text'
+            }
+          })
+          
+          // 合并数据
+          if (!ruralGridInfo.value) {
+            ruralGridInfo.value = {}
+          }
+          
+          const existingCustomFields = {}
+          if (ruralGridInfo.value) {
+            Object.keys(ruralGridInfo.value).forEach(fieldName => {
+              const fieldConfig = allFields[fieldName]
+              if (fieldConfig?.is_custom) {
+                existingCustomFields[fieldName] = ruralGridInfo.value[fieldName]
+              }
+            })
+          }
+          ruralGridInfo.value = { ...convertedData, ...existingCustomFields }
+          hasData.value = Object.keys(convertedData).some(key => {
+            const itemValue = convertedData[key]?.value
+            return itemValue && itemValue !== '' && itemValue !== null && itemValue !== undefined
+          })
+          
+          emit('data-loaded', { rural_grid_info: convertedData, has_data: hasData.value })
+          console.log('✅ 回退到原有API，农网信息加载成功')
+        }
+      } catch (fallbackError) {
+        console.error('❌ 原有API也获取失败:', fallbackError)
+        throw fallbackError
+      }
     }
   } catch (error) {
     console.error('❌ 加载农网信息失败:', error)
@@ -940,15 +746,87 @@ const loadRuralGridData = async (unitId: number) => {
   }
 }
 
-// 监听单位ID变化
+// 使用预加载数据
+const usePreloadedData = (preloadedContents: DataQueryContent[]) => {
+  try {
+    console.log('📋 [农网] 开始处理预加载数据:', preloadedContents)
+    
+    // 初始化 ruralGridInfo
+    ruralGridInfo.value = {}
+    
+    // 将预加载的内容转换为组件期望的格式
+    if (preloadedContents.length > 0) {
+      const convertedData = {}
+      preloadedContents.forEach((contentItem: DataQueryContent, index: number) => {
+        const fieldName = `content_${contentItem.id}` // 使用内容ID作为字段名
+        
+        // 添加字段定义到 allFields（这很重要！）
+        allFields[fieldName] = {
+          display_name: contentItem.title,
+          type: 'textarea' as const,
+          description: `来自${contentItem.section}的内容`,
+          is_custom: false,
+          data_source: 'data_query_content'
+        }
+        
+        convertedData[fieldName] = {
+          value: contentItem.content,
+          display_name: contentItem.title,
+          type: 'textarea' as const,
+          priority: contentItem.display_order || index + 1,
+          data_source: 'data_query_content'
+        }
+      })
+      
+      ruralGridInfo.value = convertedData
+      hasData.value = Object.keys(convertedData).length > 0
+      
+      // 更新字段配置，显示所有新加载的字段
+      enabledFields.value = Object.keys(convertedData)
+      
+      console.log('✅ [农网] 预加载数据转换完成，包含', preloadedContents.length, '个内容条目')
+    } else {
+      console.log('ℹ️ [农网] 预加载数据为空')
+      hasData.value = false
+      enabledFields.value = []
+    }
+    
+    emit('data-loaded', { rural_grid_info: ruralGridInfo.value, has_data: hasData.value })
+    console.log('✅ [农网] 预加载数据处理完成')
+    
+  } catch (error) {
+    console.error('❌ [农网] 处理预加载数据失败:', error)
+    ruralGridInfo.value = {}
+    hasData.value = false
+    enabledFields.value = []
+  }
+}
+
+// 监听单位ID变化 - 优先使用预加载数据
 watch(() => props.unitId, (newUnitId) => {
   if (newUnitId) {
-    loadRuralGridData(newUnitId)
+    // 如果有预加载数据，优先使用预加载数据
+    if (props.preloadedData && props.preloadedData.data && props.preloadedData.data.length > 0) {
+      console.log('🔍 [农网] 使用预加载数据:', props.preloadedData)
+      usePreloadedData(props.preloadedData.data)
+    } else {
+      // 如果没有预加载数据，才发起API请求
+      console.log('⚠️ [农网] 没有预加载数据，回退到API请求')
+      loadRuralGridData(newUnitId)
+    }
   } else {
     ruralGridInfo.value = null
     hasData.value = false
   }
 }, { immediate: true })
+
+// 监听预加载数据变化
+watch(() => props.preloadedData, (newPreloadedData) => {
+  if (newPreloadedData && newPreloadedData.data && newPreloadedData.data.length > 0) {
+    console.log('🔄 [农网] 预加载数据更新，使用新数据:', newPreloadedData)
+    usePreloadedData(newPreloadedData.data)
+  }
+}, { immediate: true, deep: true })
 
 // 监听省份变化，确保字段隔离
 watch(() => currentProvince.value, (newProvince, oldProvince) => {
@@ -971,107 +849,6 @@ watch(() => currentProvince.value, (newProvince, oldProvince) => {
   }
 })
 
-// 编辑相关方法
-const enterEditMode = () => {
-  // 进入编辑模式时自动展开
-  if (!isExpanded.value) {
-    isExpanded.value = true
-  }
-  
-  // 准备编辑数据
-  const currentData: Record<string, any> = {}
-  
-  Object.keys(visibleFields.value).forEach(fieldName => {
-    const fieldConfig = visibleFields.value[fieldName]
-    currentData[fieldName] = fieldConfig.value || ''
-  })
-  
-  setData(currentData)
-  startEdit()
-}
-
-const saveChanges = async () => {
-  await saveEdit('手动保存')
-}
-
-const handleFormSubmit = async () => {
-  await saveEdit('表单提交')
-}
-
-const handleFormSubmitFailed = (errorInfo: any) => {
-  console.log('表单验证失败:', errorInfo)
-  message.error('请检查表单数据后再提交')
-}
-
-// 表单验证规则
-const formRules = computed(() => {
-  const rules: Record<string, any[]> = {}
-  
-  // 为必填字段添加验证规则
-  Object.keys(visibleFields.value).forEach(fieldName => {
-    const fieldConfig = visibleFields.value[fieldName]
-    if (isRequiredField(fieldName)) {
-      rules[fieldName] = [{
-        required: true,
-        message: `请输入${fieldConfig.display_name}`,
-        trigger: 'blur'
-      }]
-    }
-  })
-  
-  return rules
-})
-
-const isRequiredField = (fieldName: string): boolean => {
-  // 不需要必填字段，用户想怎么填怎么填
-  return false
-}
-
-// 字段管理相关
-const fieldManagerDialogVisible = ref(false)
-
-
-// 打开字段管理对话框
-
-const openFieldManagerDialog = () => {
-  fieldManagerDialogVisible.value = true
-}
-
-// 处理字段管理更新
-const handleFieldsUpdated = async () => {
-  console.log('🔄 [农网] 字段管理更新事件被触发！！！')
-  console.log('🔄 [农网] 字段管理更新，开始清理和重新加载')
-  
-  // 清空现有数据和字段配置
-  ruralGridInfo.value = null
-  hasData.value = false
-  enabledFields.value = []
-  
-  // 清除所有自定义字段
-  const customFieldKeys = Object.keys(allFields).filter(key => allFields[key].is_custom)
-  customFieldKeys.forEach(key => {
-    delete allFields[key]
-  })
-  console.log('🗑️ [农网] 清除自定义字段:', customFieldKeys)
-  
-  // 等待DOM更新
-  await nextTick()
-  
-  // 重新加载数据
-  if (props.unitId) {
-    try {
-      await loadRuralGridData(props.unitId)
-      console.log('✅ [农网] 字段管理更新后重新加载完成')
-    } catch (error) {
-      console.error('❌ [农网] 字段管理更新后重新加载失败:', error)
-    }
-  }
-}
-
-// 监听defaultExpanded变化
-watch(() => props.defaultExpanded, (newExpanded) => {
-  isExpanded.value = newExpanded
-})
 </script>
 
 <style scoped lang="less">
@@ -1184,249 +961,165 @@ watch(() => props.defaultExpanded, (newExpanded) => {
       }
     }
 
-    // 农网信息布局
-    .grid-info-layout {
+    // 内容卡片网格
+    .content-grid {
       padding: 12px;
       display: grid;
-      grid-template-columns: repeat(2, 1fr); // 固定2列布局，与提前批一致
-      gap: 8px; // 统一间距
-      min-height: 300px; // 设置最小高度
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      min-height: 120px;
 
       @media (max-width: 768px) {
         grid-template-columns: 1fr;
-        gap: 12px;
-        padding: 16px;
+        gap: 8px;
+        padding: 12px;
       }
 
-      .info-item {
-        border-radius: 6px;
-        padding: 14px;
-        transition: all 0.2s ease;
+      // 内容卡片样式
+      .content-card {
+        background: linear-gradient(145deg, #f9fffc 0%, #f6ffed 100%);
+        border: 1px solid #d9f7be;
+        border-radius: 8px;
+        padding: 16px;
+        cursor: pointer;
+        transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
 
-        // 默认字段（基本字段）- 绿色系
-        &.default-field {
-          background: #f9fffc;
-          border: 1px solid #d9f7be;
-          
-          &:hover {
-            background: #f6ffed;
-            border-color: #b7eb8f;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(82, 196, 26, 0.1);
-          }
-          
-          &::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
-            transition: all 0.3s ease;
-          }
-          
-          &:hover::after {
+        &::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+        }
+
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(82, 196, 26, 0.15);
+          border-color: #73d13d;
+          background: linear-gradient(145deg, #f6ffed 0%, #ecffdb 100%);
+
+          &::before {
+            height: 4px;
             background: linear-gradient(90deg, #52c41a 0%, #73d13d 50%, #95de64 100%);
-            height: 3px;
           }
         }
 
-        // 附加字段（自定义字段）- 紫色系
-        &.custom-field {
-          background: linear-gradient(145deg, #fdfaff 0%, #f9f0ff 100%);
-          border: 1px solid #d3adf7;
-          
-          &:hover {
-            background: linear-gradient(145deg, #f9f0ff 0%, #efdbff 100%);
-            border-color: #b37feb;
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(114, 46, 209, 0.1);
-          }
-          
-          &::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, #722ed1 0%, #9254de 100%);
-            transition: all 0.3s ease;
-          }
-          
-          &:hover::after {
-            background: linear-gradient(90deg, #722ed1 0%, #9254de 50%, #b37feb 100%);
-            height: 3px;
-          }
-        }
+        .card-header {
+          margin-bottom: 12px;
 
-        .info-label {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-          margin-bottom: 8px;
-
-          .label-text {
-            font-size: 12px;
+          .card-title {
+            margin: 0;
+            font-size: 14px;
             font-weight: 600;
             color: #389e0d;
-          }
-
-          .field-help {
-            font-size: 11px;
-            color: #52c41a;
-            cursor: help;
-
-            &:hover {
-              color: #389e0d;
-            }
+            line-height: 1.4;
           }
         }
 
-        .info-value {
-          .value-text {
+        .card-content {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+
+          .content-preview {
+            margin: 0;
             font-size: 12px;
             color: #595959;
             line-height: 1.5;
-            position: relative;
-            max-height: 60px;
             overflow: hidden;
             display: -webkit-box;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 4;
             -webkit-box-orient: vertical;
-            
-            &.expandable {
-              cursor: pointer;
-              transition: all 0.2s ease;
-              
-              &:hover {
-                color: #52c41a;
-              }
-              
-              .expand-indicator {
-                position: absolute;
-                right: 2px;
-                bottom: 2px;
-                font-size: 12px;
-                color: #52c41a;
-                opacity: 0.7;
-                transition: all 0.2s ease;
-              }
-              
-              &:hover .expand-indicator {
-                opacity: 1;
-                transform: scale(1.1);
-              }
-            }
+            flex: 1;
+          }
+        }
+      }
 
-            &.multiline {
-              white-space: pre-wrap;
-              word-break: break-word;
-            }
+      // 新增内容卡片
+      .add-content-card {
+        border: 2px dashed #d9d9d9;
+        border-radius: 8px;
+        background: #fafafa;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        min-height: 120px;
+        height: 120px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        &:hover {
+          border-color: #52c41a;
+          background: #f6ffed;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(82, 196, 26, 0.1);
+        }
+
+        .add-content-inner {
+          text-align: center;
+          color: #8c8c8c;
+
+          .add-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+            display: block;
           }
 
-          .value-boolean,
-          .value-select {
-            font-size: 11px;
+          .add-text {
+            font-size: 12px;
             font-weight: 500;
           }
-
-          .value-time {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 12px;
-            color: #595959;
-
-            .time-icon {
-              color: #52c41a;
-              font-size: 12px;
-            }
-          }
-
-          .value-default {
-            font-size: 12px;
-            color: #595959;
-          }
         }
 
-        // 特殊字段样式
-        &.salary_benefits {
-          background: linear-gradient(135deg, #f9fffc 0%, #fcffe6 100%);
-          border-color: #b7eb8f;
-          
-          .info-label .label-text {
-            color: #d48806;
-          }
-        }
-
-        &.exam_time {
-          background: linear-gradient(135deg, #f0f9ff 0%, #f9fffc 100%);
-          border-color: #91d5ff;
-          
-          .info-label .label-text {
-            color: #1890ff;
-          }
+        &:hover .add-content-inner {
+          color: #52c41a;
         }
       }
     }
 
-    // 无数据状态
-    .no-data-state {
-      padding: 24px;
-      text-align: center;
+    // 空状态卡片
+    .empty-state-card {
+      background: #fafafa;
+      border: 1px solid #f0f0f0;
+      border-radius: 8px;
+      margin: 16px;
+      min-height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
-      .no-data-content {
-        max-width: 420px;
-        margin: 0 auto;
+      .empty-content {
+        text-align: center;
+        color: #8c8c8c;
 
-        .no-data-icon {
+        .empty-icon {
           font-size: 36px;
           color: #95de64;
           margin-bottom: 12px;
         }
 
-        .no-data-text {
-          font-size: 13px;
-          color: #666;
-          margin-bottom: 16px;
+        .empty-title {
+          margin: 0 0 8px 0;
+          font-size: 16px;
+          font-weight: 600;
+          color: #595959;
         }
 
-        .no-data-tips {
-          background: #f9fffc;
-          border: 1px solid #d9f7be;
-          border-radius: 6px;
-          padding: 14px;
-          text-align: left;
-
-          p {
-            margin: 0 0 8px 0;
-            font-size: 12px;
-            color: #389e0d;
-            font-weight: 600;
-          }
-
-          ul {
-            margin: 0;
-            padding-left: 16px;
-
-            li {
-              font-size: 11px;
-              color: #8c8c8c;
-              line-height: 1.5;
-              margin-bottom: 3px;
-
-              &:last-child {
-                margin-bottom: 0;
-              }
-            }
-          }
+        .empty-text {
+          margin: 0;
+          font-size: 14px;
+          color: #8c8c8c;
         }
       }
     }
+
   }
   
   // 编辑表单样式
@@ -1598,7 +1291,7 @@ watch(() => props.defaultExpanded, (newExpanded) => {
   }
 }
 
-// 内容预览对话框样式
+// 增强版话术详情样式 - 农网
 :deep(.content-preview-modal) {
   .ant-modal-header {
     border-bottom: 1px solid #f0f0f0;
@@ -1614,11 +1307,65 @@ watch(() => props.defaultExpanded, (newExpanded) => {
   .ant-modal-body {
     padding: 24px;
     
+    .script-detail-enhanced {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      
+      .question-section-enhanced,
+      .answer-section-enhanced {
+        .section-header {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+          
+          .anticon {
+            font-size: 16px;
+            color: #1890ff;
+          }
+          
+          .section-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1890ff;
+          }
+        }
+        
+        .section-content-enhanced {
+          font-size: 16px;
+          line-height: 1.8;
+          padding: 16px;
+          border-radius: 8px;
+          border: 1px solid #bae7ff;
+          
+          &.question-content {
+            background: linear-gradient(135deg, #f0f8ff 0%, #bae7ff 100%);
+            color: #1565c0;
+            font-style: italic;
+          }
+          
+          &.answer-content {
+            background: linear-gradient(135deg, #f0f8ff 0%, #e6f7ff 100%);
+            color: #333;
+            font-weight: 500;
+          }
+        }
+      }
+
+      .action-buttons-enhanced {
+        display: flex;
+        justify-content: center;
+        padding-top: 8px;
+        border-top: 1px solid #f0f0f0;
+      }
+    }
+    
     .preview-content {
       .field-info {
         display: flex;
         align-items: center;
-        gap: 8px;
+        justify-content: space-between;
         margin-bottom: 16px;
         padding-bottom: 12px;
         border-bottom: 1px solid #f0f0f0;
@@ -1632,6 +1379,13 @@ watch(() => props.defaultExpanded, (newExpanded) => {
           font-size: 14px;
           font-weight: 600;
           color: #262626;
+          flex: 1;
+          margin-left: 8px;
+        }
+        
+        .preview-actions {
+          display: flex;
+          gap: 8px;
         }
       }
       
@@ -1654,6 +1408,194 @@ watch(() => props.defaultExpanded, (newExpanded) => {
           color: #bfbfbf;
           font-style: italic;
         }
+      }
+    }
+  }
+}
+
+// 农网板块预览弹窗 - 绿色主题样式 (使用global确保样式生效)
+:global(.rural-grid-modal) {
+  .ant-modal-header {
+    border-bottom: 1px solid #f0f0f0 !important;
+    padding: 16px 24px !important;
+    
+    .ant-modal-title {
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      color: #262626 !important;
+    }
+  }
+  
+  .ant-modal-body {
+    padding: 24px !important;
+    
+    .script-detail-enhanced {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 20px !important;
+      
+      .question-section-enhanced {
+        .section-header {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          margin-bottom: 12px !important;
+          
+          .anticon {
+            font-size: 16px !important;
+            color: #52c41a !important;
+          }
+          
+          .section-title {
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            color: #52c41a !important;
+          }
+        }
+        
+        .section-content-enhanced.question-content {
+          font-size: 16px !important;
+          line-height: 1.8 !important;
+          padding: 16px !important;
+          border-radius: 8px !important;
+          background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%) !important;
+          color: #389e0d !important;
+          font-style: italic !important;
+          border: 1px solid #d9f7be !important;
+          word-wrap: break-word !important;
+          white-space: pre-wrap !important;
+        }
+      }
+      
+      .answer-section-enhanced {
+        .section-header {
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          margin-bottom: 12px !important;
+          
+          .anticon {
+            font-size: 16px !important;
+            color: #52c41a !important;
+          }
+          
+          .section-title {
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            color: #52c41a !important;
+          }
+        }
+        
+        .section-content-enhanced.answer-content {
+          font-size: 16px !important;
+          line-height: 1.8 !important;
+          padding: 16px !important;
+          border-radius: 8px !important;
+          background: linear-gradient(135deg, #f6ffed 0%, #f0f9e8 100%) !important;
+          color: #333 !important;
+          font-weight: 500 !important;
+          border: 1px solid #d9f7be !important;
+          word-wrap: break-word !important;
+          white-space: pre-wrap !important;
+        }
+      }
+
+      .action-section {
+        display: flex !important;
+        justify-content: center !important;
+        padding-top: 8px !important;
+        border-top: 1px solid #f0f0f0 !important;
+      }
+    }
+  }
+}
+
+// 内容预览弹窗样式 - 简洁美化设计
+.content-preview-modal {
+  :deep(.ant-modal-header) {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+    border-bottom: 2px solid #91d5ff;
+    
+    .ant-modal-title {
+      color: #1890ff;
+      font-weight: 600;
+      font-size: 16px;
+    }
+  }
+  
+  :deep(.ant-modal-body) {
+    padding: 24px;
+  }
+}
+
+.content-preview {
+  .field-section {
+    margin-bottom: 20px;
+    
+    &:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+      color: #1890ff;
+      font-weight: 600;
+      font-size: 14px;
+      
+      .section-icon {
+        font-size: 16px;
+      }
+    }
+    
+    .section-content {
+      padding: 16px 20px;
+      border-radius: 8px;
+      border: 1px solid #f0f0f0;
+      background: #fafafa;
+      min-height: 60px;
+      
+      &.title-content {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e6f7ff 100%);
+        border-color: #bae7ff;
+        color: #1890ff;
+        font-weight: 600;
+        font-size: 15px;
+      }
+      
+      &.main-content {
+        background: linear-gradient(135deg, #f6ffed 0%, #f0f9e8 100%);
+        border-color: #d9f7be;
+        color: #262626;
+        font-size: 14px;
+        line-height: 1.6;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        min-height: 100px;
+      }
+    }
+  }
+  
+  .action-buttons {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #f0f0f0;
+    text-align: center;
+    
+    .ant-btn {
+      height: 36px;
+      border-radius: 6px;
+      font-weight: 500;
+      
+      .anticon {
+        font-size: 14px;
+      }
+      
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
     }
   }

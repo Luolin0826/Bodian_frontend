@@ -16,8 +16,8 @@
 
       <!-- 登录统计卡片 -->
       <div class="stats-section" style="margin-bottom: 24px;">
-        <a-row :gutter="16">
-          <a-col :span="6">
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-card size="small">
               <a-statistic
                 title="总登录次数"
@@ -26,7 +26,7 @@
               />
             </a-card>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-card size="small">
               <a-statistic
                 title="失败次数"
@@ -35,7 +35,7 @@
               />
             </a-card>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-card size="small">
               <a-statistic
                 title="成功率"
@@ -46,7 +46,7 @@
               />
             </a-card>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-card size="small">
               <a-statistic
                 title="不同IP地址"
@@ -60,8 +60,8 @@
 
       <!-- 筛选条件 -->
       <div class="filters-section">
-        <a-row :gutter="16" align="middle">
-          <a-col :span="6">
+        <a-row :gutter="[12, 16]" align="middle">
+          <a-col :xs="24" :sm="6" :md="6">
             <a-select 
               v-model:value="filters.status" 
               placeholder="登录状态"
@@ -74,7 +74,7 @@
             </a-select>
           </a-col>
           
-          <a-col :span="6">
+          <a-col :xs="24" :sm="6" :md="6">
             <a-select 
               v-model:value="filters.days" 
               placeholder="时间范围"
@@ -88,7 +88,7 @@
             </a-select>
           </a-col>
           
-          <a-col :span="12">
+          <a-col :xs="24" :sm="12" :md="12">
             <a-space>
               <a-tag v-if="loginStats?.stats?.last_login_time" color="blue">
                 最近登录：{{ formatDateTime(loginStats.stats.last_login_time) }}
@@ -259,7 +259,7 @@
       @ok="submitReport"
       :confirm-loading="reporting"
     >
-      <a-form :label-col="{ span: 6 }" :wrapper-col="{ span: 18 }">
+      <a-form :label-col="{ xs: { span: 24 }, sm: { span: 6 } }" :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 } }">
         <a-form-item label="举报原因" name="reason">
           <a-select v-model:value="reportForm.reason" placeholder="请选择举报原因">
             <a-select-option value="suspicious_ip">可疑IP地址</a-select-option>
@@ -288,7 +288,6 @@ import { useUserPreferences } from '@/composables/useUserPreferences'
 import { 
   DownloadOutlined, 
   ReloadOutlined, 
-  GlobalOutlined,
   EnvironmentOutlined,
   DesktopOutlined,
   MobileOutlined,
@@ -523,14 +522,9 @@ const exportLogs = async () => {
     exporting.value = true
     
     // 构建导出参数
-    const params = {
+    const params: any = {
       ...filters,
       export: true
-    }
-    
-    if (dateRange.value && dateRange.value.length === 2) {
-      params.start_date = dayjs(dateRange.value[0]).format('YYYY-MM-DD')
-      params.end_date = dayjs(dateRange.value[1]).format('YYYY-MM-DD')
     }
     
     // 这里应该调用导出API
@@ -613,5 +607,176 @@ onMounted(async () => {
   border-radius: 4px;
   max-height: 100px;
   overflow-y: auto;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .login-logs-page {
+    padding: 16px;
+  }
+  
+  /* 统计卡片适配 */
+  .stats-section {
+    margin-bottom: 16px !important;
+  }
+  
+  :deep(.ant-card-body) {
+    padding: 12px;
+  }
+  
+  :deep(.ant-statistic) {
+    text-align: center;
+    
+    .ant-statistic-title {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    
+    .ant-statistic-content {
+      font-size: 18px;
+    }
+  }
+  
+  /* 筛选区域适配 */
+  .filters-section {
+    margin-bottom: 16px;
+    padding: 12px;
+  }
+  
+  /* 按钮组适配 */
+  :deep(.ant-card-extra) {
+    margin-top: 12px;
+  }
+  
+  :deep(.ant-space) {
+    width: 100%;
+    justify-content: center;
+    
+    .ant-space-item {
+      flex: 1;
+      
+      .ant-btn {
+        width: 100%;
+        min-height: 44px;
+      }
+    }
+  }
+  
+  /* 表格适配 */
+  :deep(.ant-table-wrapper) {
+    .ant-table {
+      font-size: 12px;
+    }
+    
+    .ant-table-thead > tr > th {
+      padding: 8px 4px;
+      font-size: 12px;
+    }
+    
+    .ant-table-tbody > tr > td {
+      padding: 8px 4px;
+      font-size: 12px;
+    }
+  }
+  
+  /* 标签适配 */
+  :deep(.ant-tag) {
+    margin: 2px;
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  
+  /* 表单适配 */
+  :deep(.ant-form-item-label) {
+    text-align: left !important;
+    padding-bottom: 4px !important;
+  }
+  
+  /* 选择框适配 */
+  :deep(.ant-select) {
+    width: 100% !important;
+  }
+  
+  /* 模态框适配 */
+  :deep(.ant-modal) {
+    margin: 0;
+    max-width: calc(100vw - 32px);
+    
+    .ant-modal-content {
+      border-radius: 8px;
+    }
+  }
+  
+  /* 设备信息适配 */
+  .device-type {
+    font-size: 12px;
+  }
+  
+  .user-agent {
+    font-size: 11px;
+  }
+  
+  .location-info {
+    font-size: 11px;
+  }
+  
+  .relative-time {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-logs-page {
+    padding: 12px;
+  }
+  
+  /* 统计卡片小屏幕适配 */
+  :deep(.ant-statistic-content) {
+    font-size: 16px !important;
+  }
+  
+  :deep(.ant-statistic-title) {
+    font-size: 11px !important;
+  }
+  
+  /* 按钮触摸适配 */
+  :deep(.ant-btn) {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  
+  /* 表格更紧凑 */
+  :deep(.ant-table-thead > tr > th) {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+  
+  :deep(.ant-table-tbody > tr > td) {
+    padding: 6px 2px;
+    font-size: 11px;
+  }
+  
+  /* 输入框适配 */
+  :deep(.ant-input) {
+    min-height: 44px;
+  }
+  
+  :deep(.ant-textarea) {
+    min-height: 88px;
+  }
+  
+  /* 筛选区域紧凑布局 */
+  .filters-section {
+    padding: 8px;
+  }
+  
+  /* 描述列表适配 */
+  :deep(.ant-descriptions-item-label) {
+    font-size: 12px;
+  }
+  
+  :deep(.ant-descriptions-item-content) {
+    font-size: 12px;
+  }
 }
 </style>

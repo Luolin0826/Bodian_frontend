@@ -181,6 +181,10 @@
         loading.value = true
         await userStore.login(formState)
         
+        // 登录成功后立即获取用户权限信息
+        console.log('🔄 登录成功，正在获取用户权限...')
+        await userStore.getUserInfo()
+        
         // 保存或清除记住的账号信息
         saveRememberedCredentials()
         

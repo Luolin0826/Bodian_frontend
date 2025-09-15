@@ -20,8 +20,8 @@
 
       <!-- 设备统计 -->
       <div class="device-stats" style="margin-bottom: 24px;">
-        <a-row :gutter="16">
-          <a-col :span="6">
+        <a-row :gutter="[12, 16]">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-statistic
               title="在线设备"
               :value="onlineDevices.length"
@@ -32,21 +32,21 @@
               </template>
             </a-statistic>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-statistic
               title="桌面设备"
               :value="deviceStats.desktop"
               :value-style="{ color: '#1890ff' }"
             />
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-statistic
               title="移动设备"
               :value="deviceStats.mobile"
               :value-style="{ color: '#722ed1' }"
             />
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="12" :sm="6" :md="6">
             <a-statistic
               title="信任设备"
               :value="trustedDevices.length"
@@ -58,8 +58,8 @@
 
       <!-- 设备筛选 -->
       <div class="device-filters" style="margin-bottom: 24px;">
-        <a-row :gutter="16" align="middle">
-          <a-col :span="6">
+        <a-row :gutter="[12, 16]" align="middle">
+          <a-col :xs="24" :sm="8" :md="6">
             <a-select
               v-model:value="filterStatus"
               placeholder="设备状态"
@@ -71,7 +71,7 @@
               <a-select-option value="offline">离线</a-select-option>
             </a-select>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="24" :sm="8" :md="6">
             <a-select
               v-model:value="filterDeviceType"
               placeholder="设备类型"
@@ -84,7 +84,7 @@
               <a-select-option value="tablet">平板设备</a-select-option>
             </a-select>
           </a-col>
-          <a-col :span="6">
+          <a-col :xs="24" :sm="8" :md="6">
             <a-select
               v-model:value="filterTrusted"
               placeholder="信任状态"
@@ -638,5 +638,227 @@ onMounted(() => {
 .device-actions {
   border-top: 1px solid #f0f0f0;
   padding-top: 16px;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .devices-page {
+    padding: 16px;
+  }
+  
+  /* 统计区域适配 */
+  .device-stats {
+    padding: 12px;
+    margin-bottom: 16px !important;
+  }
+  
+  :deep(.ant-statistic) {
+    text-align: center;
+    
+    .ant-statistic-title {
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    
+    .ant-statistic-content {
+      font-size: 18px;
+    }
+  }
+  
+  /* 筛选区域适配 */
+  .device-filters {
+    padding: 12px;
+    margin-bottom: 16px !important;
+  }
+  
+  /* 按钮组适配 */
+  :deep(.ant-card-extra) {
+    margin-top: 12px;
+  }
+  
+  :deep(.ant-space) {
+    width: 100%;
+    justify-content: center;
+    
+    .ant-space-item {
+      flex: 1;
+      
+      .ant-btn {
+        width: 100%;
+        min-height: 44px;
+      }
+    }
+  }
+  
+  /* 列表项适配 */
+  :deep(.ant-list-item) {
+    padding: 16px 12px;
+    
+    .ant-list-item-meta {
+      .ant-list-item-meta-avatar {
+        margin-right: 12px;
+      }
+      
+      .ant-list-item-meta-content {
+        .ant-list-item-meta-title {
+          font-size: 14px;
+          margin-bottom: 8px;
+        }
+        
+        .ant-list-item-meta-description {
+          font-size: 12px;
+        }
+      }
+    }
+    
+    .ant-list-item-action {
+      margin-left: 0;
+      margin-top: 12px;
+      
+      li {
+        padding: 0 4px;
+      }
+    }
+  }
+  
+  /* 设备标题适配 */
+  .device-title {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    
+    .device-name {
+      font-size: 14px;
+    }
+  }
+  
+  /* 设备信息适配 */
+  .info-row {
+    font-size: 12px;
+    margin-bottom: 6px;
+    flex-wrap: wrap;
+  }
+  
+  .location {
+    margin-left: 4px;
+    font-size: 11px;
+  }
+  
+  .expires {
+    margin-left: 8px;
+    font-size: 11px;
+  }
+  
+  /* 标签适配 */
+  :deep(.ant-tag) {
+    margin: 2px;
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  
+  /* 头像适配 */
+  :deep(.ant-badge) {
+    .anticon {
+      font-size: 24px !important;
+    }
+  }
+  
+  /* 分页适配 */
+  :deep(.ant-pagination) {
+    text-align: center;
+    
+    .ant-pagination-options {
+      display: none;
+    }
+  }
+  
+  /* 模态框适配 */
+  :deep(.ant-modal) {
+    margin: 0;
+    max-width: calc(100vw - 32px);
+    
+    .ant-modal-content {
+      border-radius: 8px;
+    }
+  }
+  
+  /* 设备操作适配 */
+  .device-actions {
+    padding-top: 12px;
+    
+    .ant-space {
+      width: 100%;
+      justify-content: center;
+      
+      .ant-space-item {
+        flex: 1;
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .devices-page {
+    padding: 12px;
+  }
+  
+  /* 统计数据小屏幕适配 */
+  :deep(.ant-statistic-content) {
+    font-size: 16px !important;
+  }
+  
+  :deep(.ant-statistic-title) {
+    font-size: 11px !important;
+  }
+  
+  /* 按钮触摸适配 */
+  :deep(.ant-btn) {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  
+  /* 列表项紧凑布局 */
+  :deep(.ant-list-item) {
+    padding: 12px 8px;
+  }
+  
+  /* 选择框适配 */
+  :deep(.ant-select) {
+    width: 100% !important;
+  }
+  
+  /* 设备名称适配 */
+  .device-name {
+    font-size: 13px !important;
+  }
+  
+  /* 信息行适配 */
+  .info-row {
+    font-size: 11px !important;
+  }
+  
+  /* 筛选区域紧凑布局 */
+  .device-filters {
+    padding: 8px;
+  }
+  
+  .device-stats {
+    padding: 8px;
+  }
+  
+  /* 描述列表适配 */
+  :deep(.ant-descriptions-item-label) {
+    font-size: 12px;
+  }
+  
+  :deep(.ant-descriptions-item-content) {
+    font-size: 12px;
+  }
+  
+  /* 设备指纹适配 */
+  .device-fingerprint {
+    font-size: 11px;
+    max-height: 60px;
+  }
 }
 </style>

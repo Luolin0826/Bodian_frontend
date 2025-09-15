@@ -9,6 +9,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     AAlert: typeof import('ant-design-vue/es')['Alert']
+    AAutoComplete: typeof import('ant-design-vue/es')['AutoComplete']
     AAvatar: typeof import('ant-design-vue/es')['Avatar']
     ABadge: typeof import('ant-design-vue/es')['Badge']
     ABreadcrumb: typeof import('ant-design-vue/es')['Breadcrumb']
@@ -32,6 +33,7 @@ declare module 'vue' {
     AEmpty: typeof import('ant-design-vue/es')['Empty']
     AForm: typeof import('ant-design-vue/es')['Form']
     AFormItem: typeof import('ant-design-vue/es')['FormItem']
+    AFormItemRest: typeof import('ant-design-vue/es')['FormItemRest']
     AInput: typeof import('ant-design-vue/es')['Input']
     AInputNumber: typeof import('ant-design-vue/es')['InputNumber']
     AInputPassword: typeof import('ant-design-vue/es')['InputPassword']
@@ -85,6 +87,7 @@ declare module 'vue' {
     ComingSoon: typeof import('./../components/common/ComingSoon.vue')['default']
     CustomerTimeline: typeof import('./../components/customer/CustomerTimeline.vue')['default']
     HelloWorld: typeof import('./../components/HelloWorld.vue')['default']
+    MaskedText: typeof import('./../components/common/MaskedText.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     UserMenu: typeof import('./../components/common/UserMenu.vue')['default']

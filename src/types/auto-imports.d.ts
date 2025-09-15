@@ -72,6 +72,7 @@ declare global {
   const useAutoSave: typeof import('../composables/useAutoSave')['useAutoSave']
   const useCssModule: typeof import('vue')['useCssModule']
   const useCssVars: typeof import('vue')['useCssVars']
+  const useDataQueryContent: typeof import('../composables/useDataQueryContent')['useDataQueryContent']
   const useEditMode: typeof import('../composables/useEditMode')['useEditMode']
   const useFieldEditor: typeof import('../composables/useEditMode')['useFieldEditor']
   const useId: typeof import('vue')['useId']
@@ -97,6 +98,9 @@ declare global {
   // @ts-ignore
   export type { Component, Slot, Slots, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, ShallowRef, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
+  // @ts-ignore
+  export type { DataQueryState } from '../composables/useDataQueryContent'
+  import('../composables/useDataQueryContent')
 }
 
 // for vue template auto import
@@ -170,6 +174,7 @@ declare module 'vue' {
     readonly useAutoSave: UnwrapRef<typeof import('../composables/useAutoSave')['useAutoSave']>
     readonly useCssModule: UnwrapRef<typeof import('vue')['useCssModule']>
     readonly useCssVars: UnwrapRef<typeof import('vue')['useCssVars']>
+    readonly useDataQueryContent: UnwrapRef<typeof import('../composables/useDataQueryContent')['useDataQueryContent']>
     readonly useEditMode: UnwrapRef<typeof import('../composables/useEditMode')['useEditMode']>
     readonly useFieldEditor: UnwrapRef<typeof import('../composables/useEditMode')['useFieldEditor']>
     readonly useId: UnwrapRef<typeof import('vue')['useId']>

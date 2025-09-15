@@ -2,16 +2,18 @@ import request from '@/api/request'
 
 // 政策相关数据类型定义
 export interface FilterOptions {
-  gw_provinces: UnitOption[]      // 国网省公司
-  gw_direct_units: UnitOption[]   // 国网直属单位
-  nw_provinces: UnitOption[]      // 南网省公司  
-  nw_direct_units: UnitOption[]   // 南网直属单位
-  total_units: number             // 总单位数
-  categories: {                   // 分类统计
+  gw_provinces: UnitOption[]          // 国网省公司
+  gw_direct_units: UnitOption[]       // 国网直属单位
+  nw_provinces: UnitOption[]          // 南网省公司  
+  nw_direct_units: UnitOption[]       // 南网直属单位
+  provincial_industry: UnitOption[]   // 省属产业
+  total_units: number                 // 总单位数
+  categories: {                       // 分类统计
     gw_provinces_count: number
     gw_direct_units_count: number
     nw_provinces_count: number
     nw_direct_units_count: number
+    provincial_industry_count: number
   }
 }
 
@@ -171,7 +173,7 @@ export interface DisplayConfigResponse {
  * 获取筛选选项（4个互斥选择）
  */
 export function getFilterOptions(): Promise<FilterOptions> {
-  return request.get('/api/v1/policy-sections/filter-options').then(response => {
+  return request.get('/api/v1/policy-sections/filter-options').then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -185,7 +187,7 @@ export function getFilterOptions(): Promise<FilterOptions> {
 export function getUnitDetails(unitId: number): Promise<UnitDetailsResponse['data']> {
   return request.get('/api/v1/policies/unit-details', {
     params: { unit_id: unitId }
-  }).then(response => {
+  }).then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -199,7 +201,7 @@ export function getUnitDetails(unitId: number): Promise<UnitDetailsResponse['dat
 export function getRegionalOverview(unitId: number): Promise<RegionalOverviewResponse['data']> {
   return request.get('/api/v1/policies/regional-overview', {
     params: { unit_id: unitId }
-  }).then(response => {
+  }).then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -213,7 +215,7 @@ export function getRegionalOverview(unitId: number): Promise<RegionalOverviewRes
 export function getEarlyBatchInfo(unitId: number): Promise<EarlyBatchResponse['data']> {
   return request.get('/api/v1/policies/early-batch', {
     params: { unit_id: unitId }
-  }).then(response => {
+  }).then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -227,7 +229,7 @@ export function getEarlyBatchInfo(unitId: number): Promise<EarlyBatchResponse['d
 export function getRuralGridInfo(unitId: number): Promise<RuralGridResponse['data']> {
   return request.get('/api/v1/policies/rural-grid', {
     params: { unit_id: unitId }
-  }).then(response => {
+  }).then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -241,7 +243,7 @@ export function getRuralGridInfo(unitId: number): Promise<RuralGridResponse['dat
 export function getDisplayConfig(category: string): Promise<DisplayConfigResponse['data']> {
   return request.get('/api/v1/policies/display-config', {
     params: { category }
-  }).then(response => {
+  }).then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -253,7 +255,7 @@ export function getDisplayConfig(category: string): Promise<DisplayConfigRespons
  * 获取政策API健康状态
  */
 export function getPolicyHealth(): Promise<any> {
-  return request.get('/api/v1/policies/health').then(response => {
+  return request.get('/api/v1/policies/health').then((response: any) => {
     return response
   })
 }
@@ -264,7 +266,7 @@ export function getPolicyHealth(): Promise<any> {
 export function getProvincePolicies(regionId: number): Promise<any> {
   return request.get('/api/v1/policies/province-policies', {
     params: { region_id: regionId }
-  }).then(response => {
+  }).then((response: any) => {
     if (response.success) {
       return response.data
     }
@@ -322,7 +324,7 @@ export const policyManagementAPI = {
   getBatchTreeData(includePolicy: boolean = true): Promise<BatchTreeResponse> {
     return request.get('/api/v1/policy-management/tree-data', {
       params: { include_policy_status: includePolicy }
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -350,7 +352,7 @@ export const policyManagementAPI = {
     has_more: boolean
     total_pages: number
   }> {
-    return request.get('/api/v1/policy-management/regions', { params }).then(response => {
+    return request.get('/api/v1/policy-management/regions', { params }).then((response: any) => {
       if (response.success) {
         return {
           data: response.data?.regions || [],
@@ -369,7 +371,7 @@ export const policyManagementAPI = {
    * 获取行政区划树形结构
    */
   getRegionTree(params?: { province?: string }): Promise<any> {
-    return request.get('/api/v1/policy-management/regions/tree', { params }).then(response => {
+    return request.get('/api/v1/policy-management/regions/tree', { params }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -386,7 +388,7 @@ export const policyManagementAPI = {
     page?: number
     limit?: number
   }): Promise<any> {
-    return request.get('/api/v1/policy-management/province-policies', { params }).then(response => {
+    return request.get('/api/v1/policy-management/province-policies', { params }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -398,7 +400,7 @@ export const policyManagementAPI = {
    * 获取单个省级政策
    */
   getProvincePolicy(regionId: number): Promise<any> {
-    return request.get(`/api/v1/policy-management/province-policies/${regionId}`).then(response => {
+    return request.get(`/api/v1/policy-management/province-policies/${regionId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -410,7 +412,7 @@ export const policyManagementAPI = {
    * 创建省级政策
    */
   createProvincePolicy(data: any): Promise<any> {
-    return request.post('/api/v1/policy-management/province-policies', data).then(response => {
+    return request.post('/api/v1/policy-management/province-policies', data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -422,7 +424,7 @@ export const policyManagementAPI = {
    * 更新省级政策
    */
   updateProvincePolicy(regionId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/policy-management/province-policies/${regionId}`, data).then(response => {
+    return request.put(`/api/v1/policy-management/province-policies/${regionId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -434,7 +436,7 @@ export const policyManagementAPI = {
    * 删除省级政策
    */
   deleteProvincePolicy(regionId: number): Promise<any> {
-    return request.delete(`/api/v1/policy-management/province-policies/${regionId}`).then(response => {
+    return request.delete(`/api/v1/policy-management/province-policies/${regionId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -452,7 +454,7 @@ export const policyManagementAPI = {
     page?: number
     limit?: number
   }): Promise<any> {
-    return request.get('/api/v1/policy-management/company-policies', { params }).then(response => {
+    return request.get('/api/v1/policy-management/company-policies', { params }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -464,7 +466,7 @@ export const policyManagementAPI = {
    * 获取单个公司级政策
    */
   getCompanyPolicy(regionId: number): Promise<any> {
-    return request.get(`/api/v1/policy-management/company-policies/${regionId}`).then(response => {
+    return request.get(`/api/v1/policy-management/company-policies/${regionId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -476,7 +478,7 @@ export const policyManagementAPI = {
    * 创建公司级政策
    */
   createCompanyPolicy(data: any): Promise<any> {
-    return request.post('/api/v1/policy-management/company-policies', data).then(response => {
+    return request.post('/api/v1/policy-management/company-policies', data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -488,7 +490,7 @@ export const policyManagementAPI = {
    * 更新公司级政策
    */
   updateCompanyPolicy(regionId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/policy-management/company-policies/${regionId}`, data).then(response => {
+    return request.put(`/api/v1/policy-management/company-policies/${regionId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -500,7 +502,7 @@ export const policyManagementAPI = {
    * 通过region_id更新公司级政策（新的后端API适配）
    */
   updateCompanyPolicyByRegion(regionId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/policy-management/company-policies/by-region/${regionId}`, data).then(response => {
+    return request.put(`/api/v1/policy-management/company-policies/by-region/${regionId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -512,7 +514,7 @@ export const policyManagementAPI = {
    * 删除公司级政策
    */
   deleteCompanyPolicy(regionId: number): Promise<any> {
-    return request.delete(`/api/v1/policy-management/company-policies/${regionId}`).then(response => {
+    return request.delete(`/api/v1/policy-management/company-policies/${regionId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -528,7 +530,7 @@ export const policyManagementAPI = {
       headers: {
         'Content-Type': 'multipart/form-data'
       }
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -547,7 +549,7 @@ export const policyManagementAPI = {
     return request.get('/api/v1/policy-management/export', { 
       params,
       responseType: 'blob'
-    }).then(response => {
+    }).then((response: any) => {
       return { data: response }
     })
   },
@@ -560,7 +562,7 @@ export const policyManagementAPI = {
     target_region_id: number
     policy_type: 'province' | 'company'
   }): Promise<any> {
-    return request.post('/api/v1/policy-management/copy-policy', params).then(response => {
+    return request.post('/api/v1/policy-management/copy-policy', params).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -572,7 +574,7 @@ export const policyManagementAPI = {
    * 获取政策管理系统健康状态
    */
   getHealth(): Promise<any> {
-    return request.get('/api/v1/policy-management/health').then(response => {
+    return request.get('/api/v1/policy-management/health').then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -584,7 +586,7 @@ export const policyManagementAPI = {
    * 获取政策统计信息
    */
   getStats(): Promise<any> {
-    return request.get('/api/v1/policy-management/stats').then(response => {
+    return request.get('/api/v1/policy-management/stats').then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -596,7 +598,7 @@ export const policyManagementAPI = {
    * 获取指定区域的所有政策（改进的层级API）
    */
   getRegionPolicies(regionId: number): Promise<any> {
-    return request.get(`/api/v1/policy-management/regions/${regionId}/policies`).then(response => {
+    return request.get(`/api/v1/policy-management/regions/${regionId}/policies`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -632,7 +634,7 @@ export const policyManagementAPI = {
     city?: string
     company?: string
   }): Promise<any> {
-    return request.post('/api/v1/policy-management/regions', data).then(response => {
+    return request.post('/api/v1/policy-management/regions', data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -650,7 +652,7 @@ export const policyManagementAPI = {
     city?: string
     company?: string
   }): Promise<any> {
-    return request.put(`/api/v1/policy-management/regions/${regionId}`, data).then(response => {
+    return request.put(`/api/v1/policy-management/regions/${regionId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -667,7 +669,7 @@ export const policyManagementAPI = {
   }): Promise<any> {
     return request.delete(`/api/v1/policy-management/regions/${regionId}`, { 
       data: options 
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -685,7 +687,7 @@ export const policyManagementAPI = {
     return request.post('/api/v1/policy-management/regions/batch-delete', {
       region_ids: regionIds,
       ...options
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -697,7 +699,7 @@ export const policyManagementAPI = {
    * 获取区域详细信息
    */
   getRegionDetail(regionId: number): Promise<any> {
-    return request.get(`/api/v1/policy-management/regions/${regionId}`).then(response => {
+    return request.get(`/api/v1/policy-management/regions/${regionId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -714,7 +716,7 @@ export const policyManagementAPI = {
     policy_count?: number
     child_count?: number
   }> {
-    return request.get(`/api/v1/policy-management/regions/${regionId}/check-deletable`).then(response => {
+    return request.get(`/api/v1/policy-management/regions/${regionId}/check-deletable`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -728,7 +730,7 @@ export const policyManagementAPI = {
   moveRegion(regionId: number, newParentId: number): Promise<any> {
     return request.put(`/api/v1/policy-management/regions/${regionId}/move`, {
       new_parent_id: newParentId
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -757,7 +759,7 @@ export const policyManagementAPI = {
     province_stats: Array<any>
   }> {
     const params = regionId ? { region_id: regionId } : {}
-    return request.get('/api/v1/policy-management/regions/stats', { params }).then(response => {
+    return request.get('/api/v1/policy-management/regions/stats', { params }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -776,7 +778,7 @@ export const sectionEditingAPI = {
    * 获取基本政策信息
    */
   getBasicPolicy(unitId: number): Promise<any> {
-    return request.get(`/api/v1/section-editing/basic/${unitId}`).then(response => {
+    return request.get(`/api/v1/section-editing/basic/${unitId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -788,7 +790,7 @@ export const sectionEditingAPI = {
    * 更新基本政策信息
    */
   updateBasicPolicy(unitId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/section-editing/basic/${unitId}`, data).then(response => {
+    return request.put(`/api/v1/section-editing/basic/${unitId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -800,7 +802,7 @@ export const sectionEditingAPI = {
    * 更新提前批板块
    */
   updateEarlyBatch(unitId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/section-editing/early-batch/${unitId}`, data).then(response => {
+    return request.put(`/api/v1/section-editing/early-batch/${unitId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -812,7 +814,7 @@ export const sectionEditingAPI = {
    * 更新农网板块
    */
   updateRuralGrid(unitId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/section-editing/rural-grid/${unitId}`, data).then(response => {
+    return request.put(`/api/v1/section-editing/rural-grid/${unitId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -824,7 +826,7 @@ export const sectionEditingAPI = {
    * 更新地市县概览
    */
   updateRegionalOverview(unitId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/section-editing/regional/${unitId}`, data).then(response => {
+    return request.put(`/api/v1/section-editing/regional/${unitId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -854,7 +856,7 @@ export const sectionEditingAPI = {
     total_updated: number
     total_failed: number
   }> {
-    return request.put(`/api/v1/section-editing/regional/batch/${unitId}`, data).then(response => {
+    return request.put(`/api/v1/section-editing/regional/batch/${unitId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -877,7 +879,7 @@ export const customFieldsAPI = {
     province?: string
     is_active?: boolean
   }): Promise<any> {
-    return request.get('/api/v1/custom-fields/', { params }).then(response => {
+    return request.get('/api/v1/custom-fields/', { params }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -899,7 +901,7 @@ export const customFieldsAPI = {
     field_options?: any
     validation_rules?: any
   }): Promise<any> {
-    return request.post('/api/v1/custom-fields/', data).then(response => {
+    return request.post('/api/v1/custom-fields/', data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -911,7 +913,7 @@ export const customFieldsAPI = {
    * 更新自定义字段
    */
   updateCustomField(fieldId: number, data: any): Promise<any> {
-    return request.put(`/api/v1/custom-fields/${fieldId}`, data).then(response => {
+    return request.put(`/api/v1/custom-fields/${fieldId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -923,7 +925,7 @@ export const customFieldsAPI = {
    * 删除自定义字段
    */
   deleteCustomField(fieldId: number): Promise<any> {
-    return request.delete(`/api/v1/custom-fields/${fieldId}`).then(response => {
+    return request.delete(`/api/v1/custom-fields/${fieldId}`).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -936,7 +938,7 @@ export const customFieldsAPI = {
    */
   getFieldsForManagement(section: string, province?: string): Promise<any> {
     const params = province ? { province } : undefined
-    return request.get(`/api/v1/custom-fields/manage/${section}`, { params }).then(response => {
+    return request.get(`/api/v1/custom-fields/manage/${section}`, { params }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -950,7 +952,7 @@ export const customFieldsAPI = {
   toggleFieldVisibility(fieldId: number, isVisible: boolean): Promise<{ message: string; success: boolean }> {
     return request.put(`/api/v1/custom-fields/${fieldId}/visibility`, {
       is_visible: isVisible
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response // 返回整个response，包含message字段
       }
@@ -964,7 +966,7 @@ export const customFieldsAPI = {
   batchUpdateFieldOrder(fieldOrders: { field_id: number; display_order: number }[]): Promise<any> {
     return request.put('/api/v1/custom-fields/batch-update-order', {
       field_orders: fieldOrders
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -983,7 +985,7 @@ export const customFieldsAPI = {
     
     return request.get(`/api/v1/custom-fields/values/${unitId}`, { 
       params: Object.keys(params).length > 0 ? params : undefined 
-    }).then(response => {
+    }).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -998,7 +1000,7 @@ export const customFieldsAPI = {
     section: string
     field_values: Record<string, any>
   }): Promise<any> {
-    return request.put(`/api/v1/custom-fields/values/${unitId}`, data).then(response => {
+    return request.put(`/api/v1/custom-fields/values/${unitId}`, data).then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -1010,7 +1012,7 @@ export const customFieldsAPI = {
    * 获取字段统计信息
    */
   getFieldStatistics(): Promise<any> {
-    return request.get('/api/v1/custom-fields/statistics').then(response => {
+    return request.get('/api/v1/custom-fields/statistics').then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -1028,7 +1030,7 @@ export const customFieldsAPI = {
       field_count: number
     }>
   }> {
-    return request.get('/api/v1/custom-fields/provinces').then(response => {
+    return request.get('/api/v1/custom-fields/provinces').then((response: any) => {
       if (response.success) {
         return response.data
       }
@@ -1187,7 +1189,7 @@ export const policySectionsAPI = {
     regional_breakdown: any[]
     total_count: number
   }> {
-    return request.get(`/api/v1/policy-sections/${unitId}/regional-overview`).then(response => {
+    return request.get(`/api/v1/policy-sections/${unitId}/regional-overview`).then((response: any) => {
       if (response.success) {
         return response.data
       }

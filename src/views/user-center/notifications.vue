@@ -23,8 +23,8 @@
       </template>
 
       <div class="filters-section">
-        <a-row :gutter="16" align="middle">
-          <a-col :span="6">
+        <a-row :gutter="[12, 16]" align="middle">
+          <a-col :xs="24" :sm="8" :md="6">
             <a-select 
               v-model:value="filters.type" 
               placeholder="通知类型"
@@ -38,7 +38,7 @@
             </a-select>
           </a-col>
           
-          <a-col :span="6">
+          <a-col :xs="24" :sm="8" :md="6">
             <a-select 
               v-model:value="filters.status" 
               placeholder="阅读状态"
@@ -51,7 +51,7 @@
             </a-select>
           </a-col>
           
-          <a-col :span="12">
+          <a-col :xs="24" :sm="8" :md="12">
             <a-range-picker 
               v-model:value="dateRange" 
               style="width: 100%"
@@ -521,5 +521,170 @@ onMounted(() => {
   line-height: 1.6;
   color: #262626;
   white-space: pre-wrap;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .notifications-page {
+    padding: 16px;
+  }
+  
+  /* 筛选区域适配 */
+  .filters-section {
+    margin-bottom: 16px;
+    padding: 12px;
+  }
+  
+  /* 按钮组适配 */
+  :deep(.ant-card-extra) {
+    margin-top: 12px;
+  }
+  
+  :deep(.ant-space) {
+    width: 100%;
+    justify-content: center;
+    
+    .ant-space-item {
+      flex: 1;
+      
+      .ant-btn {
+        width: 100%;
+        min-height: 44px;
+      }
+    }
+  }
+  
+  /* 列表项适配 */
+  .notification-item {
+    :deep(.ant-list-item-action) {
+      margin-left: 0;
+      margin-top: 8px;
+      width: 100%;
+      
+      li {
+        padding: 0;
+      }
+      
+      .ant-space {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+  }
+  
+  /* 通知头部适配 */
+  .notification-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .notification-title {
+    flex-wrap: wrap;
+    gap: 4px;
+    
+    .title-text {
+      font-size: 14px;
+    }
+  }
+  
+  .notification-sender {
+    font-size: 11px;
+  }
+  
+  /* 通知内容适配 */
+  .notification-body {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+  
+  /* 时间显示适配 */
+  .notification-time {
+    font-size: 11px;
+  }
+  
+  /* 标签适配 */
+  :deep(.ant-tag) {
+    margin: 2px;
+    font-size: 11px;
+    padding: 2px 6px;
+  }
+  
+  /* 分页适配 */
+  :deep(.ant-pagination) {
+    text-align: center;
+    
+    .ant-pagination-options {
+      display: none;
+    }
+  }
+  
+  /* 模态框适配 */
+  :deep(.ant-modal) {
+    margin: 0;
+    max-width: calc(100vw - 32px);
+    
+    .ant-modal-content {
+      border-radius: 8px;
+    }
+  }
+  
+  /* 详情头部适配 */
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .detail-meta {
+    text-align: left;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .notifications-page {
+    padding: 12px;
+  }
+  
+  /* 头部标题适配 */
+  .header-title {
+    font-size: 15px;
+  }
+  
+  /* 按钮触摸适配 */
+  :deep(.ant-btn) {
+    min-height: 48px;
+    font-size: 14px;
+  }
+  
+  /* 筛选区域紧凑布局 */
+  .filters-section {
+    padding: 8px;
+  }
+  
+  /* 列表项紧凑布局 */
+  :deep(.ant-list-item) {
+    padding: 12px 8px;
+  }
+  
+  /* 日期选择器适配 */
+  :deep(.ant-picker) {
+    width: 100% !important;
+  }
+  
+  /* 选择框适配 */
+  :deep(.ant-select) {
+    width: 100% !important;
+  }
+  
+  /* 通知内容适配 */
+  .notification-body {
+    font-size: 12px;
+  }
+  
+  .detail-content {
+    font-size: 13px;
+  }
 }
 </style>

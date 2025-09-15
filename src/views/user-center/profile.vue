@@ -11,13 +11,13 @@
       <a-form
         :model="form"
         :rules="rules"
-        :label-col="{ span: 4 }"
-        :wrapper-col="{ span: 20 }"
+        :label-col="{ xs: { span: 24 }, sm: { span: 6 }, md: { span: 4 } }"
+        :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 }, md: { span: 20 } }"
         @finish="handleSubmit"
         ref="formRef"
       >
-        <a-row :gutter="24">
-          <a-col :span="12">
+        <a-row :gutter="[16, 16]">
+          <a-col :xs="24" :sm="24" :md="12" :lg="12">
             <a-form-item label="用户名" name="username">
               <a-input :value="userInfo?.username" disabled />
             </a-form-item>
@@ -55,7 +55,7 @@
             </a-form-item>
           </a-col>
 
-          <a-col :span="12">
+          <a-col :xs="24" :sm="24" :md="12" :lg="12">
             <a-form-item label="头像" name="avatar">
               <div class="avatar-section">
                 <AvatarSelector
@@ -91,7 +91,7 @@
           </a-col>
         </a-row>
 
-        <a-form-item :wrapper-col="{ offset: 4, span: 20 }" v-if="editMode">
+        <a-form-item :wrapper-col="{ xs: { span: 24 }, sm: { offset: 6, span: 18 }, md: { offset: 4, span: 20 } }" v-if="editMode">
           <a-space>
             <a-button type="primary" html-type="submit" :loading="submitting">
               保存
@@ -106,8 +106,8 @@
       <a-form
         :model="passwordForm"
         :rules="passwordRules"
-        :label-col="{ span: 4 }"
-        :wrapper-col="{ span: 12 }"
+        :label-col="{ xs: { span: 24 }, sm: { span: 6 }, md: { span: 4 } }"
+        :wrapper-col="{ xs: { span: 24 }, sm: { span: 18 }, md: { span: 12 } }"
         @finish="handlePasswordSubmit"
         ref="passwordFormRef"
       >
@@ -132,7 +132,7 @@
           />
         </a-form-item>
 
-        <a-form-item :wrapper-col="{ offset: 4, span: 12 }">
+        <a-form-item :wrapper-col="{ xs: { span: 24 }, sm: { offset: 6, span: 18 }, md: { offset: 4, span: 12 } }">
           <a-button type="primary" html-type="submit" :loading="passwordSubmitting">
             修改密码
           </a-button>
@@ -145,7 +145,7 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { message } from 'ant-design-vue'
-import { EditOutlined, UserOutlined, UploadOutlined } from '@ant-design/icons-vue'
+import { EditOutlined } from '@ant-design/icons-vue'
 import { getUserProfile, updateUserProfile, changePassword, type UserProfile, type UpdateProfileRequest, type ChangePasswordRequest } from '@/api/user-center'
 import AvatarSelector from '@/components/AvatarSelector.vue'
 import { useUserStore } from '@/stores/user'
@@ -173,7 +173,7 @@ const passwordForm = reactive<ChangePasswordRequest>({
   confirm_password: ''
 })
 
-const rules = {
+const rules: Record<string, any> = {
   real_name: [
     { required: true, message: '请输入真实姓名', trigger: 'blur' }
   ],
@@ -187,7 +187,7 @@ const rules = {
   ]
 }
 
-const passwordRules = {
+const passwordRules: Record<string, any> = {
   old_password: [
     { required: true, message: '请输入当前密码', trigger: 'blur' }
   ],
@@ -259,8 +259,6 @@ const handleSubmit = async () => {
       // 更新全局用户状态
       userStore.updateUserInfo({
         real_name: form.real_name,
-        email: form.email,
-        phone: form.phone,
         avatar: form.avatar
       })
       
@@ -291,19 +289,6 @@ const handlePasswordSubmit = async () => {
   }
 }
 
-const beforeUpload = (file: File) => {
-  const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png'
-  if (!isJpgOrPng) {
-    message.error('只能上传 JPG/PNG 格式的图片!')
-    return false
-  }
-  const isLt2M = file.size / 1024 / 1024 < 2
-  if (!isLt2M) {
-    message.error('图片大小不能超过 2MB!')
-    return false
-  }
-  return true
-}
 
 const handleAvatarChange = async (newAvatar: string) => {
   try {
@@ -335,8 +320,6 @@ userStore.$subscribe((_mutation, state) => {
   if (state.userInfo && !editMode.value) {
     // 只在非编辑模式下同步，避免编辑时被覆盖
     form.real_name = state.userInfo.real_name || ''
-    form.email = state.userInfo.email || ''
-    form.phone = state.userInfo.phone || ''
     form.avatar = state.userInfo.avatar || ''
     console.log('🔄 个人信息页监听到userStore变化:', state.userInfo.avatar)
   }
@@ -358,5 +341,49 @@ userStore.$subscribe((_mutation, state) => {
 .avatar-actions {
   display: flex;
   justify-content: center;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .user-profile {
+    padding: 16px;
+  }
+  
+  /* 移动端下标签垂直排列 */
+  :deep(.ant-form-item-label) {
+    text-align: left !important;
+    padding-bottom: 4px !important;
+  }
+  
+  /* 移动端下按钮组适配 */
+  :deep(.ant-space) {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  :deep(.ant-space-item) {
+    flex: 1;
+  }
+  
+  :deep(.ant-btn) {
+    width: 100%;
+  }
+  
+  /* 卡片间距调整 */
+  :deep(.ant-card) {
+    margin-bottom: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-profile {
+    padding: 12px;
+  }
+  
+  /* 小屏幕下头像尺寸调整 */
+  .avatar-section :deep(.ant-avatar) {
+    width: 80px !important;
+    height: 80px !important;
+  }
 }
 </style>
