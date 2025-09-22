@@ -4,7 +4,7 @@ import request from './request'
 export interface UserProfile {
   id: number
   username: string
-  real_name: string
+  real_name?: string
   email: string
   phone: string
   avatar: string

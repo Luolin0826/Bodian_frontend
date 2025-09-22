@@ -6,6 +6,18 @@
         <h1>角色权限</h1>
         <span class="title-desc">角色定义与权限配置</span>
       </div>
+      <div class="page-actions">
+        <a-space>
+          <a-button @click="loadRoles">
+            <ReloadOutlined />
+            刷新数据
+          </a-button>
+          <a-button type="primary" @click="showCreateRole">
+            <PlusOutlined />
+            新建角色
+          </a-button>
+        </a-space>
+      </div>
     </div>
 
     <!-- 统计仪表盘 -->
@@ -75,23 +87,6 @@
                     <p>{{ role.description }}</p>
                   </div>
                 </div>
-                <a-dropdown>
-                  <a class="role-action" @click.prevent>
-                    <MoreOutlined />
-                  </a>
-                  <template #overlay>
-                    <a-menu>
-                      <a-menu-item @click="selectRole(role)">
-                        <SettingOutlined />
-                        配置权限
-                      </a-menu-item>
-                      <a-menu-item @click="viewRoleUsers(role)">
-                        <UserOutlined />
-                        查看用户
-                      </a-menu-item>
-                    </a-menu>
-                  </template>
-                </a-dropdown>
               </div>
               
               <div class="role-stats">
@@ -108,10 +103,32 @@
               </div>
               
               <div class="role-actions">
-                <a-button type="primary" block @click="selectRole(role)">
-                  <SettingOutlined />
-                  配置权限
-                </a-button>
+                <a-space direction="vertical" style="width: 100%">
+                  <a-button type="primary" block @click="selectRole(role)">
+                    <SettingOutlined />
+                    配置权限
+                  </a-button>
+                  <div class="role-action-buttons">
+                    <a-button size="small" @click="showEditRole(role)" title="编辑角色">
+                      <EditOutlined />
+                      编辑
+                    </a-button>
+                    <a-button size="small" @click="viewRoleUsers(role)" title="查看用户">
+                      <UserOutlined />
+                      用户
+                    </a-button>
+                    <a-button 
+                      v-if="!role.is_system" 
+                      size="small" 
+                      danger 
+                      @click="handleDeleteRole(role)"
+                      title="删除角色"
+                    >
+                      <DeleteOutlined />
+                      删除
+                    </a-button>
+                  </div>
+                </a-space>
               </div>
             </div>
           </a-col>
@@ -130,10 +147,18 @@
             <span class="role-name">{{ selectedRole.display_name }}</span>
             <a-tag :color="getRoleColor(selectedRole.name)" size="small">{{ selectedRole.name }}</a-tag>
           </div>
-          <a-button type="primary" @click="savePermissions" :loading="saveLoading">
-            <SaveOutlined />
-            保存配置
-          </a-button>
+          <div class="panel-actions">
+            <a-button size="small" @click="showEditRole(selectedRole)" title="编辑角色">
+              <EditOutlined />
+            </a-button>
+            <a-button size="small" @click="viewRoleUsers(selectedRole)" title="查看用户">
+              <UserOutlined />
+            </a-button>
+            <a-button type="primary" @click="savePermissions" :loading="saveLoading">
+              <SaveOutlined />
+              保存配置
+            </a-button>
+          </div>
         </div>
       </template>
       
@@ -365,12 +390,16 @@
         <template #bodyCell="{ column, record }">
           <template v-if="column.key === 'real_name'">
             <div class="user-info">
-              <a-avatar :src="record.avatar">{{ record.real_name?.[0] }}</a-avatar>
+              <a-avatar :src="record.avatar">{{ record.real_name?.[0] || record.username?.[0] }}</a-avatar>
               <div class="user-details">
-                <div class="user-name">{{ record.real_name }}</div>
-                <div class="user-username">@{{ record.username }}</div>
+                <div class="user-name">{{ record.real_name || record.username }}</div>
+                <div class="user-username">ID: {{ record.id }}</div>
               </div>
             </div>
+          </template>
+          
+          <template v-if="column.key === 'email'">
+            {{ record.email || '-' }}
           </template>
           
           <template v-if="column.key === 'is_active'">
@@ -378,15 +407,111 @@
               {{ record.is_active ? '正常' : '停用' }}
             </a-tag>
           </template>
+          
+          <template v-if="column.key === 'last_login'">
+            {{ record.last_login ? new Date(record.last_login).toLocaleString() : '-' }}
+          </template>
         </template>
       </a-table>
+    </a-modal>
+
+    <!-- 角色新建/编辑弹窗 -->
+    <a-modal
+      v-model:open="roleModalVisible"
+      :title="editingRole ? '编辑角色' : '新建角色'"
+      width="600px"
+      @ok="handleRoleSubmit"
+      @cancel="roleModalVisible = false"
+    >
+      <a-form
+        ref="formRef"
+        :model="roleForm"
+        layout="vertical"
+        :rules="{
+          name: [
+            { required: true, message: '请输入角色名称', trigger: 'blur' },
+            { pattern: /^[a-zA-Z][a-zA-Z0-9_]*$/, message: '角色名称只能包含字母、数字和下划线，且必须以字母开头', trigger: 'blur' }
+          ],
+          display_name: [
+            { required: true, message: '请输入显示名称', trigger: 'blur' }
+          ]
+        }"
+      >
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="角色名称" name="name">
+              <a-input 
+                v-model:value="roleForm.name" 
+                placeholder="根据显示名称自动生成"
+                :disabled="!!editingRole"
+              />
+              <div class="form-help">
+                {{ editingRole ? '角色的唯一标识，不可修改' : '角色的唯一标识，根据显示名称自动生成' }}
+              </div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="显示名称" name="display_name">
+              <a-input 
+                v-model:value="roleForm.display_name" 
+                placeholder="如: 销售经理"
+                @input="onDisplayNameChange"
+              />
+              <div class="form-help">用户界面中显示的角色名称</div>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-form-item label="角色描述">
+          <a-textarea 
+            v-model:value="roleForm.description" 
+            placeholder="描述该角色的职责和权限范围（可选）"
+            :rows="3"
+          />
+        </a-form-item>
+
+        <a-row :gutter="16">
+          <a-col :span="12">
+            <a-form-item label="角色级别">
+              <a-input-number 
+                v-model:value="roleForm.level" 
+                :min="1" 
+                :max="100"
+                style="width: 100%"
+                placeholder="1-100"
+              />
+              <div class="form-help">数值越高权限越大，用于权限层级控制（可选）</div>
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="角色类型">
+              <a-switch
+                v-model:checked="roleForm.is_system"
+                checked-children="系统角色"
+                un-checked-children="普通角色"
+                :disabled="!!editingRole"
+                :default-checked="false"
+              />
+              <div class="form-help">系统角色不允许删除</div>
+            </a-form-item>
+          </a-col>
+        </a-row>
+
+        <a-alert
+          message="提示"
+          description="角色创建成功后，您可以在权限配置中为该角色分配具体的功能权限。"
+          type="info"
+          show-icon
+          style="margin-top: 16px"
+        />
+      </a-form>
     </a-modal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, onMounted, computed } from 'vue'
-import { message } from 'ant-design-vue'
+import { message, Modal } from 'ant-design-vue'
 import { 
   SafetyCertificateOutlined,
   UserOutlined,
@@ -394,7 +519,11 @@ import {
   SettingOutlined,
   MoreOutlined,
   SaveOutlined,
-  InfoCircleOutlined
+  InfoCircleOutlined,
+  ReloadOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined
 } from '@ant-design/icons-vue'
 import {
   getRoles,
@@ -402,6 +531,9 @@ import {
   updateRolePermissions,
   getRoleUsers,
   getPermissionTree,
+  createRole,
+  updateRole,
+  deleteRole,
   type Role,
   type User,
   type PermissionNode
@@ -419,6 +551,70 @@ const selectedRole = ref<Role | null>(null)
 const currentRoleForUsers = ref<Role | null>(null)
 const roleUsers = ref<User[]>([])
 const activePermissionTab = ref('menu')
+
+// 角色管理相关
+const roleModalVisible = ref(false)
+const editingRole = ref<Role | null>(null)
+const formRef = ref()
+const roleForm = reactive({
+  name: '',
+  display_name: '',
+  description: '',
+  level: 1,
+  is_system: false
+})
+
+// 自动生成角色名称
+const generateRoleName = (displayName: string) => {
+  if (!displayName) return ''
+  
+  // 中文到英文的映射
+  const chineseToEnglish: Record<string, string> = {
+    '管理员': 'admin',
+    '经理': 'manager', 
+    '销售': 'sales',
+    '教师': 'teacher',
+    '学员': 'student',
+    '客服': 'service',
+    '财务': 'finance',
+    '人事': 'hr',
+    '技术': 'tech',
+    '运营': 'operation',
+    '市场': 'marketing',
+    '产品': 'product',
+    '设计': 'design',
+    '测试': 'test',
+    '主管': 'supervisor',
+    '专员': 'specialist',
+    '助理': 'assistant',
+    '顾问': 'consultant'
+  }
+  
+  // 先尝试直接映射
+  if (chineseToEnglish[displayName]) {
+    return chineseToEnglish[displayName]
+  }
+  
+  // 如果是组合词，尝试拆分映射
+  let englishName = displayName
+  for (const [chinese, english] of Object.entries(chineseToEnglish)) {
+    englishName = englishName.replace(chinese, english)
+  }
+  
+  // 如果还有中文，使用拼音转换的简化版本
+  if (/[\u4e00-\u9fa5]/.test(englishName)) {
+    englishName = 'role_' + Date.now().toString().slice(-4)
+  }
+  
+  // 确保符合命名规范：只包含字母、数字、下划线，且以字母开头
+  englishName = englishName.toLowerCase()
+    .replace(/[^a-z0-9_]/g, '_')
+    .replace(/^[^a-z]/, 'role_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+  
+  return englishName || 'custom_role'
+}
 
 // 权限格式已统一，无需记录格式类型
 
@@ -481,7 +677,7 @@ const menuTreeData = [
     description: '企业知识库管理'
   },
   {
-    title: '数查一点通',
+    title: '电网数据',
     key: 'data-query',
     description: '电网录取信息查询和分析工具'
   },
@@ -489,6 +685,16 @@ const menuTreeData = [
     title: '提前批信息',
     key: 'advance-batch',
     description: '提前批录取信息管理'
+  },
+  {
+    title: '网申模拟',
+    key: 'application-simulation',
+    description: '电网网申模拟填报系统',
+    children: [
+      { title: '国网模拟填报', key: 'application-simulation.sgcc', description: '国网网申模拟填报功能' },
+      { title: '南网模拟填报', key: 'application-simulation.csg', description: '南网网申模拟填报功能' },
+      { title: '江苏三新版模拟填报', key: 'application-simulation.jiangsu', description: '江苏三新版网申模拟填报功能' }
+    ]
   },
   {
     title: '用户中心',
@@ -618,9 +824,9 @@ const operationModules = [
 // 用户列表表格列
 const userColumns = [
   { title: '用户信息', dataIndex: 'real_name', key: 'real_name', width: 200 },
-  { title: '工号', dataIndex: 'employee_no', key: 'employee_no', width: 120 },
+  { title: '用户名', dataIndex: 'username', key: 'username', width: 120 },
   { title: '部门', dataIndex: 'department_name', key: 'department_name', width: 150 },
-  { title: '手机号', dataIndex: 'phone', key: 'phone', width: 120 },
+  { title: '邮箱', dataIndex: 'email', key: 'email', width: 160 },
   { title: '状态', dataIndex: 'is_active', key: 'is_active', width: 80 },
   { title: '最后登录', dataIndex: 'last_login', key: 'last_login', width: 150 }
 ]
@@ -924,9 +1130,20 @@ const viewRoleUsers = async (role: Role) => {
   
   try {
     const response = await getRoleUsers(role.name)
-    roleUsers.value = response.data || response
+    // 处理后端返回的数据结构：{users: User[], total: number, role_info: any}
+    if (response.users && Array.isArray(response.users)) {
+      roleUsers.value = response.users
+    } else if (response.data && Array.isArray(response.data)) {
+      roleUsers.value = response.data
+    } else if (Array.isArray(response)) {
+      roleUsers.value = response
+    } else {
+      console.warn('用户数据格式不正确:', response)
+      roleUsers.value = []
+    }
   } catch (error) {
     message.error('加载用户列表失败')
+    roleUsers.value = []
   } finally {
     userListLoading.value = false
   }
@@ -968,6 +1185,131 @@ const initializeOperationPermissions = () => {
   operationModules.forEach(module => {
     if (!operationPermissions[module.key]) {
       operationPermissions[module.key] = []
+    }
+  })
+}
+
+// 显示名称变化时自动生成角色名称
+const onDisplayNameChange = () => {
+  // 只在新建角色时自动生成名称
+  if (!editingRole.value && roleForm.display_name) {
+    roleForm.name = generateRoleName(roleForm.display_name)
+  }
+}
+
+// 角色管理方法
+const showCreateRole = () => {
+  editingRole.value = null
+  resetRoleForm()
+  roleModalVisible.value = true
+}
+
+const showEditRole = (role: Role) => {
+  editingRole.value = role
+  Object.assign(roleForm, {
+    name: role.name,
+    display_name: role.display_name,
+    description: role.description,
+    level: role.level,
+    is_system: role.is_system || false
+  })
+  roleModalVisible.value = true
+}
+
+const resetRoleForm = () => {
+  Object.assign(roleForm, {
+    name: '',
+    display_name: '',
+    description: '',
+    level: 1,
+    is_system: false
+  })
+  formRef.value?.resetFields()
+}
+
+const handleRoleSubmit = async () => {
+  try {
+    await formRef.value.validate()
+    
+    const roleData = {
+      name: roleForm.name,
+      display_name: roleForm.display_name,
+      description: roleForm.description,
+      level: roleForm.level,
+      is_system: roleForm.is_system,
+      permissions: {
+        menu: [],
+        operation: {},
+        data: {
+          scope: 'own',
+          regional_permissions: [],
+          department_permissions: [],
+          customer_permissions: [],
+          data_types: [],
+          sensitive: [],
+          project_category_permissions: []
+        },
+        time: {
+          enable_login_time: false,
+          login_time_range: null,
+          login_weekdays: [],
+          session_timeout: 240,
+          max_sessions: 1
+        }
+      }
+    }
+
+    if (editingRole.value) {
+      await updateRole(editingRole.value.name, roleData)
+      message.success('角色更新成功')
+    } else {
+      await createRole(roleData)
+      message.success('角色创建成功')
+    }
+    
+    roleModalVisible.value = false
+    loadRoles()
+  } catch (error) {
+    if (error?.errorFields) return
+    message.error(editingRole.value ? '角色更新失败' : '角色创建失败')
+  }
+}
+
+const handleDeleteRole = (role: Role) => {
+  if (role.is_system) {
+    message.warning('系统内置角色不允许删除')
+    return
+  }
+  
+  Modal.confirm({
+    title: '⚠️ 危险操作确认',
+    content: `您即将删除角色"${role.display_name}"(${role.name})，此操作将：
+    
+    • 永久删除该角色和相关权限配置
+    • 无法恢复已删除的角色信息
+    • 使用该角色的用户将失去相应权限
+    
+    请确认您有权限执行此操作！`,
+    okText: '确认删除',
+    okType: 'danger',
+    cancelText: '取消',
+    onOk: async () => {
+      try {
+        await deleteRole(role.name)
+        message.success('角色删除成功')
+        loadRoles()
+        
+        // 如果删除的是当前选中的角色，清除选中状态
+        if (selectedRole.value?.name === role.name) {
+          selectedRole.value = null
+        }
+      } catch (error: any) {
+        if (error?.response?.status === 400) {
+          message.error('该角色正在被用户使用，无法删除')
+        } else {
+          message.error('角色删除失败')
+        }
+      }
     }
   })
 }
@@ -1195,6 +1537,17 @@ onMounted(() => {
   
   .role-actions {
     margin-top: auto;
+    
+    .role-action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+      
+      &:has(.danger) {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
   }
 }
 
@@ -1217,6 +1570,12 @@ onMounted(() => {
       font-weight: 600;
       color: #262626;
     }
+  }
+  
+  .panel-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 }
 

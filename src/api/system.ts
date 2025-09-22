@@ -33,7 +33,7 @@ export interface User {
   username: string
   employee_no?: string
   password?: string
-  real_name: string
+  real_name?: string
   role: 'super_admin' | 'admin' | 'manager' | 'sales' | 'teacher' | 'viewer'
   department_id?: number
   department_name?: string
@@ -88,6 +88,7 @@ export interface RolePermissions {
 
 // 角色接口
 export interface Role {
+  id?: number
   name: string
   display_name: string
   level: number
@@ -221,6 +222,14 @@ export const getRoles = (): Promise<Role[]> => {
 
 export const createRole = (data: Omit<Role, 'created_at' | 'updated_at'>): Promise<Role> => {
   return request.post('/api/v1/roles/', data)
+}
+
+export const updateRole = (roleName: string, data: Partial<Omit<Role, 'created_at' | 'updated_at'>>): Promise<Role> => {
+  return request.put(`/api/v1/roles/${roleName}`, data)
+}
+
+export const deleteRole = (roleName: string): Promise<void> => {
+  return request.delete(`/api/v1/roles/${roleName}`)
 }
 
 export const getRolePermissions = (roleName: string): Promise<RolePermissions> => {

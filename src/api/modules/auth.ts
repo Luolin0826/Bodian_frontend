@@ -13,7 +13,7 @@ export interface LoginResponse {
   user: {
     id: number
     username: string
-    real_name: string
+    real_name?: string
     role: 'super_admin' | 'admin' | 'manager' | 'sales' | 'teacher' | 'viewer'
     avatar?: string
     role_display_name?: string

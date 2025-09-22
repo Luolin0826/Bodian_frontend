@@ -77,12 +77,9 @@
             @change="handleSearch"
             size="large"
           >
-            <a-select-option value="super_admin">超级管理员</a-select-option>
-            <a-select-option value="admin">系统管理员</a-select-option>
-            <a-select-option value="manager">部门经理</a-select-option>
-            <a-select-option value="sales">销售人员</a-select-option>
-            <a-select-option value="teacher">教学人员</a-select-option>
-            <a-select-option value="viewer">查看人员</a-select-option>
+            <a-select-option v-for="role in roleOptions" :key="role.name" :value="role.name">
+              {{ role.display_name }}
+            </a-select-option>
           </a-select>
           <a-cascader
             v-model:value="selectedDepartment"
@@ -271,12 +268,9 @@
           <a-col :span="12">
             <a-form-item label="角色" name="role">
               <a-select v-model:value="formData.role" placeholder="选择用户角色">
-                <a-select-option value="super_admin">超级管理员</a-select-option>
-                <a-select-option value="admin">系统管理员</a-select-option>
-                <a-select-option value="manager">部门经理</a-select-option>
-                <a-select-option value="sales">销售人员</a-select-option>
-                <a-select-option value="teacher">教学人员</a-select-option>
-                <a-select-option value="viewer">查看人员</a-select-option>
+                <a-select-option v-for="role in roleOptions" :key="role.name" :value="role.name">
+                  {{ role.display_name }}
+                </a-select-option>
               </a-select>
             </a-form-item>
           </a-col>
@@ -460,8 +454,10 @@ import {
   resetUserPassword,
   batchUpdateUserStatus,
   getDepartmentTree,
+  getRoles,
   type User,
-  type Department
+  type Department,
+  type Role
 } from '@/api/system'
 
 // 响应式工具
@@ -480,6 +476,7 @@ const passwordModalVisible = ref(false)
 
 const userList = ref<User[]>([])
 const departmentOptions = ref<Department[]>([])
+const roleOptions = ref<Role[]>([])
 const editingUser = ref<User | null>(null)
 const currentUser = ref<User | null>(null)
 const selectedRowKeys = ref<number[]>([])
@@ -538,7 +535,7 @@ const rules = {
     { pattern: /^[a-zA-Z0-9_]{3,20}$/, message: '用户名只能包含字母、数字和下划线，长度3-20位', trigger: 'blur' }
   ],
   real_name: [
-    { required: true, message: '请输入真实姓名', trigger: 'blur' }
+    { required: false, message: '请输入真实姓名', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
@@ -688,6 +685,17 @@ const loadDepartments = async () => {
   } catch (error) {
     console.error('加载部门数据失败:', error)
     departmentOptions.value = []
+  }
+}
+
+// 加载角色选项
+const loadRoles = async () => {
+  try {
+    const response = await getRoles()
+    roleOptions.value = Array.isArray(response) ? response : (response?.data || [])
+  } catch (error) {
+    console.error('加载角色数据失败:', error)
+    roleOptions.value = []
   }
 }
 
@@ -841,11 +849,22 @@ const handleResetPassword = (user: User) => {
 // 状态变更
 const handleStatusChange = async (user: User) => {
   user.statusLoading = true
+  const originalStatus = user.is_active
   try {
     await updateUser(user.id!, { ...user })
-    message.success('状态更新成功')
+    
+    // 如果用户被停用且当前隐藏停用用户，自动切换为显示停用用户
+    if (!user.is_active && !showInactive.value) {
+      showInactive.value = true
+      message.success('用户已停用，已自动切换为显示停用用户')
+    } else {
+      message.success(`用户已${user.is_active ? '启用' : '停用'}`)
+    }
+    
+    // 重新加载用户列表以显示最新状态
+    loadUsers()
   } catch (error) {
-    user.is_active = !user.is_active // 回滚状态
+    user.is_active = originalStatus // 回滚状态
     message.error('状态更新失败')
   } finally {
     user.statusLoading = false
@@ -868,7 +887,15 @@ const handleBatchEnable = async () => {
 const handleBatchDisable = async () => {
   try {
     await batchUpdateUserStatus(selectedRowKeys.value, false)
-    message.success('批量停用成功')
+    
+    // 如果当前隐藏停用用户，自动切换为显示停用用户
+    if (!showInactive.value) {
+      showInactive.value = true
+      message.success('批量停用成功，已自动切换为显示停用用户')
+    } else {
+      message.success('批量停用成功')
+    }
+    
     selectedRowKeys.value = []
     loadUsers()
   } catch (error) {
@@ -967,6 +994,7 @@ const resetForm = () => {
 onMounted(() => {
   loadUsers()
   loadDepartments()
+  loadRoles()
 })
 </script>
 
